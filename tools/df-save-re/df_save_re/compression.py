@@ -8,7 +8,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-# From DFHack devel/save-version.lua (0.47.05 era)
+from .target import TARGET_DF_VERSION, TARGET_SAVE_VERSION
+
+# From DFHack devel/save-version.lua (0.47.x era)
 SAVE_VERSIONS: dict[int, str] = {
     1710: "0.47.01",
     1711: "0.47.02",
@@ -46,12 +48,18 @@ class DecompressedSave:
 
 def describe_save_version(save_version: int) -> str:
     if save_version in SAVE_VERSIONS:
-        return f"{SAVE_VERSIONS[save_version]} ({save_version})"
+        label = SAVE_VERSIONS[save_version]
+        suffix = " [TARGET]" if save_version == TARGET_SAVE_VERSION else ""
+        return f"{label} ({save_version}){suffix}"
     if save_version < min(SAVE_VERSIONS):
         return f"unknown old (< {min(SAVE_VERSIONS)}): {save_version}"
     if save_version > max(SAVE_VERSIONS):
-        return f"unknown new (> {max(SAVE_VERSIONS)}): {save_version}"
+        return f"unknown new (> {max(SAVE_VERSIONS)}): {save_version} (expected {TARGET_DF_VERSION} = {TARGET_SAVE_VERSION})"
     return f"unknown in 0.47.x range: {save_version}"
+
+
+def is_target_save_version(save_version: int) -> bool:
+    return save_version == TARGET_SAVE_VERSION
 
 
 def read_header(data: bytes) -> SaveHeader:

@@ -8,7 +8,8 @@ import json
 import sys
 from pathlib import Path
 
-from .compression import decompress_file, describe_save_version, read_header
+from .compression import decompress_file, describe_save_version, is_target_save_version, read_header
+from .target import TARGET_DF_VERSION, TARGET_SAVE_VERSION
 from .deserializers.probe import probe_save
 from .hexdump import format_hexdump, scan_int32_values
 from .scan import scan_save
@@ -21,6 +22,12 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     print(f"file:           {path}")
     print(f"size:           {len(raw):,} bytes")
     print(f"save_version:   {header.save_version} ({describe_save_version(header.save_version)})")
+    print(f"target:         {TARGET_DF_VERSION} (save_version {TARGET_SAVE_VERSION})")
+    if not is_target_save_version(header.save_version):
+        print(
+            f"warning:        save is not {TARGET_DF_VERSION} — parser hypotheses may not apply",
+            file=sys.stderr,
+        )
     print(f"compressed:     {header.is_compressed}")
     if header.is_compressed:
         dec = decompress_file(path)

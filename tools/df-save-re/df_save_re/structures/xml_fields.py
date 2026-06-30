@@ -7,6 +7,8 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..target import TARGET_SAVE_VERSION
+
 
 @dataclass
 class FieldDef:
@@ -120,7 +122,7 @@ def load_struct(name: str, xml_dir: Path | str) -> StructDef | None:
     return None
 
 
-def summarize_fields(struct: StructDef, loadversion: int = 1716) -> list[str]:
+def summarize_fields(struct: StructDef, loadversion: int = TARGET_SAVE_VERSION) -> list[str]:
     """Human-readable field list respecting `since` tags where parseable."""
     lines: list[str] = []
     for f in struct.fields:

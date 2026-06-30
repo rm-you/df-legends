@@ -2,6 +2,12 @@
 
 Tools for extracting data from **Dwarf Fortress** game save files and **legends** exports, then using that data to build our own visualization and exploration system.
 
+## Target version
+
+**Dwarf Fortress 0.47.05** (Linux 64-bit, `save_version` **1716**).
+
+All binary RE, structure layouts, and validation are scoped to this release. Saves from other DF versions will not parse correctly until separately reverse-engineered.
+
 ## Approach
 
 We are pursuing **Path C**: a native save-file parser built by reverse-engineering the DF binary, so legends-style world history can be explored without running the game.
