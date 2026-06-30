@@ -12,6 +12,7 @@ from .compression import decompress_file, describe_save_version, is_target_save_
 from .deserializers.probe import probe_save
 from .deserializers.world_dat import parse_dat_preamble
 from .hexdump import format_hexdump, scan_int32_values
+from .legends_extract import extract_legends_snapshot, snapshot_to_dict
 from .legends_scan import scan_legends_region
 from .legends_xml import compare_with_save_header, parse_legends_xml
 from .save_bundle import index_save_folder, legends_parse_target
@@ -186,6 +187,48 @@ def cmd_probe(args: argparse.Namespace) -> int:
             print(f"  parsed {key}: field_8={val.field_8} payload={len(val.payload)} bytes")
         else:
             print(f"  {key}: {val}")
+    return 0
+
+
+def cmd_extract(args: argparse.Namespace) -> int:
+    path = Path(args.path)
+    dec = decompress_file(path)
+    file_header = read_header(path.read_bytes())
+    pre = parse_dat_preamble(dec.payload, save_version=file_header.save_version)
+    snap = extract_legends_snapshot(
+        dec.payload,
+        preamble=pre,
+        max_entities=args.max_entities,
+    )
+    data = snapshot_to_dict(snap)
+
+    if args.json:
+        print(json.dumps(data, indent=2))
+        return 0
+
+    print(f"file: {path}")
+    print(f"world_name: {snap.world_name}")
+    print(f"max_histfig: {snap.header.max_ids[8]:,}")
+    print(f"max_event:   {snap.header.max_ids[9]:,}")
+    for note in snap.notes:
+        print(f"note: {note}")
+    print("\nstring table sections:")
+    for row in data["string_tables"]:
+        print(
+            f"  [{row['index']:2}] {row['count']:5} entries  "
+            f"{row['first']!r} … {row['last']!r}"
+        )
+    print("\nfirst entities:")
+    for ent in data["entities"][: min(15, len(data["entities"]))]:
+        name = " (named)" if ent["has_name"] else ""
+        print(f"  id={ent['id']:4} {ent['class']!r}{name}")
+    if snap.history_stats:
+        hs = snap.history_stats
+        print(
+            f"\nhistory stats @ 0x{hs.payload_offset:x}: "
+            f"events={hs.event_counter:,} figs={hs.histfig_counter:,} "
+            f"(mid fields {hs.field_151}, {hs.field_4})"
+        )
     return 0
 
 
@@ -535,6 +578,20 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_lscan.add_argument("--json", action="store_true")
     p_lscan.set_defaults(func=cmd_legends_scan)
+
+    p_extract = sub.add_parser(
+        "extract",
+        help="Extract string tables, entity headers, and known landmarks from world.dat",
+    )
+    p_extract.add_argument("path", help="Path to world.dat")
+    p_extract.add_argument(
+        "--max-entities",
+        type=int,
+        default=50,
+        help="Max consecutive civ headers to parse (default 50)",
+    )
+    p_extract.add_argument("--json", action="store_true")
+    p_extract.set_defaults(func=cmd_extract)
 
     p_hex = sub.add_parser("hexdump", help="Hexdump decompressed payload region")
     p_hex.add_argument("path")

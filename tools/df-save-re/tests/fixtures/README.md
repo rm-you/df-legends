@@ -61,3 +61,11 @@ df-save-re legends-compare tests/fixtures/small-retired/world.dat tests/fixtures
 
 This compares world name and event/figure counts against `max_ids[8]` / `max_ids[9]` in the
 DAT header — useful while RE'ing `world_history` location.
+
+Scan string-table and history-anchor landmarks:
+
+```bash
+df-save-re legends-scan tests/fixtures/small-retired/world.dat --full
+df-save-re extract tests/fixtures/small-retired/world.dat --json
+df-save-re legends-scan tests/fixtures/small-retired/world.dat --full --legends-xml tests/fixtures/small-retired/legends.xml
+```

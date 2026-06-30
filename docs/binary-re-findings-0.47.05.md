@@ -128,6 +128,10 @@ Located via `IRON` entry signature; Namushul block @ **`0x2a397e`**, ends @ **`0
 
 Implemented in `deserializers/string_tables.py` (`StringTableBlock`, `find_string_table_block`).
 
+After the string tables: **string index** (`int32` count + indices — 283 on Namushul) then **entity defs**
+(Andux layout: `int16` type, `int32` id, class string, …). First civ @ **`0x2f7d79`** on Namushul.
+Implemented in `deserializers/string_index.py`, `deserializers/entity_def.py`, CLI `df-save-re extract`.
+
 ### 7. Post-header raw stream (validated Namushul)
 
 After `post_raws_field`:
@@ -142,10 +146,11 @@ repeat until EOF/error:
 ~427 sections / 7541 strings on Namushul, ending ~`0x86d93`. Still generated ITEM/CREATURE
 raw chunks — not short string-table names.
 
-### 8. world_history anchor (heuristic)
+### 8. world_history stats block (partial)
 
-Candidate @ **`0x15beb28`**: int32 event count (113,118) with histfig count (12,747) within
-64 bytes and posnull-like vector prefix. Needs confirmation via legends XML + event parse.
+Candidate @ **`0x15beb28`**: paired header counters (events=113,118, figs=12,747 at +12 bytes).
+This is a **stats/id block**, not the start of a pointer vector (no posnull prefix). Full
+`history_event` deserialization still open — needs legends XML cross-check.
 
 ## Polymorphic history events
 
