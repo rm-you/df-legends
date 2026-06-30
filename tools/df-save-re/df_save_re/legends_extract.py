@@ -31,6 +31,7 @@ from .deserializers.historical_figures import (
 )
 from .deserializers.history_events import HistoryEventsCatalog, build_history_events_catalog
 from .deserializers.history_rulers import RulerCatalog
+from .deserializers.engine_layers import LayerWalk, summarize_layer_walks, walk_figures_layer
 from .deserializers.world_header_ids import resolve_site_ceiling
 from .deserializers.world_layout import WorldLayoutLandmarks, discover_layout_landmarks, resolve_history_search_start
 
@@ -73,6 +74,7 @@ class LegendsSnapshot:
     history_events_catalog: HistoryEventsCatalog | None = None
     ruler_catalog: RulerCatalog | None = None
     vector_probe: VectorProbeSummary | None = None
+    engine_walks: list = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
 
@@ -242,6 +244,7 @@ def extract_legends_snapshot(
     historical_figure_catalog: HistoricalFigureCatalog | None = None
     history_events_catalog: HistoryEventsCatalog | None = None
     ruler_catalog: RulerCatalog | None = None
+    engine_walks: list[LayerWalk] = []
     history_search_start = resolve_history_search_start(payload, layout, preamble.header)
     if history_search_start is not None:
         historical_figure_catalog = build_historical_figure_catalog(
@@ -259,6 +262,14 @@ def extract_legends_snapshot(
             )
             for line in historical_figure_catalog.notes:
                 notes.append(f"  histfig: {line}")
+            # Deterministic engine walk of figure bodies (self-validating).
+            figures_walk = walk_figures_layer(
+                payload,
+                preamble.header,
+                layout,
+                anchor=historical_figure_catalog.anchor,
+            )
+            engine_walks.append(figures_walk)
 
         history_events_catalog = build_history_events_catalog(
             payload,
@@ -354,6 +365,9 @@ def extract_legends_snapshot(
                     f"(best @ {site_cands[0].payload_offset:#x}, score={site_cands[0].posnull_score})"
                 )
 
+    for line in summarize_layer_walks(engine_walks):
+        notes.append(line)
+
     return LegendsSnapshot(
         world_name=preamble.header.world_name.value if preamble.header.world_name else None,
         header=preamble.header,
@@ -373,6 +387,7 @@ def extract_legends_snapshot(
         history_events_catalog=history_events_catalog,
         ruler_catalog=ruler_catalog,
         vector_probe=vector_probe,
+        engine_walks=engine_walks,
         notes=notes,
     )
 
@@ -585,5 +600,6 @@ def snapshot_to_dict(snapshot: LegendsSnapshot) -> dict:
             and (anchor := snapshot.historical_figure_catalog.anchor)
             else None
         ),
+        "engine_walks": [w.to_dict() for w in snapshot.engine_walks],
         "notes": snapshot.notes,
     }

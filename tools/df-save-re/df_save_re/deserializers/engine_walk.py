@@ -59,6 +59,7 @@ def walk_pointer_vector(
     element_type: str,
     expected_count: int | None = None,
     next_anchor: int | None = None,
+    bodies_start: int | None = None,
     capture: bool = False,
     capture_limit: int = 0,
     xml_dir: Path | None = None,
@@ -67,7 +68,9 @@ def walk_pointer_vector(
     """Walk a posnull pointer vector and report exact-landing / desync.
 
     Layout: int32 count + count presence bytes (aligned to 4) + present bodies.
-    Polymorphic element types read an int16 tag before each body.
+    Polymorphic element types read an int16 tag before each body. ``bodies_start``
+    overrides where bodies begin when an inter-gap follows the presence flags
+    (e.g. the figures vector has an 0x50 gap before bodies on Namushul).
     """
     xml_dir = default_xml_dir() if xml_dir is None else Path(xml_dir)
     reader = BinaryReader(BytesIO(payload))
@@ -92,7 +95,10 @@ def walk_pointer_vector(
 
     flags = _read_presence_flags(reader, declared)
     flags_end = reader.tell()
-    bodies_start = flags_end
+    if bodies_start is not None:
+        reader.seek(bodies_start)
+    else:
+        bodies_start = flags_end
     present_count = sum(1 for f in flags if f)
 
     polymorphic = is_polymorphic(element_type, xml_dir)
