@@ -31,7 +31,13 @@ from .deserializers.historical_figures import (
 )
 from .deserializers.history_events import HistoryEventsCatalog, build_history_events_catalog
 from .deserializers.history_rulers import RulerCatalog
-from .deserializers.engine_layers import LayerWalk, summarize_layer_walks, walk_figures_layer
+from .deserializers.engine_layers import (
+    LayerWalk,
+    summarize_layer_walks,
+    walk_events_death_layer,
+    walk_figures_layer,
+    walk_sites_layer,
+)
 from .deserializers.world_header_ids import resolve_site_ceiling
 from .deserializers.world_layout import WorldLayoutLandmarks, discover_layout_landmarks, resolve_history_search_start
 
@@ -262,14 +268,23 @@ def extract_legends_snapshot(
             )
             for line in historical_figure_catalog.notes:
                 notes.append(f"  histfig: {line}")
-            # Deterministic engine walk of figure bodies (self-validating).
-            figures_walk = walk_figures_layer(
-                payload,
-                preamble.header,
-                layout,
-                anchor=historical_figure_catalog.anchor,
+            # Deterministic engine walks of history records (self-validating).
+            engine_walks.append(
+                walk_figures_layer(
+                    payload,
+                    preamble.header,
+                    layout,
+                    anchor=historical_figure_catalog.anchor,
+                )
             )
-            engine_walks.append(figures_walk)
+            engine_walks.append(
+                walk_events_death_layer(
+                    payload,
+                    preamble.header,
+                    layout,
+                    anchor=historical_figure_catalog.anchor,
+                )
+            )
 
         history_events_catalog = build_history_events_catalog(
             payload,
@@ -364,6 +379,9 @@ def extract_legends_snapshot(
                     f"vector probe: {len(site_cands)} posnull count={site_ceiling} candidates "
                     f"(best @ {site_cands[0].payload_offset:#x}, score={site_cands[0].posnull_score})"
                 )
+
+    if layout is not None:
+        engine_walks.append(walk_sites_layer(payload, preamble.header, layout))
 
     for line in summarize_layer_walks(engine_walks):
         notes.append(line)
