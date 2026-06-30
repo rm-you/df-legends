@@ -22,22 +22,21 @@ df-save-re extract /path/to/region1/world.dat --json
 
 If you pass a **region folder** instead of a file, `validate` picks `world.dat` (retired) or `world.sav` (active) automatically.
 
-## Optional legends text cross-check
+## Verify parsing against your text exports
 
-If you exported from Legends mode with **[p]** (Map/Gen information), you can confirm the save matches:
+Cross-check what we extract from `world.dat` against your **[p]** exports:
 
 ```bash
-df-save-re validate /path/to/world.dat --legends-text /path/to/region3-...-world_history.txt
-# or pass the DF root folder containing all p-key .txt files:
-df-save-re validate /path/to/world.dat --legends-text /path/to/df-install/
+df-save-re verify /path/to/world.dat /path/to/folder-with-txt-exports/
 ```
 
-This checks world name (and DF version when `world_gen_param.txt` is present). Text exports are **optional** — the project does not require or generate them in CI.
+- **PASS** — binary parse matches text export for that layer
+- **PENDING** — text records a target; that layer is not parsed from the save yet
 
-Press **[p]** in Legends mode, not **[x]**. The `[p]` files land in your DF install directory.
+On Namushul: world name, 15 named civs, 63 subterranean peoples all **PASS**. Sites (350), figures (12,747), and events (113,118) are **PENDING**.
 
 ```bash
-df-save-re validate /path/to/world.dat --export-help   # full instructions
+df-save-re validate /path/to/world.dat --export-help   # how to get p-key exports
 ```
 
 ## Other commands
