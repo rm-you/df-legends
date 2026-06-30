@@ -7,10 +7,12 @@ Binary saves are **not committed** (see repo `.gitignore`). Integration tests sk
 ```
 fixtures/
 ├── README.md
+├── small-retired/
+│   └── world.dat          # Compact 0.47.05 world (Namushul) — fast default fixture
 ├── waterlures-retired/
-│   └── world.dat          # Track A — retired fort, DF 0.47.05 (save_version 1716)
+│   └── world.dat          # Larger retired fort world (Minbazkar)
 └── ironhand-active/
-    └── world.sav          # Track B — optional active save (same version)
+    └── world.sav          # Track B — optional active save
 ```
 
 ## Obtain fixtures
@@ -18,25 +20,31 @@ fixtures/
 From `tools/df-save-re`:
 
 ```bash
-python3 scripts/fetch_fixtures.py
+python3 scripts/fetch_fixtures.py          # small + Waterlures
+python3 scripts/fetch_fixtures.py --all    # + Ironhand world.sav
 ```
 
-Or set `DF_SAVE_RE_FIXTURES` to a folder that contains `waterlures-retired/world.dat`.
+Or set `DF_SAVE_RE_FIXTURES` to a folder containing the subdirs above.
 
-Manual download (DFFD, no registration required):
+### Manual sources
 
-| Fixture | URL |
-|---------|-----|
-| Waterlures retired `world.dat` | https://dffd.bay12games.com/file.php?id=17772 |
-| Ironhand active `world.sav` | https://dffd.bay12games.com/file.php?id=15468 |
+| Fixture | Source |
+|---------|--------|
+| Small `world.dat` (Namushul) | Community file (~8 MB compressed); fetched by script or copy to `small-retired/world.dat` |
+| Waterlures `world.dat` | [DFFD #17772](https://dffd.bay12games.com/file.php?id=17772) |
+| Ironhand `world.sav` | [DFFD #15468](https://dffd.bay12games.com/file.php?id=15468) |
 
-Extract so `world.dat` / `world.sav` paths match the layout above.
+If the Discord CDN URL for the small world expires, place any verified copy at
+`small-retired/world.dat` (SHA-256: `f9cee2642831252bcb09c71cc4f10450505e174abc0aa6806a1f9c79745d8714`)
+or set `SMALL_WORLD_DAT_URL`.
 
-## Expected header values (Waterlures)
+## Validated header values (save_version 1716)
 
-Validated against decompressed payload:
+Both worlds use **50 int32 ID counters** after the leading int16.
 
-- World name string: `Minbazkar` (world name; fort was “Waterlures”)
-- ID counter `[8]` ≈ max historical figure id
-- ID counter `[9]` ≈ max history event id
-- Header size: **229 bytes** (50×int32 + trailing fields)
+| World | Name | Header bytes | `max_ids[8]` (histfig) | `max_ids[9]` (events) |
+|-------|------|--------------|------------------------|----------------------|
+| Small | Namushul | 228 (`0xE4`) | 12,747 | 113,118 |
+| Waterlures | Minbazkar | 229 (`0xE5`) | 46,661 | 531,051 |
+
+After the header, generated raws begin with `int32` count **42**.

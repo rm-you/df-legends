@@ -108,7 +108,8 @@ flowchart TB
 | Fixture | Purpose |
 |---------|---------|
 | `tests/fixtures/region-retired/world.dat` | Track A — legends parsing |
-| `tests/fixtures/waterlures-retired/world.dat` | Track A — DFFD Waterlures (validated header) |
+| `tests/fixtures/small-retired/world.dat` | Track A — compact Namushul world (fast tests) |
+| `tests/fixtures/waterlures-retired/world.dat` | Track A — DFFD Waterlures / Minbazkar (larger) |
 | `tests/fixtures/region-active/world.sav` | Track B — Game data + legends inside active save |
 | Same world retired then loaded | Compare history counts between DAT and SAV |
 
