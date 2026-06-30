@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}{{ entry.world_name }} — DF Legends Explorer{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/">Worlds</a> / {{ entry.world_name }}</div>
+<h1>{{ entry.world_name }}</h1>
+<p class="subtitle">
+  Extracted {{ world.extracted_at.strftime('%Y-%m-%d %H:%M UTC') if world and world.extracted_at else '—' }}
+  · parser {{ entry.parser_version }}
+  {% if world and world.source_path %}
+  · source <span class="mono">{{ world.source_path }}</span>
+  {% endif %}
+</p>
+
+<div class="stats-row">
+  <div class="stat">
+    <span class="label">Civilizations</span>
+    <span class="value">{{ entry.entity_count }}</span>
+  </div>
+  <div class="stat">
+    <span class="label">Sites</span>
+    <span class="value">{{ entry.site_count }}</span>
+  </div>
+  <div class="stat">
+    <span class="label">Figure headers</span>
+    <span class="value">{{ entry.histfig_header_count }}</span>
+  </div>
+  {% if entry.event_count is not none %}
+  <div class="stat">
+    <span class="label">Events (anchor)</span>
+    <span class="value">{{ "{:,}".format(entry.event_count) }}</span>
+  </div>
+  {% endif %}
+</div>
+
+<h2>Explore</h2>
+<div class="card-grid">
+  <a href="/world/{{ slug }}/entities" class="card" style="display:block;text-decoration:none;color:inherit;">
+    <h3>Civilizations</h3>
+    <div class="meta">Browse entity catalog and jump to owned sites and figures.</div>
+  </a>
+  <a href="/world/{{ slug }}/sites" class="card" style="display:block;text-decoration:none;color:inherit;">
+    <h3>Sites</h3>
+    <div class="meta">Settlements and ruins linked to owning civs and map coords.</div>
+  </a>
+  <a href="/world/{{ slug }}/figures" class="card" style="display:block;text-decoration:none;color:inherit;">
+    <h3>Historical figures</h3>
+    <div class="meta">Parsed figure headers with civ and family cross-links.</div>
+  </a>
+  <a href="/world/{{ slug }}/history" class="card" style="display:block;text-decoration:none;color:inherit;">
+    <h3>History layer</h3>
+    <div class="meta">Event vector anchors, stats block, and payload landmarks.</div>
+  </a>
+</div>
+
+<h2>Header counters</h2>
+<table class="data">
+  <thead>
+    <tr><th>Slot</th><th>Label</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    {% for slot, value, label in counters %}
+    <tr>
+      <td class="mono">{{ slot }}</td>
+      <td>{{ label }}</td>
+      <td class="mono">{{ "{:,}".format(value) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if entity_classes %}
+<h2>Entity classes</h2>
+<p>
+  {% for cls in entity_classes %}
+  <a href="/world/{{ slug }}/entities?entity_class={{ cls | urlencode }}" class="badge">{{ cls }}</a>
+  {% if not loop.last %} {% endif %}
+  {% endfor %}
+</p>
+{% endif %}
+
+{% if layer_status %}
+<h2>Extraction status (serialization engine)</h2>
+<p class="subtitle">
+  Authoritative counts come from save header counters / confirmed vectors.
+  "Deterministic" means the engine walked full record bodies and landed exactly
+  on the next anchor; otherwise the precise desync offset is shown for follow-up RE.
+</p>
+<table class="data">
+  <thead>
+    <tr>
+      <th>Layer</th>
+      <th>Authoritative count</th>
+      <th>Body walk</th>
+      <th>Parsed</th>
+      <th>Desync offset</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ls in layer_status %}
+    <tr>
+      <td>{{ ls.layer }}</td>
+      <td class="mono">{{ "{:,}".format(ls.authoritative_count) if ls.authoritative_count is not none else "—" }}</td>
+      <td>
+        {% if ls.deterministic %}
+        <span class="badge" style="color:#7ec97e;border-color:#3d6b3d;">deterministic</span>
+        {% else %}
+        <span class="badge">desync</span>
+        {% endif %}
+      </td>
+      <td class="mono">{{ ls.parsed_count if ls.parsed_count is not none else "—" }}</td>
+      <td class="mono">{% if ls.error_offset is not none %}0x{{ "%x" | format(ls.error_offset) }}{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if record_counts %}
+<p class="meta">
+  Deterministic record rows stored:
+  history_event = {{ record_counts.get("history_event", 0) }},
+  site_population = {{ record_counts.get("site_population", 0) }}
+  (populate as body walks land).
+</p>
+{% endif %}
+{% endif %}
+
+{% if notes %}
+<h2>Extraction notes</h2>
+<ul class="notes">
+  {% for note in notes %}
+  <li>{{ note }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Civilizations — {{ slug }}{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / Civilizations</div>
+<h1>Civilizations</h1>
+
+<form class="filters" method="get">
+  <label>
+    Class
+    <select name="entity_class">
+      <option value="">All classes</option>
+      {% for cls in classes %}
+      <option value="{{ cls }}" {% if selected_class == cls %}selected{% endif %}>{{ cls }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label style="flex-direction:row;align-items:center;gap:0.4rem;padding-top:1.2rem;">
+    <input type="checkbox" name="named_only" value="true" {% if named_only %}checked{% endif %}>
+    Named only
+  </label>
+  <button type="submit">Filter</button>
+  {% if named_only or selected_class %}
+  <a href="/world/{{ slug }}/entities" style="align-self:center;font-size:0.85rem;">Clear</a>
+  {% endif %}
+</form>
+
+{% if entities %}
+<table class="data">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Class</th>
+      <th>Sites</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ent in entities %}
+    <tr>
+      <td class="mono"><a href="/world/{{ slug }}/entities/{{ ent.entity_id }}">{{ ent.entity_id }}</a></td>
+      <td><a href="/world/{{ slug }}/entities/{{ ent.entity_id }}">{{ ent.display_name }}</a></td>
+      <td><span class="badge">{{ ent.entity_class }}</span></td>
+      <td>
+        {% if ent.site_count %}
+        <a href="/world/{{ slug }}/sites?civ_id={{ ent.entity_id }}">{{ ent.site_count }}</a>
+        {% else %}
+        0
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="meta">{{ entities | length }} entities shown</p>
+{% else %}
+<p class="empty">No entities match the current filters.</p>
+{% endif %}
+{% endblock %}

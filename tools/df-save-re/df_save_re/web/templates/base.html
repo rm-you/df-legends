@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}DF Legends Explorer{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand"><a href="/">DF Legends Explorer</a></div>
+    {% if slug is defined %}
+    <nav>
+      <a href="/world/{{ slug }}">Overview</a>
+      <a href="/world/{{ slug }}/entities">Civilizations</a>
+      <a href="/world/{{ slug }}/sites">Sites</a>
+      <a href="/world/{{ slug }}/figures">Figures</a>
+      <a href="/world/{{ slug }}/history">History layer</a>
+    </nav>
+    {% endif %}
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    Proof-of-concept browser for extracted Dwarf Fortress world history (df-save-re)
+  </footer>
+</body>
+</html>

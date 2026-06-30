@@ -1,0 +1,226 @@
+"""Probe decompressed save payloads using RE-derived structure guesses."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from io import BytesIO
+from pathlib import Path
+
+from ..binary_reader import BinaryReader
+from ..compression import decompress_file, read_header
+from ..legends_scan import LegendsScanReport, scan_legends_region
+from ..target import TARGET_SAVE_VERSION
+from ..save_bundle import SaveKind, classify_filename
+from .active_save import SavPreamble, WorldHeaderSavHypothesis, parse_sav_preamble
+from .post_header import PostHeaderRawStream
+from .primitives import BlockWithByteVector, WorldHeaderHypothesis
+from .string_tables import StringTableBlock, find_string_table_block
+from .world_dat import DatPreamble
+
+REGION_MARKERS = [
+    "*START REGION SAVE*",
+    "*START REGION DIM SAVE*",
+    "*START REGION MAP SAVE*",
+    "*START REGION GEOLOGY SAVE*",
+    "*START REGION SUBREGION SAVE*",
+]
+
+
+@dataclass
+class ProbeResult:
+    path: str
+    save_kind: SaveKind
+    payload_size: int
+    marker_offsets: dict[str, list[int]]
+    world_header: WorldHeaderHypothesis | None = None
+    world_header_error: str | None = None
+    sav_header: WorldHeaderSavHypothesis | None = None
+    sav_header_error: str | None = None
+    dat_preamble: DatPreamble | None = None
+    dat_preamble_error: str | None = None
+    sav_preamble: SavPreamble | None = None
+    sav_preamble_error: str | None = None
+    post_header_stream: PostHeaderRawStream | None = None
+    string_tables: StringTableBlock | None = None
+    string_tables_error: str | None = None
+    legends_scan: LegendsScanReport | None = None
+    block_at_markers: dict[str, BlockWithByteVector | str] = field(default_factory=dict)
+    notes: list[str] = field(default_factory=list)
+
+
+def find_markers(payload: bytes) -> dict[str, list[int]]:
+    found: dict[str, list[int]] = {}
+    for marker in REGION_MARKERS:
+        needle = marker.encode("latin-1")
+        offsets: list[int] = []
+        start = 0
+        while True:
+            idx = payload.find(needle, start)
+            if idx < 0:
+                break
+            offsets.append(idx)
+            start = idx + 1
+        if offsets:
+            found[marker] = offsets
+    return found
+
+
+def probe_save(path: str) -> ProbeResult:
+    path_obj = Path(path)
+    kind, _ = classify_filename(path_obj.name)
+    dec = decompress_file(path)
+    payload = dec.payload
+    markers = find_markers(payload)
+
+    result = ProbeResult(
+        path=str(path_obj),
+        save_kind=kind,
+        payload_size=len(payload),
+        marker_offsets=markers,
+    )
+
+    if kind == SaveKind.WORLD_SAV:
+        result.notes.append(
+            "world.sav: uses SAV world header + Game data (not DAT WorldHeaderHypothesis); "
+            "legends data is inside Game data — see docs/save-formats-0.47.05.md"
+        )
+    elif kind == SaveKind.WORLD_DAT:
+        result.notes.append("world.dat: Track A — DAT world header + World data (legends-first target)")
+    elif kind not in (SaveKind.WORLD_DAT, SaveKind.WORLD_SAV):
+        result.notes.append(f"sidecar/other ({kind.value}); main history is in world.sav/dat")
+
+    if kind == SaveKind.WORLD_DAT:
+        try:
+            file_header = read_header(Path(path).read_bytes())
+            reader = BinaryReader(BytesIO(payload))
+            result.dat_preamble = DatPreamble.read(
+                reader,
+                save_version=file_header.save_version,
+            )
+            pre = result.dat_preamble
+            result.world_header = pre.header
+            wh = pre.header
+            result.notes.append(
+                f"DAT world header hypothesis consumed {wh.bytes_consumed} bytes "
+                f"({len(wh.max_ids)} id counters, save_version {file_header.save_version})"
+            )
+            if wh.world_name and wh.world_name.value.startswith("["):
+                result.notes.append(
+                    "warning: world_name looks like generated raws — header alignment may be wrong"
+                )
+            gr = pre.generated_raws
+            result.notes.append(
+                f"generated raws: {gr.section_count} sections, "
+                f"{gr.total_strings} strings @ 0x{gr.payload_offset:x} "
+                f"({gr.bytes_consumed:,} bytes)"
+            )
+            result.notes.append(
+                f"preamble total {pre.bytes_consumed:,} bytes; "
+                f"next section @ 0x{pre.world_data_offset:x}"
+            )
+            try:
+                reader = BinaryReader(BytesIO(payload))
+                reader.seek(pre.world_data_offset)
+                result.post_header_stream = PostHeaderRawStream.read(reader)
+                ph = result.post_header_stream
+                post_end = reader.tell()
+                result.notes.append(
+                    f"post-header raw stream: lead={ph.lead_field}, "
+                    f"{len(ph.sections)} sections, {ph.total_strings} strings, "
+                    f"ends @ 0x{post_end:x}"
+                )
+                tables_off = find_string_table_block(payload, start=pre.world_data_offset)
+                if tables_off is not None:
+                    try:
+                        reader = BinaryReader(BytesIO(payload))
+                        reader.seek(tables_off)
+                        result.string_tables = StringTableBlock.read(reader)
+                        st = result.string_tables
+                        result.notes.append(
+                            f"string tables @ 0x{tables_off:x}: {st.section_count} sections, "
+                            f"{st.total_names:,} names, ends @ 0x{reader.tell():x}"
+                        )
+                    except (EOFError, ValueError) as exc:
+                        result.string_tables_error = str(exc)
+                result.legends_scan = scan_legends_region(
+                    payload,
+                    preamble_end=pre.world_data_offset,
+                    post_raws_int32=pre.post_raws_int32,
+                    header=pre.header,
+                    post_header_lead=ph.lead_field,
+                    post_header_sections=len(ph.sections),
+                    post_header_end=post_end,
+                )
+            except (EOFError, ValueError) as exc:
+                result.legends_scan = scan_legends_region(
+                    payload,
+                    preamble_end=pre.world_data_offset,
+                    post_raws_int32=pre.post_raws_int32,
+                    header=pre.header,
+                )
+                result.notes.append(f"post-header stream parse partial: {exc}")
+                if result.legends_scan:
+                    result.notes.extend(result.legends_scan.notes)
+            else:
+                if result.legends_scan:
+                    result.notes.extend(result.legends_scan.notes)
+        except (EOFError, ValueError) as exc:
+            result.dat_preamble_error = str(exc)
+            result.world_header_error = str(exc)
+    elif kind == SaveKind.WORLD_SAV:
+        try:
+            result.sav_preamble = parse_sav_preamble(payload)
+            pre = result.sav_preamble
+            result.sav_header = pre.sav_header
+            result.notes.append(
+                f"SAV preamble: gamemode={pre.gamemode} game={pre.game_name!r} "
+                f"world={pre.world_name!r}; string tables @ 0x{pre.string_tables_offset:x}; "
+                f"game data @ 0x{pre.game_data_offset:x}"
+            )
+            result.notes.append(
+                f"SAV header hypothesis consumed {len(pre.sav_header.fields)} int32 fields; "
+                f"metadata blob {len(pre.metadata_blob)} bytes"
+            )
+            if pre.string_tables:
+                st = pre.string_tables
+                result.string_tables = st
+                result.notes.append(
+                    f"string tables: {st.section_count} sections, "
+                    f"{st.total_names:,} names, ends @ 0x{st.payload_offset + st.bytes_consumed:x}"
+                )
+            result.legends_scan = scan_legends_region(
+                payload,
+                preamble_end=pre.game_data_offset or 0,
+                post_raws_int32=pre.generated_raws_lead,
+                header=pre.header,
+            )
+            if result.legends_scan:
+                result.notes.extend(result.legends_scan.notes)
+        except (EOFError, ValueError) as exc:
+            result.sav_preamble_error = str(exc)
+            result.sav_header_error = str(exc)
+        if result.sav_header is None:
+            try:
+                reader = BinaryReader(BytesIO(payload))
+                result.sav_header = WorldHeaderSavHypothesis.read(reader)
+                result.notes.append(
+                    f"SAV world header hypothesis consumed {reader.tell()} bytes "
+                    f"({len(result.sav_header.fields)} int32 fields)"
+                )
+            except (EOFError, ValueError) as exc:
+                result.sav_header_error = str(exc)
+
+    # At each region marker, try reading BlockWithByteVector backward/forward.
+    # Markers appear INSIDE the magic string field — offset points at '*' char.
+    for marker, offsets in markers.items():
+        for off in offsets[:3]:  # first few occurrences only
+            try:
+                # Magic is stored as length-prefixed string starting at off
+                reader = BinaryReader(BytesIO(payload))
+                reader.seek(off)
+                block = BlockWithByteVector.read(reader)
+                result.block_at_markers[f"{marker}@{off:#x}"] = block
+            except (EOFError, ValueError) as exc:
+                result.block_at_markers[f"{marker}@{off:#x}"] = f"parse error: {exc}"
+
+    return result

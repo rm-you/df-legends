@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Worlds — DF Legends Explorer{% endblock %}
+{% block content %}
+<h1>Imported worlds</h1>
+<p class="subtitle">Fortress databases registered under <span class="mono">{{ data_dir }}</span></p>
+
+{% if entries %}
+<div class="card-grid">
+  {% for entry in entries %}
+  <a href="/world/{{ entry.slug }}" class="card" style="display:block;text-decoration:none;color:inherit;">
+    <h3>{{ entry.world_name }}</h3>
+    <div class="meta">
+      {{ entry.entity_count }} civ headers ·
+      {{ entry.site_count }} sites ·
+      {{ entry.histfig_header_count }} figure headers
+      {% if entry.event_count is not none %}
+      · {{ "{:,}".format(entry.event_count) }} events (anchor)
+      {% endif %}
+    </div>
+    <div class="meta" style="margin-top:0.4rem;">
+      slug: <span class="mono">{{ entry.slug }}</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+  No worlds imported yet. Run:
+  <pre class="mono" style="margin-top:0.75rem;background:var(--surface);padding:0.75rem;border-radius:4px;">python3 -m df_save_re.cli import-db path/to/world.dat
+python3 -m df_save_re.cli serve</pre>
+</div>
+{% endif %}
+{% endblock %}

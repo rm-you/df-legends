@@ -1,0 +1,711 @@
+<data-definition>
+    <bitfield-type type-name='uniform_indiv_choice'>
+        <flag-bit name='any'/>
+        <flag-bit name='melee'/>
+        <flag-bit name='ranged'/>
+    </bitfield-type>
+
+    <struct-type type-name='item_filter_spec'>
+        <enum base-type='int16_t' name="item_type" type-name='item_type'/>
+        <int16_t name="item_subtype" refers-to='(item-subtype-target $$._parent.item_type $)'/>
+
+        <enum base-type='int16_t' name="material_class" type-name='entity_material_category'/>
+
+        <int16_t name='mattype' ref-target='material' aux-value='$$.matindex'/>
+        <int32_t name='matindex'/>
+    </struct-type>
+
+    <struct-type type-name='squad_uniform_spec'>
+        <int32_t name="item" ref-target='item'/>
+
+        <compound name='item_filter' type-name='item_filter_spec'/>
+
+        <int32_t name="color"/>
+
+        <stl-vector name="assigned">
+            <int32_t ref-target='item'/>
+        </stl-vector>
+
+        <bitfield name="indiv_choice" type-name='uniform_indiv_choice'/>
+    </struct-type>
+
+    <struct-type type-name='squad_ammo_spec'>
+        <compound name='item_filter' type-name='item_filter_spec'/>
+
+        <int32_t name="amount"/>
+
+        <bitfield name='flags' base-type='uint32_t'>
+            <flag-bit name='use_combat'/>
+            <flag-bit name='use_training'/>
+        </bitfield>
+
+        <stl-vector name="assigned">
+            <int32_t ref-target='item'/>
+        </stl-vector>
+    </struct-type>
+
+    <bitfield-type type-name='squad_use_flags' base-type='uint32_t'>
+        <flag-bit name='sleep'/>
+        <flag-bit name='train'/>
+        <flag-bit name='indiv_eq'/>
+        <flag-bit name='squad_eq'/>
+    </bitfield-type>
+
+    <enum-type type-name='uniform_category' base-type='int16_t'>
+        <enum-item name='body'/>
+        <enum-item name='head'/>
+        <enum-item name='pants'/>
+        <enum-item name='gloves'/>
+        <enum-item name='shoes'/>
+        <enum-item name='shield'/>
+        <enum-item name='weapon'/>
+    </enum-type>
+
+    <bitfield-type type-name='uniform_flags' base-type='uint32_t'>
+        <flag-bit name='replace_clothing'/>
+        <flag-bit name='exact_matches'/>
+    </bitfield-type>
+
+    <enum-type type-name='barrack_preference_category'>
+        <enum-item name='Bed'/>
+        <enum-item name='Armorstand'/>
+        <enum-item name='Box'/>
+        <enum-item name='Cabinet'/>
+    </enum-type>
+
+    <enum-type type-name='squad_event_type' base-type='int16_t'>
+        <enum-item name='None' value='-1'/>
+        <enum-item name='Unk0'/>
+        <enum-item name='Unk1'/>
+        <enum-item name='Unk2'/>
+    </enum-type>
+
+    <struct-type type-name='squad_position'>
+        <int32_t name='occupant' ref-target='historical_figure'/>
+
+        <code-helper name='describe'>(describe-obj @.occupant)</code-helper>
+
+        <stl-vector name="orders" pointer-type='squad_order'/>
+
+        <static-array name='preferences' count='4' index-enum='barrack_preference_category'>
+            <stl-vector type-name='int32_t' ref-target='building'/>
+        </static-array>
+
+        <static-array name='uniform' count='7' index-enum='uniform_category'>
+            <stl-vector pointer-type='squad_uniform_spec'/>
+        </static-array>
+
+        <stl-string name="unk_c4"/>
+
+        <bitfield name='flags' type-name='uniform_flags'/>
+
+        <stl-vector name='assigned_items'>
+            <int32_t ref-target='item'/>
+        </stl-vector>
+
+        <int32_t name="quiver" ref-target='item'/>
+        <int32_t name="backpack" ref-target='item'/>
+        <int32_t name="flask" ref-target='item'/>
+
+        <int32_t name='unk_1'/>
+        <static-array name='activities' count='3' index-enum='squad_event_type'
+                      type-name='int32_t' ref-target='activity_entry'/>
+        <static-array name='events' count='3' index-enum='squad_event_type'
+                      type-name='int32_t' ref-target='activity_event'
+                      aux-value='$._global.activities[$._key]'/>
+
+        <int32_t name='unk_2'/>
+    </struct-type>
+
+    <struct-type type-name='squad_schedule_order'>
+        <pointer name="order" type-name='squad_order'/>
+        <int32_t name="min_count"/>
+        <stl-bit-vector name="positions"/>
+    </struct-type>
+
+    <struct-type type-name='squad_schedule_entry'>
+        <stl-string name='name'/>
+
+        <int16_t name='sleep_mode' comment='0 room, 1 barrack will, 2 barrack need'/>
+        <int16_t name='uniform_mode' comment='0 uniformed, 1 civ clothes'/>
+
+        <stl-vector name='orders' pointer-type='squad_schedule_order'/>
+
+        <stl-vector name='order_assignments' index-refers-to='$$._global._upglobal.positions[$]'>
+            -- weird change to pointer to int in v0.34.01
+            <pointer>
+                <int32_t refers-to='$$._parent._parent._parent.orders[$]'/>
+            </pointer>
+        </stl-vector>
+    </struct-type>
+
+    <struct-type type-name='squad' key-field='id' instance-vector='$global.world.squads.all'>
+        <int32_t name='id'/>
+
+        <compound name='name' type-name='language_name'/>
+
+        <stl-string name='alias' comment='if not empty, used instead of name'/>
+
+        <code-helper name='describe'>
+            (describe-obj $.name)
+        </code-helper>
+
+        <stl-vector name='positions' pointer-type='squad_position'/>
+
+        <stl-vector name="orders" pointer-type='squad_order'/>
+
+        <stl-vector name="schedule">
+            <pointer>
+                <static-array count='12' type-name='squad_schedule_entry'/>
+            </pointer>
+        </stl-vector>
+
+        <int32_t name="cur_alert_idx" refers-to='$$._parent.schedule[$]' init-value='0'/>
+
+        <stl-vector name="rooms">
+            <pointer>
+                <int32_t name='building_id' ref-target='building'/>
+                <bitfield name='mode' type-name='squad_use_flags'/>
+            </pointer>
+        </stl-vector>
+
+        <stl-vector name="rack_combat" type-name='int32_t' ref-target='building'/>
+        <stl-vector name="rack_training" type-name='int32_t' ref-target='building'/>
+
+        <int32_t name="uniform_priority"/>
+        <int32_t name="activity" ref-target='activity_entry'/>
+
+        <stl-vector name="ammunition" pointer-type='squad_ammo_spec'/>
+
+        <stl-vector name="train_weapon_free">
+            <int32_t ref-target='item'/>
+        </stl-vector>
+        <stl-vector name="train_weapon_inuse">
+            <int32_t ref-target='item'/>
+        </stl-vector>
+
+        <stl-vector name="ammo_items">
+            <int32_t ref-target='item'/>
+        </stl-vector>
+        <stl-vector name="ammo_units">
+            <int32_t ref-target='unit'/>
+        </stl-vector>
+
+        <int16_t name="carry_food"/>
+        <int16_t name="carry_water"/>
+
+        <int32_t name="entity_id" ref-target='historical_entity' since='v0.40.01'/>
+        <int32_t name="leader_position" since='v0.40.01'
+                 refers-to='(find-by-id $$._global.entity_id.ref-target.positions.own $id $)'/>
+        <int32_t name="leader_assignment" since='v0.40.01'
+                 refers-to='(find-by-id $$._global.entity_id.ref-target.positions.assignments $id $)'/>
+        <int32_t name='unk_1' since='v0.44.01'/>
+    </struct-type>
+
+    <enum-type type-name='squad_order_type'>
+        <enum-item name='MOVE'/>
+        <enum-item name='KILL_LIST'/>
+        <enum-item name='DEFEND_BURROWS'/>
+        <enum-item name='PATROL_ROUTE'/>
+        <enum-item name='TRAIN'/>
+        <enum-item name='DRIVE_ENTITY_OFF_SITE'/>
+        <enum-item name='CAUSE_TROUBLE_FOR_ENTITY'/>
+        <enum-item name='KILL_HF'/>
+        <enum-item name='DRIVE_ARMIES_FROM_SITE'/>
+        <enum-item name='RETRIEVE_ARTIFACT'/>
+        <enum-item name='RAID_SITE'/>
+        <enum-item name='RESCUE_HF'/>
+    </enum-type>
+
+    <enum-type type-name='squad_order_cannot_reason'>
+        text in viewscreen_unitlistst
+        <enum-item name='not_following_order'/>
+        <enum-item name='activity_cancelled'/>
+        <enum-item name='no_barracks'/>
+        <enum-item name='improper_barracks'/>
+        <enum-item name='no_activity'/>
+        <enum-item name='cannot_individually_drill'/>
+        <enum-item name='does_not_exist'/>
+        <enum-item name='no_archery_target'/>
+        <enum-item name='improper_building'/>
+        <enum-item name='unreachable_location'/>
+        <enum-item name='invalid_location'/>
+        <enum-item name='no_reachable_valid_target'/>
+        <enum-item name='no_burrow'/>
+        <enum-item name='not_in_squad'/>
+        <enum-item name='no_patrol_route'/>
+        <enum-item name='no_reachable_point_on_route'/>
+        <enum-item name='invalid_order'/>
+        <enum-item name='no_temple'/>
+        <enum-item name='no_library'/>
+        <enum-item name='no_item'/>
+        <enum-item name='cannot_leave_site'/>
+    </enum-type>
+
+    <class-type type-name='squad_order' original-name='squad_orderst'>
+        <int32_t name='unk_v40_1' init-value='-1' since='v0.40.01'/>
+        <int32_t name='unk_v40_2' init-value='-1' since='v0.40.01'/>
+        <int32_t name='year' since='v0.40.01'/>
+        <int32_t name='year_tick' since='v0.40.01'/>
+        <int32_t name='unk_v40_3' since='v0.40.01'/>
+        <int32_t name='unk_1'/>
+
+        <virtual-methods>
+            <vmethod name='clone'> <ret-type><pointer type-name='squad_order'/></ret-type> </vmethod>
+            <vmethod name='write_file'> <pointer name='file' type-name='file_compressorst'/> </vmethod>
+            <vmethod name='read_file'>
+                <pointer name='file' type-name='file_compressorst'/>
+                <enum name='loadversion' type-name='save_version'/>
+            </vmethod>
+            <vmethod ret-type='squad_order_type' name='getType'/>
+            <vmethod name='isPatrol' ret-type='bool'/> whether or not dwarves get unhappy while doing this
+
+            <vmethod is-destructor='true'/>
+            <vmethod name='offsetPosition'>
+                <int16_t name='x'/> <int16_t name='y'/> <int16_t name='z'/>
+            </vmethod>
+            <vmethod ret-type='bool' name='process'>
+                <int32_t/> <int32_t/> <pointer name='soldier' type-name='unit'/>
+            </vmethod>
+            <vmethod ret-type='squad_order_cannot_reason' name='reasonCannot'>
+                <pointer name='soldier' type-name='unit'/>
+            </vmethod>
+            <vmethod ret-type='bool' name='decUniformLock'>
+                <pointer name='soldier' type-name='unit'/>
+            </vmethod>
+
+            <vmethod name='isFulfilled' ret-type='bool' since='v0.34.11' comment='true if all killed'/>
+            <vmethod name='getTargetUnits'>
+                <ret-type><pointer><stl-vector type-name='int32_t'/></pointer></ret-type>
+            </vmethod>
+            <vmethod ret-type='int16_t' name='getUniformType'>
+                <pointer name='soldier' type-name='unit'/>
+            </vmethod>
+            <vmethod name='getDescription'> <pointer type-name='stl-string'/> </vmethod>
+            <vmethod name='isInactive' ret-type='bool' comment='always false'> <int32_t/> </vmethod>
+            <vmethod name='isCombat' ret-type='bool' comment='not train'/>
+        </virtual-methods>
+    </class-type>
+
+    <class-type type-name='squad_order_movest' inherits-from='squad_order'>
+        <compound name='pos' type-name='coord'/>
+        <int32_t name='point_id'/>
+    </class-type>
+
+    <class-type type-name='squad_order_kill_listst' inherits-from='squad_order'>
+        <stl-vector name='units'>
+            <int32_t ref-target='unit'/>
+        </stl-vector>
+        <stl-vector name='histfigs'>
+            <int32_t ref-target='historical_figure'/>
+        </stl-vector>
+        <stl-string name='title'/>
+    </class-type>
+
+    <class-type type-name='squad_order_defend_burrowsst' inherits-from='squad_order'>
+        <stl-vector name='burrows' type-name='int32_t' ref-target='burrow'/>
+    </class-type>
+
+    <class-type type-name='squad_order_patrol_routest' inherits-from='squad_order'>
+        <int32_t name='route_id'/>
+    </class-type>
+
+    <class-type type-name='squad_order_trainst' inherits-from='squad_order'/>
+
+    <class-type type-name='squad_order_drive_entity_off_sitest' inherits-from='squad_order'>
+        <int32_t name='unk_2'/>
+        <int32_t name='unk_3'/>
+        <stl-string name='unk_4'/>
+    </class-type>
+
+    <class-type type-name='squad_order_cause_trouble_for_entityst' inherits-from='squad_order'>
+        <int32_t name='entity_id' ref-target='historical_entity'/>
+        <stl-string name='override_name'/>
+    </class-type>
+
+    <class-type type-name='squad_order_kill_hfst' inherits-from='squad_order'>
+        <int32_t name='histfig_id' ref-target='historical_figure'/>
+        <stl-string name='title'/>
+    </class-type>
+
+    <class-type type-name='squad_order_drive_armies_from_sitest' inherits-from='squad_order'>
+        <int32_t name='unk_2'/>
+        <int32_t name='unk_3'/>
+        <stl-string name='unk_4'/>
+    </class-type>
+
+    <class-type type-name='squad_order_retrieve_artifactst' inherits-from='squad_order'>
+        <int32_t name='artifact_id' ref-target='artifact_record'/>
+        <compound name='unk_2' type-name='coord'/>
+    </class-type>
+
+    <class-type type-name='squad_order_raid_sitest' inherits-from='squad_order'>
+        <int32_t name='unk_2'/>
+        <compound name='unk_3' type-name='coord'/>
+    </class-type>
+
+    <class-type type-name='squad_order_rescue_hfst' inherits-from='squad_order'>
+        <int32_t name='unk_2'/>
+        <compound name='unk_3' type-name='coord'/>
+    </class-type>
+
+    Some army_controller research notes:
+      t1: All seen NomadicGroup. master = group boss, general = leader of army (with troops) referencing controller. Purpose and action unknown.
+
+      An InvasionOrder (2) is generated at the start of the season, shortly followed by an army that references an Invasion controller. The army disappears from the armies.all
+      vector once it enters the embark.
+
+      Invasion (4) has been seen via InvasionOrder army_controllers' armies, but only player fortress attacks have been studied. Prior to the army appears in the armies.all vector this controller
+      seems to be available via the army_controllers.all vector referencing the the InvasionOrder via unk_34.
+
+      t5: unk_34 seen referencing Invasion (4) and unk_38 referencing t5 (player fortress) or t7, disappearing when an army is generated (at least for player fortress).
+
+      Visit (12) appears in the army_controller vector only very briefly before legitimate visitors arrive, and is also used for exiled residents.
+
+      Quest (17) doesn't seem to contain any useful info except the site_id, time, and the artifact_id, in particular not anything that looks like
+      references to the questers themselves or their employer. However, prior to arriving at the site, armies in armies.all can reference the controller, and the army members
+      seem to match the questers that show up shortly thereafter, looking for the indicated artifact. As with InvasionOrder armies, quester armies disappear on embark arrival.
+
+      VillainousVisit (24): Villainous visitors. Legitimate ones use Visit army controllers, but only until they arrive, while villainous ones linger.
+    <struct-type type-name='army_controller' key-field='id'
+                 instance-vector='$global.world.army_controllers.all'>
+        <int32_t name='id' comment="all army.controllers seen and reached via InvasionOrder controllers' armies have been of type = Invasion and absent from the 'all' vector"/>
+        <int32_t name="entity_id" ref-target='historical_entity'/>
+        <int32_t name='site_id' ref-target="world_site" comment="Invasion/Order: site to invade. Visit/Quest/VillainousVisit: site to 'visit'"/>
+        <int32_t name='unk_1' init-value='-1'/>
+        <int32_t name='pos_x' comment="Look like the unit is map_block, i.e. 3 * 16 * world tile. Position of target, which is the starting point for defeated invasions"/>
+        <int32_t name='pos_y'/>
+        <int32_t name="unk_18" comment="Seen one case of 1990 for VillainVisiting"/>
+        <int32_t name="unk_1c" comment="same value for the same visitor"/>
+        <stl-vector name='unk_20' type-name='int32_t'/>
+        <int32_t name="year"/>
+        <int32_t name="year_tick"/>
+        <int32_t name='unk_34' ref-target='army_controller' comment="id of other army controller (Invasion) from same entity seen here"/>
+        <int32_t name='unk_38' ref-target='army_controller' comment="copy of the id seen here, as well as a t7 for a t5 controller"/>
+        <int32_t name='master_hf' ref-target='historical_figure' comment="InvasionOrder: Civ/sitegov master. Invasion: leader of the attack, can be in army nemesis vector"/>
+        <int32_t name='general_hf' ref-target='historical_figure' comment="InvasionOrder:leader of the attack. Invasion: subordinate squad leader(?) in army nemesis vector. Can be same as master"/>
+        <int32_t name="unk_44_1"/>
+        <int32_t name="unk_44_2"/>
+        <int32_t name='visitor_nemesis_id' ref-target='nemesis_record' comment="Set for VillainousVisit"/>
+        <int32_t name='unk_44_4' comment="3, 6 seen for Villain"/>
+        <pointer name="unk_44_5"/>
+        <pointer name="unk_v47_1" comment="Could be before unk_44: haven't found any non zero unk_44"/>
+        <pointer name="unk_v47_2"/>
+        <int32_t name="unk_50"/>
+        <stl-vector name="unk_54" type-name='int32_t'/>
+        <stl-vector name='unk_44_11v' since='v0.44.11'/>
+        <pointer name='mission_report' type-name='mission_report'/>
+        <compound name='data' is-union='true'>
+            <pointer type-name='army_controller_sub1' name='t1'/>
+            <pointer type-name='army_controller_invasion_order' name='InvasionOrder'/>
+            <pointer type-name='army_controller_invasion' name='Invasion'/>
+            <pointer type-name='army_controller_sub5' name='t5'/>
+            <pointer type-name='army_controller_sub6' name='t6'/>
+            <pointer type-name='army_controller_sub7' name='t7'/>
+            <pointer type-name='army_controller_sub11' name='t11'/>
+            <pointer type-name='army_controller_visit' name='Visit'/>
+            <pointer type-name='army_controller_sub13' name='t13'/>
+            <pointer type-name='army_controller_sub14' name='t14'/>
+            <pointer type-name='army_controller_sub15' name='t15'/>
+            <pointer type-name='army_controller_sub16' name='t16'/>
+            <pointer type-name='army_controller_quest' name='Quest'/>
+            <pointer type-name='army_controller_sub18' name='t18'/>
+            <pointer name='t19'/>
+            <pointer name='t20'/>
+            <pointer name='t21'/>
+            <pointer name='t22'/>
+            <pointer name='t23'/>
+            <pointer type-name='army_controller_villainous_visit' name='VillainousVisit'/>
+        </compound>
+        <enum name='type' base-type='int32_t'>
+            <enum-item name='t0'/>
+            <enum-item name='t1'/>
+            <enum-item name='InvasionOrder'/>
+            <enum-item name='t3'/>
+            <enum-item name='Invasion' comment="Seen on army_controller entries of armies referenced by InvasionOrder controllers (which do not refer to the InvasionOrder entries). These Invasion entries are not in the 'all' vector"/>
+            <enum-item name='t5'/>
+            <enum-item name='t6'/>
+            <enum-item name='t7'/>
+            <enum-item name='t8'/>
+            <enum-item name='t9'/>
+            <enum-item name='t10'/>
+            <enum-item name='t11'/>
+            <enum-item name='Visit' comment="Used both for regular visitors to a fortress and exiled characters sent to 'visit' other sites"/>
+            <enum-item name='t13'/>
+            <enum-item name='t14'/>
+            <enum-item name='t15'/>
+            <enum-item name='t16'/>
+            <enum-item name='Quest' comment="Used to indicate artifact quests"/>
+            <enum-item name='t18'/>
+            <enum-item name='t19'/>
+            <enum-item name='t20'/>
+            <enum-item name='t21'/>
+            <enum-item name='t22'/>
+            <enum-item name='t23'/>
+            <enum-item name='VillainousVisit'/>
+        </enum>
+    </struct-type>
+
+    <struct-type type-name='army_controller_sub1'>
+        <int32_t name='unk_1'/>
+        <int32_t name='unk_2'/>
+        <int32_t name='unk_3'/>
+    </struct-type>
+
+    <struct-type type-name='army_controller_invasion_order'>
+        <int32_t name='unk_1'/>
+        <int32_t name='unk_2'/>
+        <int32_t name='unk_3'/>
+        <int32_t name='unk_4'/>
+        <stl-vector name='unk_4a'>
+            <pointer>
+                <int32_t name='army_id' ref-target='army' comment="no longer available when an attack has started"/>
+                <int32_t name='pos_x_a' comment="In map_blocks, i.e. in 3 * 16 * world tiles"/>
+                <int32_t name='pos_y_a'/>
+                <int32_t name='pos_x_b' comment="One is probably start and one is probably end of some movement"/>
+                <int32_t name='pos_y_b'/>
+                <int32_t name='invasion_count' comment="size of the army, including leaders"/>
+            </pointer>
+        </stl-vector>
+        <stl-vector name='unk_5' type-name='int32_t'/>
+        <stl-vector name='unk_6' type-name='int32_t'/>
+        <int32_t name='unk_7'/>
+        <int32_t name='unk_8'/>
+        <int32_t name='unk_9'/>
+    </struct-type>
+
+    <struct-type type-name='army_controller_invasion'>
+        <int32_t name='unk_1'/>
+        <bitfield name='unk_2'>
+            <flag-bit name='not_sleeping' comment='set to 1 to make army wake up'/>
+            <flag-bit name='unk_2' comment='seen set on gobbo/necro attack controller'/>
+            <flag-bit name='unk_3'/>
+            <flag-bit name='unk_4' comment='sen set on gobbo/necro attack controller'/>
+        </bitfield>
+    </struct-type>
+
+    <struct-type type-name='army_controller_sub5'>
+        <int32_t name='pos_x' comment="in map_block coordinates. Same as those of the main struct seen"/>
+        <int32_t name='pos_y'/>
+        <int32_t name='unk_1' comment="0 seen"/>
+        <int32_t name='year'/>
+        <int32_t name='year_tick'/>
+    </struct-type>
+
+    <struct-type type-name='army_controller_sub6'>
+        <int32_t name='unk_1'/>
+        <int32_t name='unk_2'/>
+        <int32_t name='unk_3'/>
+        <int32_t name='unk_4'/>
+        <int32_t name='unk_5'/>
+        <int32_t name='unk_6'/>
+        <int32_t name='unk_7'/>
+        <int32_t name='unk_8'/>
+        <int32_t name='unk_9'/>
+    </struct-type>
+
+    <struct-type type-name='army_controller_sub7'>
+        <int32_t name='unk_1' init-value='-1'/>
+        <int32_t name='unk_2' init-value='-1'/>
+        <stl-vector name='unk_3'>
+            <pointer>
+                <int32_t name='unk_1'/>
+                <int32_t name='unk_2'/>
+                <int32_t name='unk_3'/>
+                <int32_t name='unk_4'/>
+                <int32_t name='unk_5'/>
+                <int32_t name='unk_6'/>
+            </pointer>
+        </stl-vector>
+        <int32_t name='unk_4' comment="0 seen"/>
+        <int32_t name='pos_x' comment="map_block coordinates. Same as those of the main struct seen"/>
+        <int32_t name='pos_y'/>
+        <int32_t name='unk_5' comment="0 seen"/>
+        <int32_t name='unk_6' init-value='-1'/>
+        <int32_t name='unk_7' init-value='-1'/>
+        <int32_t name='unk_8' init-value='-1'/>
+    </struct-type>
+
+    <struct-type type-name='army_controller_sub11'>
+        <int32_t name='unk_1' init-value='-1'/>
+        <int32_t name='unk_2' init-value='-1'/>
+        <stl-vector name='unk_3'>
+            <pointer comment="probably the same type as the corresponding one of army_controller_invasion_order">
+                <int32_t name='army_id' ref-target='army'/>
+                <int32_t name='pos_x_a' comment="map_block coordinates"/>
+                <int32_t name='pos_y_a'/>
+                <int32_t name='pos_x_b'/>
+                <int32_t name='pos_y_b'/>
+                <int32_t name='invasion_count' comment="very much a guess from one sample, but it matched the army size"/>
+            </pointer>
+        </stl-vector>
+    </struct-type>
+
+    <struct-type type-name='army_controller_visit'>
+        <int32_t name='unk_1' init-value='-1'/>
+        <int32_t name='unk_2' init-value='-1'/>
+        <int32_t name='unk_3' init-value='0' comment="2 seen on exiled character"/>
+        <stl-vector name='unk_4'>
+            <pointer>
+                <int32_t name='unk_1'/>
+                <int32_t name='unk_2'/>
+                <int32_t name='unk_3'/>
+                <int32_t name='unk_4'/>
+                <int32_t name='unk_5'/>
+                <int32_t name='unk_6'/>
+            </pointer>
+        </stl-vector>
+        <int32_t name='unk_5' init-value='-1'/>
+        <int32_t name='unk_6' init-value='-1'/>
+        <int32_t name='abstract_building' init-value='-1' comment="Monster slayers have -1"/>
+        <enum name='purpose' type-name='history_event_reason' base-type='int32_t'/>
+    </struct-type>
+
+    <struct-type type-name='army_controller_sub13'>
+        <int32_t name='unk_1'/>
+        <int32_t name='unk_2'/>
+        <int32_t name='unk_3'/>
+        <stl-vector name='unk_4'>
+            <pointer>
+                <int32_t name='unk_1'/>
+                <int32_t name='unk_2'/>
+                <int32_t name='unk_3'/>
+                <int32_t name='unk_4'/>
+                <int32_t name='unk_5'/>
+                <int32_t name='unk_6'/>
+            </pointer>
+        </stl-vector>
+    </struct-type>
+
+    <struct-type type-name='army_controller_sub14'>
+        <int32_t name='unk_1'/>
+        <int32_t name='unk_2'/>
+        <int32_t name='unk_3'/>
+        <stl-vector name='unk_4'>
+            <pointer>
+                <int32_t name='unk_1'/>
+                <int32_t name='unk_2'/>
+                <int32_t name='unk_3'/>
+                <int32_t name='unk_4'/>
+                <int32_t name='unk_5'/>
+                <int32_t name='unk_6'/>
+            </pointer>
+        </stl-vector>
+    </struct-type>
+
+    <struct-type type-name='army_controller_sub15'>
+        <int32_t name='unk_1'/>
+        <int32_t name='unk_2'/>
+        <stl-vector name='unk_3'>
+            <pointer>
+                <int32_t name='unk_1'/>
+                <int32_t name='unk_2'/>
+                <int32_t name='unk_3'/>
+                <int32_t name='unk_4'/>
+                <int32_t name='unk_5'/>
+                <int32_t name='unk_6'/>
+            </pointer>
+        </stl-vector>
+        <int32_t name='unk_4'/>
+        <int32_t name='unk_5'/>
+        <int32_t name='unk_6'/>
+        <int32_t name='unk_7'/>
+        <int32_t name='unk_8'/>
+        <int32_t name='unk_9'/>
+        <int32_t name='unk_10'/>
+        <int32_t name='unk_11'/>
+        <int32_t name='unk_12'/>
+        <int32_t name='unk_13'/>
+    </struct-type>
+
+    <struct-type type-name='army_controller_sub16'>
+        <int32_t name='unk_1'/>
+    </struct-type>
+
+    <struct-type type-name='army_controller_quest'>
+        <int32_t name='artifact_id' ref-target="artifact_record"/>
+        <int32_t name='unk_1' init-value='-1'/>
+        <int32_t name='unk_2' init-value='-1'/>
+        <int32_t name='unk_3'/>
+    </struct-type>
+
+    <struct-type type-name='army_controller_sub18'>
+        <int32_t name='unk_1'/>
+        <int32_t name='unk_2'/>
+    </struct-type>
+
+    <struct-type type-name='army_controller_villainous_visit'>
+        <int32_t name='site_id' ref-target='world_site'/>
+        <int32_t name='entity_id' ref-target='historical_entity'/>
+        <int32_t name='abstract_building' comment="-1 before arrival"/>
+        <enum name='purpose' type-name='history_event_reason' base-type='int32_t' comment="none before arrival"/>
+    </struct-type>
+
+    <enum-type type-name='army_flags'>
+        <enum-item name='player'/>
+    </enum-type>
+
+    <struct-type type-name='army' key-field='id'
+                 instance-vector='$global.world.armies.all'>
+        <int32_t name='id'/>
+        <compound name='pos' type-name='coord'/>
+        <compound name='last_pos' type-name='coord'/>
+        <int16_t name='unk_10' init-value='0' comment="1, 2, 5, 10, 15, 20, 21 seen"/>
+        <int32_t name='unk_14' init-value='0' comment="When set, large value like army or army_controller id, but no match found"/>
+        <int32_t name='unk_18' init-value='0'/>
+        <stl-vector name='members'>
+            <pointer>
+                <int32_t name='nemesis_id' init-value='-1'/>
+                <int32_t name='hunger_timer'/>
+                <int32_t name='thirst_timer'/>
+                <int32_t name='sleepiness_timer'/>
+                <int32_t name='stored_fat'/>
+                <int32_t name='unk_14'/>
+                <int32_t name='unk_18'/>
+                <int32_t name='unk_1c' init-value='-1000000'/>
+                <int32_t name='unk_20' init-value='-1000000'/>
+                <int32_t name='unk_24' init-value='-1000000'/>
+                <int32_t name='unk_28'/>
+                <int32_t name='unk_1' since='v0.44.01'/>
+                <int32_t name='unk_2c' init-value='100'/>
+                <int32_t name='unk_30'/>
+                <int32_t name='unk_34'/>
+                <stl-vector name='unk_38' pointer-type='stl-string'/>
+                <int32_t name='unk_v42_1' since='v0.42.01'/>
+                <int32_t name='unk_2' init-value='-1' since='v0.47.01'/>
+                <int32_t name='unk_3' since='v0.47.01'/>
+            </pointer>
+        </stl-vector>
+        <stl-vector name='squads' pointer-type='world_site_inhabitant'/>
+        <int32_t name='unk_3c'/>
+        <int32_t name='unk_1' since='v0.44.01'/>
+        <int32_t name='unk_2' since='v0.47.03' comment="16 only value seen"/>
+        <int32_t name='controller_id' ref-target='army_controller'/>
+        <pointer name='controller' type-name="army_controller"/>
+        <df-flagarray name='flags' index-enum='army_flags'/>
+        <stl-vector name='block_path_x' type-name='int32_t' comment="path in map_block coordinates. Seems to be the near term"/>
+        <stl-vector name='block_path_y' type-name='int32_t'/>
+        <stl-vector name='path_x' type-name='int32_t' comment="path in world coordinates. Seems to be the extension beyond those laid out in block_path_x/y"/>
+        <stl-vector name='path_y' type-name='int32_t'/>
+        <int32_t name='unk_90' init-value='-1'/>
+        <int32_t name='unk_94' init-value='-1' comment="Number counting down. In examined save starts at 80 for id 38 counting down to 0 at 113, obviously with missing numbers somewhere"/>
+        <int32_t name='unk_98' init-value='-1'/>
+        <int32_t name='min_smell_trigger'/>
+        <int32_t name='max_odor_level' comment='1000 if undead are present'/>
+        <int32_t name='max_low_light_vision'/>
+        <stl-vector name='sense_creature_classes' pointer-type='stl-string'/>
+        <stl-vector name='creature_class' pointer-type='stl-string' comment="Usually 'GENERAL_POISON' and 'MAMMAL'. Seen something else for undead"/>
+        <enum type-name='item_type' base-type='int16_t' name='item_type'/>
+        <int16_t name='item_subtype' refers-to='(item-subtype-target $$._parent.item_type $)'/>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <stl-vector name='unk_4407_1' since='v0.44.07'/>
+    </struct-type>
+</data-definition>
+
+<!--
+Local Variables:
+indent-tabs-mode: nil
+nxml-child-indent: 4
+End:
+-->

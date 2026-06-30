@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ display_name }} — {{ slug }}{% endblock %}
+{% block content %}
+<div class="breadcrumb">
+  <a href="/">Worlds</a> /
+  <a href="/world/{{ slug }}">{{ slug }}</a> /
+  <a href="/world/{{ slug }}/figures">Figures</a> /
+  {{ display_name }}
+</div>
+<h1>{{ display_name }}</h1>
+<p class="subtitle">Figure #{{ figure.figure_id }}</p>
+
+<h2>Identity</h2>
+<dl class="detail">
+  <dt>Figure ID</dt><dd class="mono">{{ figure.figure_id }}</dd>
+  <dt>Civilization</dt>
+  <dd>
+    {% if civ %}
+    <a href="/world/{{ slug }}/entities/{{ civ.entity_id }}">{{ civ_name }}</a>
+    {% else %}—{% endif %}
+  </dd>
+  <dt>Race / caste</dt><dd class="mono">{{ figure.race or '—' }} / {{ figure.caste or '—' }}</dd>
+  <dt>Profession</dt><dd class="mono">{{ figure.profession or '—' }}</dd>
+  <dt>Sex</dt><dd class="mono">{{ figure.sex or '—' }}</dd>
+</dl>
+
+<h2>Life dates</h2>
+<dl class="detail">
+  <dt>Appeared</dt><dd class="mono">{{ figure.appeared_year or '—' }}</dd>
+  <dt>Born</dt><dd class="mono">{{ figure.born_year or '—' }}{% if figure.born_seconds %} ({{ figure.born_seconds }}s){% endif %}</dd>
+  <dt>Died</dt><dd class="mono">{{ figure.died_year or '—' }}{% if figure.died_seconds %} ({{ figure.died_seconds }}s){% endif %}</dd>
+  <dt>Curse</dt><dd class="mono">{{ figure.curse_year or '—' }}</dd>
+</dl>
+
+<h2>Relations</h2>
+<dl class="detail">
+  <dt>Family head</dt>
+  <dd>
+    {% if family_head %}
+    <a href="/world/{{ slug }}/figures/{{ family_head.figure_id }}">{{ family_head_name }}</a>
+    {% else %}—{% endif %}
+  </dd>
+  <dt>Nemesis</dt>
+  <dd>
+    {% if nemesis %}
+    <a href="/world/{{ slug }}/figures/{{ nemesis.figure_id }}">{{ nemesis_name }}</a>
+    {% else %}—{% endif %}
+  </dd>
+  <dt>Unit ID</dt><dd class="mono">{{ figure.unit_id or '—' }}</dd>
+  <dt>Population ID</dt><dd class="mono">{{ figure.population_id or '—' }}</dd>
+</dl>
+
+{% if civ %}
+<p><a href="/world/{{ slug }}/figures?civ_id={{ civ.entity_id }}">More figures from {{ civ_name }} →</a></p>
+{% endif %}
+{% endblock %}
