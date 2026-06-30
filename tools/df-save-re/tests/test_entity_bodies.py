@@ -4,6 +4,7 @@ from pathlib import Path
 
 from df_save_re.compression import decompress_file
 from df_save_re.deserializers.entity_bodies import (
+    measure_entity_catalog_region,
     sample_entity_body_spans,
     summarize_entity_body_spans,
 )
@@ -25,6 +26,24 @@ def test_entity_body_span_summary_namushul():
     assert 1500 <= summary.min_span <= 4000
     assert summary.median_span >= summary.min_span
     assert summary.catalog_span_bytes > 1_000_000
+
+
+def test_entity_catalog_region_namushul():
+    payload = decompress_file(FIXTURE).payload
+    preamble = parse_dat_preamble(payload)
+    layout = discover_layout_landmarks(payload, preamble)
+    catalog = catalog_entity_block(payload, search_end=layout.history_stats)
+    region = measure_entity_catalog_region(
+        payload,
+        catalog.entities,
+        region_end=layout.first_region_block,
+        header_capacity_hint=preamble.header.max_ids[4],
+    )
+    assert region is not None
+    assert region.header_count == len(catalog.entities)
+    assert region.max_catalog_id == 203
+    assert region.region_end == layout.first_region_block
+    assert region.gap_after_catalog_bytes > 1_000_000
 
 
 def test_entity_body_samples_have_positive_spans():

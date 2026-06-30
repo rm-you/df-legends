@@ -52,6 +52,10 @@ This block is **metadata**, not the start of the `world_history` stl-vectors.
 |--------|--------------|------------------------------|
 | `history_event` | 113118 | No high-confidence hit |
 | `historical_figure` | 12747 | No high-confidence hit |
-| `world_site` | 350 | Weak count=350 candidates only (fail header parse) |
+| `world_site` | 350 | Marker-anchored catalog @ name table ~0x1193ae5 stride 354; posnull vector still unconfirmed |
+
+## Site name table (Namushul cluster)
+
+Fixed-stride records in `0x1193ae5` + `site_id_offset * 354` hold `language_name.words` runs for many late site ids (341–350). Earlier sites use scattered marker offsets in the entity→history gap.
 
 Next step: Ghidra trace of `world_site::read_file` and `historyst::read_file` in libgraphics.so / DF 0.47.05 binary.

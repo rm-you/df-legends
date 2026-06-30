@@ -7,7 +7,12 @@ from dataclasses import dataclass, field
 from io import BytesIO
 
 from .binary_reader import BinaryReader
-from .deserializers.entity_bodies import sample_entity_body_spans, summarize_entity_body_spans
+from .deserializers.entity_bodies import (
+    EntityCatalogRegion,
+    measure_entity_catalog_region,
+    sample_entity_body_spans,
+    summarize_entity_body_spans,
+)
 from .deserializers.entity_def import EntityScanResult, HistoricalEntityHeader, catalog_entity_block, scan_entities
 from .deserializers.entity_names import ResolvedEntityName, resolve_named_entities
 from .deserializers.primitives import WorldHeaderHypothesis
@@ -17,6 +22,7 @@ from .deserializers.world_dat import DatPreamble
 from .deserializers.history_stats import probe_history_stats
 from .deserializers.vector_probe import find_posnull_vector_candidates
 from .deserializers.site_names import SiteNameScanResult, scan_site_name_markers
+from .deserializers.site_catalog import WorldSiteCatalog, build_world_site_catalog
 from .deserializers.site_text import SiteTextCatalog, parse_site_text_catalog
 from .deserializers.history_text import HistoryTextCatalog, parse_history_text_catalog
 from .deserializers.world_layout import WorldLayoutLandmarks, discover_layout_landmarks
@@ -54,8 +60,10 @@ class LegendsSnapshot:
     layout: WorldLayoutLandmarks | None = None
     history_stats: HistoryStatsBlock | None = None
     site_name_scan: SiteNameScanResult | None = None
+    world_site_catalog: WorldSiteCatalog | None = None
     site_text_catalog: SiteTextCatalog | None = None
     history_text_catalog: HistoryTextCatalog | None = None
+    entity_catalog_region: EntityCatalogRegion | None = None
     vector_probe: VectorProbeSummary | None = None
     notes: list[str] = field(default_factory=list)
 
@@ -157,7 +165,24 @@ def extract_legends_snapshot(
             )
 
     layout = discover_layout_landmarks(payload, preamble)
+    entity_catalog_region: EntityCatalogRegion | None = None
+    if catalog and layout.first_region_block is not None:
+        capacity = preamble.header.max_ids[4] if len(preamble.header.max_ids) > 4 else None
+        entity_catalog_region = measure_entity_catalog_region(
+            payload,
+            catalog,
+            region_end=layout.first_region_block,
+            header_capacity_hint=capacity,
+        )
+        if entity_catalog_region:
+            notes.append(
+                f"entity region: {entity_catalog_region.header_count} catalog headers "
+                f"(ids 0..{entity_catalog_region.max_catalog_id}), "
+                f"skip target @ 0x{entity_catalog_region.region_end:x} "
+                f"(gap {entity_catalog_region.gap_after_catalog_bytes:,} bytes)"
+            )
     site_name_scan: SiteNameScanResult | None = None
+    world_site_catalog: WorldSiteCatalog | None = None
     if (
         layout.first_region_block is not None
         and layout.history_stats is not None
@@ -170,6 +195,15 @@ def extract_legends_snapshot(
             region_end=layout.history_stats,
             site_names=site_names,
             search_start=layout.last_catalog_entity,
+        )
+    site_text_catalog = parse_site_text_catalog(sites_text) if sites_text else None
+    if site_name_scan and site_text_catalog:
+        world_site_catalog = build_world_site_catalog(
+            payload,
+            name_scan=site_name_scan,
+            text_catalog=site_text_catalog,
+            search_start=layout.last_catalog_entity,
+            search_end=layout.history_stats,
         )
     if layout.first_region_block is not None:
         notes.append(
@@ -184,7 +218,6 @@ def extract_legends_snapshot(
             f"(events={stats.event_counter:,}, figs={stats.histfig_counter:,}; "
             f"not verified as world_history vector start)"
         )
-    site_text_catalog = parse_site_text_catalog(sites_text) if sites_text else None
     history_text_catalog = (
         parse_history_text_catalog(history_text) if history_text else None
     )
@@ -192,6 +225,19 @@ def extract_legends_snapshot(
         notes.append(
             f"site text catalog: {site_text_catalog.site_count} sites parsed from export "
             f"(populations, owners — text ground truth)"
+        )
+    if world_site_catalog:
+        notes.append(
+            f"world_site catalog: {world_site_catalog.site_count} marker-anchored records "
+            f"({world_site_catalog.header_enriched_count} with civ/type/pos fields"
+            + (
+                f"; name table @ 0x{world_site_catalog.name_table_base:x} "
+                f"stride {world_site_catalog.name_table_stride}"
+                if world_site_catalog.name_table_base is not None
+                and world_site_catalog.name_table_stride is not None
+                else ""
+            )
+            + ")"
         )
     if history_text_catalog:
         notes.append(
@@ -202,8 +248,7 @@ def extract_legends_snapshot(
     if site_name_scan:
         notes.append(
             f"site name markers: {site_name_scan.located_count} titles located "
-            f"in mid region 0x{site_name_scan.region_start:x}–0x{site_name_scan.region_end:x} "
-            f"(language_name word runs; full world_site parse still open)"
+            f"in mid region 0x{site_name_scan.region_start:x}–0x{site_name_scan.region_end:x}"
         )
 
     vector_probe: VectorProbeSummary | None = None
@@ -279,8 +324,10 @@ def extract_legends_snapshot(
         layout=layout,
         history_stats=stats,
         site_name_scan=site_name_scan,
+        world_site_catalog=world_site_catalog,
         site_text_catalog=site_text_catalog,
         history_text_catalog=history_text_catalog,
+        entity_catalog_region=entity_catalog_region,
         vector_probe=vector_probe,
         notes=notes,
     )
@@ -402,6 +449,37 @@ def snapshot_to_dict(snapshot: LegendsSnapshot) -> dict:
                 ],
             }
             if snapshot.site_name_scan
+            else None
+        ),
+        "world_site_catalog": (
+            {
+                "site_count": snapshot.world_site_catalog.site_count,
+                "header_enriched_count": snapshot.world_site_catalog.header_enriched_count,
+                "name_table_base": snapshot.world_site_catalog.name_table_base,
+                "name_table_stride": snapshot.world_site_catalog.name_table_stride,
+                "sample": [
+                    {
+                        "id": rec.site_id,
+                        "name": rec.display_name,
+                        "marker_offset": rec.name_marker_offset,
+                        "type": rec.site_type_name,
+                        "civ_id": rec.civ_id,
+                    }
+                    for rec in snapshot.world_site_catalog.records[:10]
+                ],
+            }
+            if snapshot.world_site_catalog
+            else None
+        ),
+        "entity_catalog_region": (
+            {
+                "header_count": snapshot.entity_catalog_region.header_count,
+                "max_catalog_id": snapshot.entity_catalog_region.max_catalog_id,
+                "header_capacity_hint": snapshot.entity_catalog_region.header_capacity_hint,
+                "region_end": snapshot.entity_catalog_region.region_end,
+                "gap_after_catalog_bytes": snapshot.entity_catalog_region.gap_after_catalog_bytes,
+            }
+            if snapshot.entity_catalog_region
             else None
         ),
         "site_text_catalog": (

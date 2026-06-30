@@ -34,6 +34,27 @@ class EntityBodySpanSummary:
     catalog_span_bytes: int
 
 
+@dataclass(frozen=True)
+class EntityCatalogRegion:
+    """
+    Bounds of the historical_entity blob region on Namushul-style saves.
+
+    Header scan finds validated civ definition headers (78 on Namushul); the
+    header max_ids[4] slot is the next entity id capacity echo (~7949), not
+    the number of parsed headers. Region end is the first *START REGION SAVE*.
+    """
+
+    header_count: int
+    max_catalog_id: int
+    header_capacity_hint: int | None
+    first_header_offset: int
+    last_header_offset: int
+    estimated_last_body_end: int
+    region_end: int
+    catalog_span_bytes: int
+    gap_after_catalog_bytes: int
+
+
 def _body_start_after_header(payload: bytes, ent: HistoricalEntityHeader) -> int:
     body_start = ent.payload_offset + ent.header_bytes
     if ent.has_name:
@@ -84,7 +105,6 @@ def summarize_entity_body_spans(
         body_start = _body_start_after_header(payload, ent)
         body_starts.append(body_start)
         spans.append(ordered[i + 1].payload_offset - body_start)
-    last_body = _body_start_after_header(payload, ordered[-1])
     return EntityBodySpanSummary(
         sample_count=len(spans),
         min_span=min(spans),
@@ -94,3 +114,45 @@ def summarize_entity_body_spans(
         catalog_body_end=ordered[-1].payload_offset + ordered[-1].header_bytes,
         catalog_span_bytes=ordered[-1].payload_offset - ordered[0].payload_offset,
     )
+
+
+def measure_entity_catalog_region(
+    payload: bytes,
+    entities: list[HistoricalEntityHeader],
+    *,
+    region_end: int,
+    header_capacity_hint: int | None = None,
+) -> EntityCatalogRegion | None:
+    """Locate entity catalog bounds and skip target before region/world blocks."""
+    if not entities:
+        return None
+    ordered = sorted(entities, key=lambda e: e.payload_offset)
+    summary = summarize_entity_body_spans(payload, ordered)
+    if summary is None:
+        return None
+    last = ordered[-1]
+    last_body_start = _body_start_after_header(payload, last)
+    if len(ordered) >= 2:
+        estimated_last_body_end = ordered[-1].payload_offset + (
+            ordered[-1].payload_offset - ordered[-2].payload_offset
+        )
+    else:
+        estimated_last_body_end = last_body_start + summary.median_span
+    estimated_last_body_end = min(estimated_last_body_end, region_end)
+    return EntityCatalogRegion(
+        header_count=len(ordered),
+        max_catalog_id=max(ent.entity_id for ent in ordered),
+        header_capacity_hint=header_capacity_hint,
+        first_header_offset=ordered[0].payload_offset,
+        last_header_offset=last.payload_offset,
+        estimated_last_body_end=estimated_last_body_end,
+        region_end=region_end,
+        catalog_span_bytes=summary.catalog_span_bytes,
+        gap_after_catalog_bytes=max(0, region_end - estimated_last_body_end),
+    )
+
+
+def skip_entity_catalog_region(reader: BinaryReader, region: EntityCatalogRegion) -> int:
+    """Seek past the measured entity catalog region (body skipper stub)."""
+    reader.seek(region.region_end)
+    return reader.tell()

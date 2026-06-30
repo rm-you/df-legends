@@ -117,10 +117,13 @@ def test_verify_uploaded_exports_if_present():
     report = verify_snapshot_against_text(snap, bundle)
 
     assert report.failed == 0
-    assert report.passed >= 9
+    assert report.passed >= 12
     assert report.pending >= 2
     sites = next(c for c in report.checks if c.field == "site_count")
     assert sites.expected == 350
+    assert sites.status == VerifyStatus.PASS
+    world_sites = next(c for c in report.checks if c.field == "world_site_catalog")
+    assert world_sites.actual == 350
     markers = next(c for c in report.checks if c.field == "site_name_markers")
     assert markers.actual >= 340
     assert markers.status == VerifyStatus.PASS

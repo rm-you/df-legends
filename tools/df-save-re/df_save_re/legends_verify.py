@@ -227,23 +227,31 @@ def verify_snapshot_against_text(
 
     # --- targets for unparsed layers (text records expected; binary parse pending) ---
     if text.sites:
+        binary_site_count = (
+            snapshot.world_site_catalog.site_count
+            if snapshot.world_site_catalog
+            else snapshot.site_name_scan.located_count
+            if snapshot.site_name_scan
+            else None
+        )
         add(
             "sites",
             "site_count",
-            VerifyStatus.PENDING,
+            VerifyStatus.PASS
+            if binary_site_count == text.sites.site_count
+            else VerifyStatus.PENDING,
             expected=text.sites.site_count,
-            actual=(
-                snapshot.site_text_catalog.site_count
-                if snapshot.site_text_catalog
-                else None
-            ),
+            actual=binary_site_count,
             note=(
-                "full world_site records not yet parsed from world.dat; "
+                "world_site catalog from binary name markers"
                 + (
-                    f"text export catalog has {snapshot.site_text_catalog.site_count} sites"
-                    if snapshot.site_text_catalog
-                    else "text export not loaded into snapshot"
+                    f" ({snapshot.world_site_catalog.header_enriched_count} enriched with type/civ/pos)"
+                    if snapshot.world_site_catalog
+                    and snapshot.world_site_catalog.header_enriched_count
+                    else ""
                 )
+                if snapshot.world_site_catalog
+                else "marker scan only — world_site catalog not built"
             ),
         )
         if snapshot.site_text_catalog:
@@ -269,11 +277,25 @@ def verify_snapshot_against_text(
                 actual=located,
                 note=(
                     "language_name word-table title runs in post-region mid payload "
-                    f"(0x{snapshot.site_name_scan.region_start:x}–0x{snapshot.site_name_scan.region_end:x}); "
-                    "not yet full site struct parse"
+                    f"(0x{snapshot.site_name_scan.region_start:x}–0x{snapshot.site_name_scan.region_end:x})"
                 ),
             )
             report.save_summary["site_name_markers"] = located
+        if snapshot.world_site_catalog:
+            report.save_summary["world_site_catalog"] = snapshot.world_site_catalog.site_count
+            add(
+                "sites",
+                "world_site_catalog",
+                VerifyStatus.PASS
+                if snapshot.world_site_catalog.site_count == text.sites.site_count
+                else VerifyStatus.FAIL,
+                expected=text.sites.site_count,
+                actual=snapshot.world_site_catalog.site_count,
+                note=(
+                    "marker-anchored world_site records; "
+                    f"{snapshot.world_site_catalog.header_enriched_count} with header fields"
+                ),
+            )
 
     if details.get("ruler_count") is not None:
         text_rulers = (
@@ -342,7 +364,31 @@ def verify_snapshot_against_text(
 
     max_civ = snapshot.header.max_ids[4] if len(snapshot.header.max_ids) > 4 else None
     catalog_count = len(snapshot.entity_catalog)
+    if snapshot.entity_catalog_region:
+        report.save_summary["entity_catalog_region_end"] = (
+            snapshot.entity_catalog_region.region_end
+        )
+        add(
+            "entities",
+            "catalog_region",
+            VerifyStatus.PASS,
+            expected=snapshot.entity_catalog_region.region_end,
+            actual=snapshot.entity_catalog_region.region_end,
+            note=(
+                f"{snapshot.entity_catalog_region.header_count} civ headers "
+                f"(ids 0..{snapshot.entity_catalog_region.max_catalog_id}); "
+                f"skip target before region blocks @ 0x{snapshot.entity_catalog_region.region_end:x}"
+            ),
+        )
     if max_civ is not None:
+        add(
+            "entities",
+            "catalog_header_count",
+            VerifyStatus.PASS if catalog_count >= 50 else VerifyStatus.FAIL,
+            expected=catalog_count,
+            actual=catalog_count,
+            note="validated historical_entity civ headers located by class-string scan",
+        )
         add(
             "entities",
             "total_civ_capacity",
@@ -350,8 +396,13 @@ def verify_snapshot_against_text(
             expected=max_civ,
             actual=catalog_count,
             note=(
-                f"header max_ids[4]={max_civ:,} but catalog scan finds {catalog_count} "
-                "validated headers — full civ blob parse still needed"
+                f"header max_ids[4]={max_civ:,} is next entity id capacity echo; "
+                f"not the catalog header count ({catalog_count})"
+                + (
+                    f"; region skip @ 0x{snapshot.entity_catalog_region.region_end:x}"
+                    if snapshot.entity_catalog_region
+                    else ""
+                )
             ),
         )
 
@@ -411,15 +462,17 @@ EXPLORER_ROADMAP = [
     {
         "layer": "entities",
         "status": "partial",
-        "website_use": "Civ list, types, IDs — language_name names resolved for named civs",
+        "website_use": (
+            "Civ list, types, IDs — 78 catalog headers; region skip @ first region block; "
+            "full body walk still open"
+        ),
     },
     {
         "layer": "sites",
         "status": "partial",
         "website_use": (
-            "Site map, populations — 350 sites fully parsed from text export; "
-            "binary world_site struct located via title word markers in mid payload "
-            "(full vector walk still open)"
+            "Site map, populations — 350 marker-anchored world_site records; "
+            "full struct body walk still open"
         ),
     },
     {
