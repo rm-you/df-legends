@@ -342,7 +342,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         resolved.payload,
         preamble=resolved.preamble,
     )
-    report = verify_world_dat_against_text(snap, args.legends_text)
+    report = verify_world_dat_against_text(snap, args.legends_text, save_path=str(path))
 
     if args.json:
         print(json.dumps(report_to_dict(report), indent=2))

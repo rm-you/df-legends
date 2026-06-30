@@ -77,3 +77,9 @@ def test_core_layers_smoke(resolved_fixture):
         assert snap.world_site_catalog.site_count > ceiling // 2
     else:
         assert snap.world_site_catalog.site_count > 0
+
+    # Engine layer walks must be wired with authoritative counts on every fixture.
+    walks = {w.layer: w for w in snap.engine_walks}
+    assert "figures" in walks and "events_death" in walks
+    assert walks["figures"].authoritative_count == snap.header.max_ids[8]
+    assert walks["events_death"].authoritative_count == snap.header.max_ids[9]
