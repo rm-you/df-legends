@@ -232,19 +232,81 @@ def verify_snapshot_against_text(
             "site_count",
             VerifyStatus.PENDING,
             expected=text.sites.site_count,
-            actual=None,
-            note="world_site vector not yet located/parsed in world.dat",
+            actual=(
+                snapshot.site_text_catalog.site_count
+                if snapshot.site_text_catalog
+                else None
+            ),
+            note=(
+                "full world_site records not yet parsed from world.dat; "
+                + (
+                    f"text export catalog has {snapshot.site_text_catalog.site_count} sites"
+                    if snapshot.site_text_catalog
+                    else "text export not loaded into snapshot"
+                )
+            ),
         )
+        if snapshot.site_text_catalog:
+            add(
+                "sites",
+                "site_text_catalog",
+                VerifyStatus.PASS
+                if snapshot.site_text_catalog.site_count == text.sites.site_count
+                else VerifyStatus.FAIL,
+                expected=text.sites.site_count,
+                actual=snapshot.site_text_catalog.site_count,
+                note="structured parse of *-world_sites_and_pops*.txt (owners, populations)",
+            )
+            report.save_summary["site_text_catalog"] = snapshot.site_text_catalog.site_count
+        if snapshot.site_name_scan:
+            located = snapshot.site_name_scan.located_count
+            expected = text.sites.site_count
+            add(
+                "sites",
+                "site_name_markers",
+                VerifyStatus.PASS if located >= expected else VerifyStatus.PENDING,
+                expected=expected,
+                actual=located,
+                note=(
+                    "language_name word-table title runs in post-region mid payload "
+                    f"(0x{snapshot.site_name_scan.region_start:x}–0x{snapshot.site_name_scan.region_end:x}); "
+                    "not yet full site struct parse"
+                ),
+            )
+            report.save_summary["site_name_markers"] = located
 
     if details.get("ruler_count") is not None:
+        text_rulers = (
+            snapshot.history_text_catalog.ruler_count
+            if snapshot.history_text_catalog
+            else None
+        )
         add(
             "historical_figures",
             "ruler_entries",
             VerifyStatus.PENDING,
             expected=details["ruler_count"],
-            actual=None,
-            note="position holders in text export; needs histfig + entity_position parse",
+            actual=text_rulers,
+            note=(
+                "position holders in text export; binary histfig vector still open"
+                + (
+                    f"; text catalog parsed {text_rulers} rulers"
+                    if text_rulers is not None
+                    else ""
+                )
+            ),
         )
+        if snapshot.history_text_catalog:
+            add(
+                "historical_figures",
+                "history_text_catalog",
+                VerifyStatus.PASS
+                if snapshot.history_text_catalog.ruler_count == details["ruler_count"]
+                else VerifyStatus.FAIL,
+                expected=details["ruler_count"],
+                actual=snapshot.history_text_catalog.ruler_count,
+                note="structured parse of *-world_history*.txt ruler lines",
+            )
 
     max_hf = snapshot.header.max_ids[8] if len(snapshot.header.max_ids) > 8 else None
     if max_hf is not None:
@@ -353,16 +415,20 @@ EXPLORER_ROADMAP = [
     },
     {
         "layer": "sites",
-        "status": "blocked",
+        "status": "partial",
         "website_use": (
-            "Site map, populations — 350 sites in text export; "
-            "binary vector between entity region and region blocks (~0x330000–0x86c157) not yet parsed"
+            "Site map, populations — 350 sites fully parsed from text export; "
+            "binary world_site struct located via title word markers in mid payload "
+            "(full vector walk still open)"
         ),
     },
     {
         "layer": "historical_figures",
-        "status": "blocked",
-        "website_use": "Rulers, deities, figures — 12,747 in header",
+        "status": "partial",
+        "website_use": (
+            "Rulers, deities, figures — ruler lines parsed from text export; "
+            "12,747 binary histfig vector still open"
+        ),
     },
     {
         "layer": "world_history",

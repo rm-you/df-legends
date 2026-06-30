@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from df_save_re.compression import decompress_file, read_header
+from df_save_re.deserializers.site_names import parse_site_names_from_text
 from df_save_re.deserializers.world_dat import parse_dat_preamble
 from df_save_re.legends_extract import extract_legends_snapshot
 from df_save_re.legends_verify import VerifyStatus, parse_history_details, verify_snapshot_against_text
@@ -96,12 +97,30 @@ def test_verify_uploaded_exports_if_present():
 
     payload = decompress_file(world).payload
     pre = parse_dat_preamble(payload, save_version=read_header(world.read_bytes()).save_version)
-    snap = extract_legends_snapshot(payload, preamble=pre)
     bundle = load_legends_text(upload)
+    sites_text = None
+    history_text = None
+    if bundle.sites:
+        sites_text = Path(bundle.sites.path).read_bytes().decode("latin-1")
+        site_names = parse_site_names_from_text(sites_text)
+    if bundle.history:
+        history_text = Path(bundle.history.path).read_text(
+            encoding="utf-8", errors="replace"
+        )
+    snap = extract_legends_snapshot(
+        payload,
+        preamble=pre,
+        site_names=site_names,
+        sites_text=sites_text,
+        history_text=history_text,
+    )
     report = verify_snapshot_against_text(snap, bundle)
 
     assert report.failed == 0
-    assert report.passed >= 6
+    assert report.passed >= 8
     assert report.pending >= 3
     sites = next(c for c in report.checks if c.field == "site_count")
     assert sites.expected == 350
+    markers = next(c for c in report.checks if c.field == "site_name_markers")
+    assert markers.actual >= 80
+    assert markers.status == VerifyStatus.PENDING

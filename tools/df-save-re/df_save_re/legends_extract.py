@@ -13,6 +13,9 @@ from .deserializers.primitives import WorldHeaderHypothesis
 from .deserializers.string_index import StringIndexTable
 from .deserializers.string_tables import StringTableBlock, parse_string_table_block
 from .deserializers.world_dat import DatPreamble
+from .deserializers.site_names import SiteNameScanResult, scan_site_name_markers
+from .deserializers.site_text import SiteTextCatalog, parse_site_text_catalog
+from .deserializers.history_text import HistoryTextCatalog, parse_history_text_catalog
 from .deserializers.world_layout import WorldLayoutLandmarks, discover_layout_landmarks
 
 
@@ -40,6 +43,9 @@ class LegendsSnapshot:
     entity_class_counts: dict[str, int] = field(default_factory=dict)
     layout: WorldLayoutLandmarks | None = None
     history_stats: HistoryStatsBlock | None = None
+    site_name_scan: SiteNameScanResult | None = None
+    site_text_catalog: SiteTextCatalog | None = None
+    history_text_catalog: HistoryTextCatalog | None = None
     notes: list[str] = field(default_factory=list)
 
 
@@ -76,6 +82,9 @@ def extract_legends_snapshot(
     preamble: DatPreamble,
     max_entities: int = 50,
     catalog_entities: bool = True,
+    site_names: dict[int, str] | None = None,
+    sites_text: str | None = None,
+    history_text: str | None = None,
 ) -> LegendsSnapshot:
     block = parse_string_table_block(payload)
     reader = BinaryReader(BytesIO(payload))
@@ -122,6 +131,19 @@ def extract_legends_snapshot(
             notes.append(f"entity names: {len(entity_names)} resolved via language_name ({sample}, …)")
 
     layout = discover_layout_landmarks(payload, preamble)
+    site_name_scan: SiteNameScanResult | None = None
+    if (
+        layout.first_region_block is not None
+        and layout.history_stats is not None
+        and site_names
+    ):
+        site_name_scan = scan_site_name_markers(
+            payload,
+            block=block,
+            region_start=layout.first_region_block,
+            region_end=layout.history_stats,
+            site_names=site_names,
+        )
     if layout.first_region_block is not None:
         notes.append(
             f"layout: region blocks @ 0x{layout.first_region_block:x}; "
@@ -134,6 +156,27 @@ def extract_legends_snapshot(
             f"history stats block @ 0x{stats.payload_offset:x} "
             f"(events={stats.event_counter:,}, figs={stats.histfig_counter:,}; "
             f"not verified as world_history vector start)"
+        )
+    site_text_catalog = parse_site_text_catalog(sites_text) if sites_text else None
+    history_text_catalog = (
+        parse_history_text_catalog(history_text) if history_text else None
+    )
+    if site_text_catalog:
+        notes.append(
+            f"site text catalog: {site_text_catalog.site_count} sites parsed from export "
+            f"(populations, owners — text ground truth)"
+        )
+    if history_text_catalog:
+        notes.append(
+            f"history text catalog: {history_text_catalog.named_civ_count} named civs, "
+            f"{history_text_catalog.subterranean_count} subterranean, "
+            f"{history_text_catalog.ruler_count} ruler entries"
+        )
+    if site_name_scan:
+        notes.append(
+            f"site name markers: {site_name_scan.located_count} titles located "
+            f"in mid region 0x{site_name_scan.region_start:x}–0x{site_name_scan.region_end:x} "
+            f"(language_name word runs; full world_site parse still open)"
         )
 
     return LegendsSnapshot(
@@ -148,6 +191,9 @@ def extract_legends_snapshot(
         entity_class_counts=class_counts,
         layout=layout,
         history_stats=stats,
+        site_name_scan=site_name_scan,
+        site_text_catalog=site_text_catalog,
+        history_text_catalog=history_text_catalog,
         notes=notes,
     )
 
@@ -251,6 +297,51 @@ def snapshot_to_dict(snapshot: LegendsSnapshot) -> dict:
                 "field_4": snapshot.history_stats.field_4,
             }
             if snapshot.history_stats
+            else None
+        ),
+        "site_name_scan": (
+            {
+                "located_count": snapshot.site_name_scan.located_count,
+                "region_start": snapshot.site_name_scan.region_start,
+                "region_end": snapshot.site_name_scan.region_end,
+                "sample": [
+                    {
+                        "site_id": m.site_id,
+                        "name": m.display_name,
+                        "offset": m.payload_offset,
+                    }
+                    for m in snapshot.site_name_scan.markers[:10]
+                ],
+            }
+            if snapshot.site_name_scan
+            else None
+        ),
+        "site_text_catalog": (
+            {
+                "site_count": snapshot.site_text_catalog.site_count,
+                "total_population": snapshot.site_text_catalog.total_population,
+                "sample": [
+                    {
+                        "id": rec.site_id,
+                        "name": rec.display_name,
+                        "type": rec.site_type,
+                        "civ": rec.civ_name,
+                        "owner": rec.owner,
+                        "pop_lines": len(rec.populations),
+                    }
+                    for rec in snapshot.site_text_catalog.records[:10]
+                ],
+            }
+            if snapshot.site_text_catalog
+            else None
+        ),
+        "history_text_catalog": (
+            {
+                "named_civ_count": snapshot.history_text_catalog.named_civ_count,
+                "subterranean_count": snapshot.history_text_catalog.subterranean_count,
+                "ruler_count": snapshot.history_text_catalog.ruler_count,
+            }
+            if snapshot.history_text_catalog
             else None
         ),
         "notes": snapshot.notes,
