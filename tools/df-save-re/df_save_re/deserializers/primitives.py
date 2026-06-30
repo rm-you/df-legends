@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Generic, TypeVar
 
 from ..binary_reader import BinaryReader
+from ..target import TARGET_WORLD_HEADER_ID_COUNT, world_header_id_count
 
 T = TypeVar("T")
 
@@ -142,23 +143,40 @@ class MultiStringRecord0x50:
 @dataclass
 class WorldHeaderHypothesis:
     """
-    Hypothesis from Andux WORLD.DAT research (pre-v50, structurally similar in 0.47.x).
+    world.dat header from Andux WORLD.DAT research + 0.47.05 validation (Waterlures).
 
-    Field names for ID counters are guesses — validate against a real world.dat
-    by comparing max IDs to DFHack `df.global.world` values.
+    Layout: int16 (0) + N×int32 ID counters + has_name byte + optional name +
+    post_name byte + int16 + 3×int32 + world name string.
+
+    N was 23 in early Andux docs; save_version 1716 (0.47.05) uses N=50.
     """
 
     unknown_int16: int
-    max_ids: list[int] = field(default_factory=list)  # 23 x int32 in Andux
+    max_ids: list[int] = field(default_factory=list)
     has_name: bool = False
     name: DfString | None = None
     post_name_byte: int | None = None
     post_name_int16: int | None = None
     post_name_int32s: list[int] = field(default_factory=list)
     world_name: DfString | None = None
+    payload_offset: int = 0
+    bytes_consumed: int = 0
 
     @classmethod
-    def read(cls, reader: BinaryReader, *, id_count: int = 23) -> WorldHeaderHypothesis:
+    def read(
+        cls,
+        reader: BinaryReader,
+        *,
+        id_count: int | None = None,
+        save_version: int | None = None,
+    ) -> WorldHeaderHypothesis:
+        start = reader.tell()
+        if id_count is None:
+            id_count = (
+                world_header_id_count(save_version)
+                if save_version is not None
+                else TARGET_WORLD_HEADER_ID_COUNT
+            )
         unknown_int16 = reader.read_int16()
         max_ids = [reader.read_int32() for _ in range(id_count)]
         has_name = reader.read_bool()
@@ -167,6 +185,7 @@ class WorldHeaderHypothesis:
         post_name_int16 = reader.read_int16()
         post_name_int32s = [reader.read_int32() for _ in range(3)]
         world_name = DfString.read(reader)
+        end = reader.tell()
         return cls(
             unknown_int16=unknown_int16,
             max_ids=max_ids,
@@ -176,18 +195,25 @@ class WorldHeaderHypothesis:
             post_name_int16=post_name_int16,
             post_name_int32s=post_name_int32s,
             world_name=world_name,
+            payload_offset=start,
+            bytes_consumed=end - start,
         )
 
     def id_summary(self) -> dict[str, int]:
-        """Tentative labels from Andux (indices 8-9 = histfig/event max)."""
-        labels = [
-            "unk1", "unk2", "unk3", "unk4_max_civ", "unk5_max_unit",
-            "unk6", "unk7", "unk8", "unk9_max_histfig", "unk10_max_event",
-            "unk11", "unk12", "unk13", "unk14", "unk15",
-            "unk16", "unk17", "unk18", "unk19", "unk20",
-            "unk21", "unk22", "unk23",
-        ]
+        """Tentative labels; indices 8–9 match histfig/event max on Waterlures."""
+        labels = {
+            0: "unk0",
+            1: "unk1",
+            2: "unk2",
+            3: "unk3",
+            4: "unk4_max_civ",
+            5: "unk5_max_unit",
+            6: "unk6",
+            7: "unk7",
+            8: "unk8_max_histfig",
+            9: "unk9_max_event",
+        }
         return {
-            labels[i] if i < len(labels) else f"unk{i}": v
+            labels.get(i, f"unk{i}"): v
             for i, v in enumerate(self.max_ids)
         }

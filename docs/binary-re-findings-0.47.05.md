@@ -87,14 +87,16 @@ read int32 @ parent+0x168
 
 **Hypothesis:** one section of the post-header string table (Andux documents 19–20 sections).
 
-### 4. World header @ payload offset 0 (HYPOTHESIS)
+### 4. World header @ payload offset 0 (validated on Waterlures 0.47.05)
 
-From [Andux WORLD.DAT research](https://dwarffortresswiki.org/index.php/User:Andux/Format_research/WORLD.DAT):
+From [Andux WORLD.DAT research](https://dwarffortresswiki.org/index.php/User:Andux/Format_research/WORLD.DAT), extended for 0.47.05:
 
-- int16 + 23× int32 ID counters + optional name + world name string
-- Implemented as `WorldHeaderHypothesis` — **must validate** when `world.dat` arrives
+- int16 (0) + **50× int32** ID counters + has_name byte + optional name + post fields + world name string
+- Andux originally listed 23 counters for older saves; **1716 uses 50** (fixture: Waterlures `world.dat`)
+- World name on Waterlures: `Minbazkar` (229 bytes from payload start to end of name string)
+- Implemented as `WorldHeaderHypothesis` with `TARGET_WORLD_HEADER_ID_COUNT = 50`
 
-Expected validation: `unk9_max_histfig` ≈ max historical figure ID, `unk10_max_event` ≈ max event ID (compare via DFHack).
+Expected validation: `max_ids[8]` ≈ max historical figure ID, `max_ids[9]` ≈ max event ID (compare via DFHack).
 
 ## Polymorphic history events
 

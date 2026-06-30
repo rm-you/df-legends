@@ -2,6 +2,9 @@
 research/
 tests/fixtures/*.dat
 tests/fixtures/*.sav
+tools/df-save-re/tests/fixtures/*.dat
+tools/df-save-re/tests/fixtures/*.sav
+tools/df-save-re/.fixture-cache/
 
 # Python
 __pycache__/

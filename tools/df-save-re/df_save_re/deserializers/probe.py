@@ -7,7 +7,8 @@ from io import BytesIO
 from pathlib import Path
 
 from ..binary_reader import BinaryReader
-from ..compression import decompress_file
+from ..compression import decompress_file, read_header
+from ..target import TARGET_SAVE_VERSION
 from ..save_bundle import SaveKind, classify_filename
 from .active_save import WorldHeaderSavHypothesis
 from .primitives import BlockWithByteVector, WorldHeaderHypothesis
@@ -78,11 +79,21 @@ def probe_save(path: str) -> ProbeResult:
 
     if kind == SaveKind.WORLD_DAT:
         try:
+            file_header = read_header(Path(path).read_bytes())
             reader = BinaryReader(BytesIO(payload))
-            result.world_header = WorldHeaderHypothesis.read(reader)
-            result.notes.append(
-                f"DAT world header hypothesis consumed {reader.tell()} bytes from payload start"
+            result.world_header = WorldHeaderHypothesis.read(
+                reader,
+                save_version=file_header.save_version,
             )
+            wh = result.world_header
+            result.notes.append(
+                f"DAT world header hypothesis consumed {wh.bytes_consumed} bytes "
+                f"({len(wh.max_ids)} id counters, save_version {file_header.save_version})"
+            )
+            if wh.world_name and wh.world_name.value.startswith("["):
+                result.notes.append(
+                    "warning: world_name looks like generated raws — header alignment may be wrong"
+                )
         except (EOFError, ValueError) as exc:
             result.world_header_error = str(exc)
     elif kind == SaveKind.WORLD_SAV:

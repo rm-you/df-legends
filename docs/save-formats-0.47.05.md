@@ -108,13 +108,16 @@ flowchart TB
 | Fixture | Purpose |
 |---------|---------|
 | `tests/fixtures/region-retired/world.dat` | Track A — legends parsing |
+| `tests/fixtures/waterlures-retired/world.dat` | Track A — DFFD Waterlures (validated header) |
 | `tests/fixtures/region-active/world.sav` | Track B — Game data + legends inside active save |
 | Same world retired then loaded | Compare history counts between DAT and SAV |
 
 ## CLI
 
 ```bash
-df-save-re folder /path/to/region1          # inventory sidecars + classify world blob
-df-save-re inspect region1/world.dat
-df-save-re inspect region1/world.sav        # warns if header hypothesis is DAT-only
+cd tools/df-save-re
+python3 scripts/fetch_fixtures.py    # downloads Waterlures world.dat
+python3 -m pytest
+df-save-re folder /path/to/region1
+df-save-re probe tests/fixtures/waterlures-retired/world.dat
 ```
