@@ -10,7 +10,7 @@ Exports (`*-world_history*`, `*-world_sites_and_pops*`, `*-world_gen_param*`) ar
 | Named civ count/names | history | PASS | `entities.*` |
 | Subterranean peoples | history | PASS | `entities.subterranean_civ_count` |
 | Civ worship lists | history | open | TBD `entities.worship_lists` |
-| Site count (350) | sites | partial (231/350) | `sites.site_count` |
+| Site count (350) | sites | partial (261/350) | `sites.site_count` |
 | Site name/type/civ/owner/coords | sites | partial | `sites.world_site_catalog` |
 | Site populations | sites | open | TBD `sites.populations` |
 | Ruler count (71) | history | open (binary positions) | `historical_figures.ruler_entries` |

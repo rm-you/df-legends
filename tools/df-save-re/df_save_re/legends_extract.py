@@ -196,7 +196,7 @@ def extract_legends_snapshot(
                 payload,
                 block=block,
                 search_start=gap.start,
-                search_end=mid.end,
+                search_end=len(payload),
                 entities=catalog,
                 max_site_id=expected_site_count - 1,
                 civ_ids=None,
