@@ -25,7 +25,18 @@ Validated on **Namushul** fixture (`tests/fixtures/small-retired/world.dat`).
 | +12 | 12747 | max histfig id echo |
 | +24 | 12748 | next histfig id (`+1`) |
 
-This block is **metadata**, not the start of the `world_history` stl-vectors.
+This block is **metadata**, not the start of the `world_history` stl-vectors. The `figures` pointer vector is downstream @ `0x2131bb0`.
+
+## Historical figures (Namushul)
+
+| Landmark | Offset | Notes |
+|----------|--------|-------|
+| Stats echo | `0x15BEB28` | event/death/rel/fig counter block |
+| `figures` vector | `0x2131BB0` | count=12747; flags end `0x2134D80` |
+| Figure bodies | `0x2134DD0` | 80-byte prefix after flags; first header id=0 |
+| `events_death` vector | `0x226009C` | count=151, 95% posnull |
+
+Header layout matches `df.history_figure.xml` through `art_count`. Bodies are variable-size (polymorphic link vectors + profile pointers); id chain 0..14+ validated via forward scan.
 
 ## Sites
 
@@ -51,7 +62,7 @@ This block is **metadata**, not the start of the `world_history` stl-vectors.
 | Vector | Header count | posnull scan in history tail |
 |--------|--------------|------------------------------|
 | `history_event` | 113118 | No high-confidence hit |
-| `historical_figure` | 12747 | No high-confidence hit |
+| `historical_figure` | 12747 | **Vector @ `0x2131bb0`** (posnull score ~8.8k/20k sample); bodies @ `0x2134dd0`; death @ `0x226009c` |
 | `world_site` | 350 | Marker-anchored catalog @ name table ~0x1193ae5 stride 354; posnull vector still unconfirmed |
 
 ## Site name table (Namushul cluster)

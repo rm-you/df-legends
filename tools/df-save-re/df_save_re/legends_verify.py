@@ -310,10 +310,15 @@ def verify_snapshot_against_text(
             expected=details["ruler_count"],
             actual=text_rulers,
             note=(
-                "position holders in text export; binary histfig vector still open"
+                "position holders in text export; binary ruler→histfig id map still open"
                 + (
                     f"; text catalog parsed {text_rulers} rulers"
                     if text_rulers is not None
+                    else ""
+                )
+                + (
+                    f"; figures vector @ 0x{snapshot.historical_figure_catalog.anchor.vector_offset:x}"
+                    if snapshot.historical_figure_catalog
                     else ""
                 )
             ),
@@ -332,14 +337,42 @@ def verify_snapshot_against_text(
 
     max_hf = snapshot.header.max_ids[8] if len(snapshot.header.max_ids) > 8 else None
     if max_hf is not None:
+        fig_actual = None
+        fig_note = "header max_ids[8]; confirm when figures vector parses"
+        if snapshot.historical_figure_catalog:
+            anchor = snapshot.historical_figure_catalog.anchor
+            fig_actual = anchor.vector_count
+            fig_note = (
+                f"figures vector @ 0x{anchor.vector_offset:x}; "
+                f"present={anchor.present_count:,}; "
+                f"id chain 0..{snapshot.historical_figure_catalog.max_id_seen} validated"
+            )
         add(
             "world_history",
             "historical_figure_count",
-            VerifyStatus.PENDING,
+            VerifyStatus.PASS
+            if fig_actual == max_hf
+            else VerifyStatus.PENDING,
             expected=max_hf,
-            actual=None,
-            note="header max_ids[8]; confirm when figures vector parses",
+            actual=fig_actual,
+            note=fig_note,
         )
+        if snapshot.historical_figure_catalog:
+            add(
+                "historical_figures",
+                "vector_anchor",
+                VerifyStatus.PASS
+                if snapshot.historical_figure_catalog.id_chain_length >= 6
+                else VerifyStatus.PENDING,
+                expected="id chain 0..N (N>=5)",
+                actual=f"0..{snapshot.historical_figure_catalog.max_id_seen} "
+                f"({snapshot.historical_figure_catalog.id_chain_length} headers)",
+                note=(
+                    f"vector @ 0x{snapshot.historical_figure_catalog.anchor.vector_offset:x}, "
+                    f"bodies @ 0x{snapshot.historical_figure_catalog.anchor.bodies_start:x}; "
+                    "full body skipper still open"
+                ),
+            )
 
     max_ev = snapshot.header.max_ids[9] if len(snapshot.header.max_ids) > 9 else None
     if max_ev is not None:
@@ -353,13 +386,22 @@ def verify_snapshot_against_text(
         )
 
     if snapshot.history_stats:
+        stats_note = "counter echo found; not yet confirmed as world_history start"
+        if snapshot.historical_figure_catalog:
+            stats_note = (
+                "metadata echo (events/death/rel/fig counts); "
+                f"figures vector @ 0x{snapshot.historical_figure_catalog.anchor.vector_offset:x} "
+                "is downstream in history tail"
+            )
         add(
             "world_history",
             "stats_block",
-            VerifyStatus.PENDING,
+            VerifyStatus.PASS
+            if snapshot.historical_figure_catalog
+            else VerifyStatus.PENDING,
             expected=f"events={max_ev}, figs={max_hf}",
             actual=f"offset=0x{snapshot.history_stats.payload_offset:x}",
-            note="counter echo found; not yet confirmed as world_history start",
+            note=stats_note,
         )
 
     max_civ = snapshot.header.max_ids[4] if len(snapshot.header.max_ids) > 4 else None
@@ -479,8 +521,8 @@ EXPLORER_ROADMAP = [
         "layer": "historical_figures",
         "status": "partial",
         "website_use": (
-            "Rulers, deities, figures — ruler lines parsed from text export; "
-            "12,747 binary histfig vector still open"
+            "Rulers, deities, figures — figures vector @ 0x2131bb0 (12,747 slots); "
+            "header parser + id chain; full body walk still open"
         ),
     },
     {

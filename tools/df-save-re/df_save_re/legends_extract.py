@@ -25,6 +25,10 @@ from .deserializers.site_names import SiteNameScanResult, scan_site_name_markers
 from .deserializers.site_catalog import WorldSiteCatalog, build_world_site_catalog
 from .deserializers.site_text import SiteTextCatalog, parse_site_text_catalog
 from .deserializers.history_text import HistoryTextCatalog, parse_history_text_catalog
+from .deserializers.historical_figures import (
+    HistoricalFigureCatalog,
+    build_historical_figure_catalog,
+)
 from .deserializers.world_layout import WorldLayoutLandmarks, discover_layout_landmarks
 
 
@@ -64,6 +68,7 @@ class LegendsSnapshot:
     site_text_catalog: SiteTextCatalog | None = None
     history_text_catalog: HistoryTextCatalog | None = None
     entity_catalog_region: EntityCatalogRegion | None = None
+    historical_figure_catalog: HistoricalFigureCatalog | None = None
     vector_probe: VectorProbeSummary | None = None
     notes: list[str] = field(default_factory=list)
 
@@ -251,6 +256,24 @@ def extract_legends_snapshot(
             f"in mid region 0x{site_name_scan.region_start:x}–0x{site_name_scan.region_end:x}"
         )
 
+    historical_figure_catalog: HistoricalFigureCatalog | None = None
+    if layout.history_stats is not None:
+        historical_figure_catalog = build_historical_figure_catalog(
+            payload,
+            preamble.header,
+            search_start=layout.history_stats,
+            id_chain_limit=32,
+        )
+        if historical_figure_catalog:
+            anchor = historical_figure_catalog.anchor
+            notes.append(
+                f"historical_figure vector @ 0x{anchor.vector_offset:x} "
+                f"(count={anchor.vector_count:,}, present={anchor.present_count:,}, "
+                f"bodies @ 0x{anchor.bodies_start:x})"
+            )
+            for line in historical_figure_catalog.notes:
+                notes.append(f"  histfig: {line}")
+
     vector_probe: VectorProbeSummary | None = None
     stats_probe = probe_history_stats(payload, preamble.header)
     if stats_probe:
@@ -328,6 +351,7 @@ def extract_legends_snapshot(
         site_text_catalog=site_text_catalog,
         history_text_catalog=history_text_catalog,
         entity_catalog_region=entity_catalog_region,
+        historical_figure_catalog=historical_figure_catalog,
         vector_probe=vector_probe,
         notes=notes,
     )
@@ -517,6 +541,29 @@ def snapshot_to_dict(snapshot: LegendsSnapshot) -> dict:
                 "histfigs": snapshot.vector_probe.histfig_candidates,
             }
             if snapshot.vector_probe
+            else None
+        ),
+        "historical_figure_catalog": (
+            {
+                "vector_offset": anchor.vector_offset,
+                "vector_count": anchor.vector_count,
+                "present_count": anchor.present_count,
+                "bodies_start": anchor.bodies_start,
+                "death_events_offset": anchor.death_events_offset,
+                "id_chain_length": snapshot.historical_figure_catalog.id_chain_length,
+                "max_id_seen": snapshot.historical_figure_catalog.max_id_seen,
+                "sample": [
+                    {
+                        "id": h.figure_id,
+                        "race": h.race,
+                        "civ_id": h.civ_id,
+                        "name_words": h.name.words[:3],
+                    }
+                    for h in snapshot.historical_figure_catalog.headers[:8]
+                ],
+            }
+            if snapshot.historical_figure_catalog
+            and (anchor := snapshot.historical_figure_catalog.anchor)
             else None
         ),
         "notes": snapshot.notes,
