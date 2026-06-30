@@ -9,12 +9,11 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from ..compression import decompress_file, read_header
 from ..deserializers.entity_names import resolve_language_name_display
-from ..deserializers.world_dat import parse_dat_preamble
 from ..deserializers.vector_anchor import VectorAnchor as ParsedVectorAnchor
 from ..deserializers.vector_anchor import anchor_history_vectors
 from ..legends_extract import LegendsSnapshot, extract_legends_snapshot
+from ..save_preamble import resolve_save_payload
 from ..save_validate import fingerprint_path
 from ..target import TARGET_DF_VERSION
 from .migrate import create_legends_database
@@ -298,17 +297,17 @@ def import_world_dat(
     expected_site_count: int = 350,
 ) -> ImportResult:
     """
-    Parse ``world.dat``, create ``<slug>.sqlite``, migrate, and persist extract.
+    Parse ``world.dat`` or ``world.sav``, create ``<slug>.sqlite``, migrate, and persist extract.
 
     Registers the database in ``<data_dir>/registry.json`` for the future explorer UI.
     """
-    world_dat_path = world_dat_path.resolve()
-    raw = world_dat_path.read_bytes()
-    save_header = read_header(raw)
-    dec = decompress_file(world_dat_path)
-    preamble = parse_dat_preamble(dec.payload)
+    resolved = resolve_save_payload(world_dat_path)
+    world_path = resolved.path
+    dec_payload = resolved.payload
+    preamble = resolved.preamble
+    save_header_version = resolved.save_version
     snapshot = extract_legends_snapshot(
-        dec.payload,
+        dec_payload,
         preamble=preamble,
         expected_site_count=expected_site_count,
     )
@@ -316,16 +315,16 @@ def import_world_dat(
     slug = fortress_slug(world_name)
     db_path = legends_db_path(data_dir, slug)
 
-    fingerprint = fingerprint_path(world_dat_path)
+    fingerprint = fingerprint_path(world_path)
     engine = create_legends_database(db_path, overwrite=overwrite)
     with Session(engine) as session:
         run_id = persist_snapshot(
             session,
             snapshot,
-            payload=dec.payload,
-            source_path=str(world_dat_path),
-            payload_size=len(dec.payload),
-            save_version=save_header.save_version,
+            payload=dec_payload,
+            source_path=str(world_path),
+            payload_size=len(dec_payload),
+            save_version=save_header_version,
             source_fingerprint=fingerprint.sha256,
         )
         session.commit()

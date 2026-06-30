@@ -19,6 +19,7 @@ from .deserializers.primitives import WorldHeaderHypothesis
 from .deserializers.string_index import StringIndexTable
 from .deserializers.string_tables import StringTableBlock, parse_string_table_block
 from .deserializers.world_dat import DatPreamble
+from .save_preamble import SavePreamble
 from .deserializers.history_stats import probe_history_stats
 from .deserializers.vector_probe import find_posnull_vector_candidates
 from .deserializers.site_catalog import WorldSiteCatalog
@@ -55,7 +56,7 @@ class VectorProbeSummary:
 class LegendsSnapshot:
     world_name: str | None
     header: WorldHeaderHypothesis
-    preamble: DatPreamble
+    preamble: SavePreamble
     string_tables: StringTableBlock
     string_index: StringIndexTable
     entities: EntityScanResult
@@ -104,12 +105,12 @@ def find_history_stats_block(
 def extract_legends_snapshot(
     payload: bytes,
     *,
-    preamble: DatPreamble,
+    preamble: SavePreamble,
     max_entities: int = 50,
     catalog_entities: bool = True,
     expected_site_count: int = 350,
 ) -> LegendsSnapshot:
-    """Extract legends data from decompressed world.dat only (no text exports)."""
+    """Extract legends data from decompressed world.dat or world.sav (no text exports)."""
     block = parse_string_table_block(payload)
     reader = BinaryReader(BytesIO(payload))
     reader.seek(block.payload_offset + block.bytes_consumed)

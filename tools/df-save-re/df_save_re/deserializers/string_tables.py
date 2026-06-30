@@ -15,6 +15,7 @@ MAX_SHORT_NAME_SECTIONS = 32
 SHORT_NAME_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_ \-'():]*$")
 
 MATERIALS_IRON_ENTRY = struct.pack("<h", 4) + b"IRON"
+PLANT_TABLE_ANCHOR = struct.pack("<h", len("agave bush")) + b"agave bush"
 
 
 @dataclass
@@ -96,8 +97,8 @@ class StringTableBlock:
         )
 
 
-def find_string_table_block(payload: bytes, *, start: int = 0) -> int | None:
-    """Locate materials table (count × IRON …) — anchor for short-name string tables."""
+def find_string_table_block_dat(payload: bytes, *, start: int = 0) -> int | None:
+    """Locate materials table (count × IRON …) — anchor for retired world.dat saves."""
     idx = payload.find(MATERIALS_IRON_ENTRY, start)
     while idx >= 4:
         count = struct.unpack_from("<i", payload, idx - 4)[0]
@@ -107,13 +108,64 @@ def find_string_table_block(payload: bytes, *, start: int = 0) -> int | None:
     return None
 
 
+def _validate_sav_string_table_block(block: StringTableBlock) -> bool:
+    if block.section_count < 19 or block.total_names < 3_000:
+        return False
+    if not block.sections or block.sections[0].names[0] != "agave bush":
+        return False
+    if len(block.sections) <= 6:
+        return False
+    entity_classes = block.sections[6].names
+    if "SUBTERRANEAN_ANIMAL_PEOPLES" not in entity_classes:
+        return False
+    if len(block.sections) > 7 and block.sections[7].names[0] != "ABBEY":
+        return False
+    return True
+
+
+def find_string_table_block_sav(payload: bytes) -> int | None:
+    """
+    Locate the 19-section short-name block inside world.sav.
+
+    Active saves do not expose a reliable IRON-count prefix. Anchor on the first
+    plant-table section (count × ``agave bush`` …) and validate the civ/word
+    sections match the expected Andux table order.
+    """
+    from io import BytesIO
+
+    idx = payload.find(PLANT_TABLE_ANCHOR)
+    while idx >= 4:
+        count = struct.unpack_from("<i", payload, idx - 4)[0]
+        if 50 <= count <= MAX_SHORT_NAME_COUNT:
+            off = idx - 4
+            try:
+                reader = BinaryReader(BytesIO(payload))
+                reader.seek(off)
+                block = StringTableBlock.read(reader, max_sections=20)
+            except (EOFError, ValueError):
+                pass
+            else:
+                if _validate_sav_string_table_block(block):
+                    return off
+        idx = payload.find(PLANT_TABLE_ANCHOR, idx + 1)
+    return None
+
+
+def find_string_table_block(payload: bytes, *, start: int = 0) -> int | None:
+    """Locate short-name string tables (DAT IRON anchor, then SAV civ-header scan)."""
+    found = find_string_table_block_dat(payload, start=start)
+    if found is not None:
+        return found
+    return find_string_table_block_sav(payload)
+
+
 def parse_string_table_block(payload: bytes, *, offset: int | None = None) -> StringTableBlock:
     from io import BytesIO
 
     if offset is None:
         found = find_string_table_block(payload)
         if found is None:
-            raise ValueError("materials short-name table signature not found")
+            raise ValueError("short-name string table block not found")
         offset = found
     reader = BinaryReader(BytesIO(payload))
     reader.seek(offset)

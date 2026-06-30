@@ -65,6 +65,8 @@ See `tests/fixtures/README.md` for SHA-256 fingerprints and DFFD sources.
 
 Target: **DF 0.47.05** Linux 64-bit (`save_version` 1716).
 
+**Track B (world.sav):** Ironhand active fixture parses via `parse_sav_preamble()` — SAV header (13×int32 + metadata blob), gamemode/names, plant-anchored string tables @ ~0x74A8D8, entity catalog @ ~0x9D83B1. CLI `extract`, `import-db`, and `probe` accept `world.sav` paths.
+
 | Layer | Status |
 |-------|--------|
 | Compression / header | Done |

@@ -8,7 +8,8 @@ from dataclasses import dataclass
 from .entity_def import catalog_entity_block
 from .primitives import WorldHeaderHypothesis
 from .string_tables import parse_string_table_block
-from .world_dat import DatPreamble
+from .world_dat import DatPreamble, parse_dat_preamble
+from ..save_preamble import SavePreamble
 
 
 @dataclass(frozen=True)
@@ -115,7 +116,7 @@ def find_history_stats_block(payload: bytes, header: WorldHeaderHypothesis) -> i
         pos = off + 4
 
 
-def discover_layout_landmarks(payload: bytes, preamble: DatPreamble) -> WorldLayoutLandmarks:
+def discover_layout_landmarks(payload: bytes, preamble: SavePreamble) -> WorldLayoutLandmarks:
     block = parse_string_table_block(payload)
     tables_end = block.payload_offset + block.bytes_consumed
     from io import BytesIO

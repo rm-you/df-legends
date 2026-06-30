@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .compression import decompress_file, describe_save_version, is_target_save_version, read_header
-from .deserializers.world_dat import parse_dat_preamble
+from .save_preamble import parse_save_preamble, preamble_kind_for_path
 from .save_bundle import SaveKind, index_save_folder, legends_parse_target
 from .target import TARGET_DF_VERSION, TARGET_SAVE_VERSION
 
@@ -64,7 +64,8 @@ def fingerprint_world_blob(path: Path) -> SaveFingerprint:
     raw = path.read_bytes()
     header = read_header(raw)
     dec = decompress_file(path)
-    pre = parse_dat_preamble(dec.payload, save_version=header.save_version)
+    kind = preamble_kind_for_path(path)
+    pre = parse_save_preamble(dec.payload, kind=kind, save_version=header.save_version)
     world_name = pre.header.world_name.value if pre.header.world_name else None
     max_histfig = pre.header.max_ids[8] if len(pre.header.max_ids) > 8 else None
     max_event = pre.header.max_ids[9] if len(pre.header.max_ids) > 9 else None
@@ -121,7 +122,7 @@ def fingerprint_path(path: Path) -> SaveFingerprint:
         sidecars = [e for e in index.entries if e.kind not in (SaveKind.WORLD_DAT, SaveKind.WORLD_SAV)]
         fp.notes.append(f"save folder: {len(index.entries)} files ({len(sidecars)} sidecars)")
         if index.is_active:
-            fp.notes.append("active fort — world.sav is live; legends export uses retired world.dat after abandon")
+            fp.notes.append("active fort — world.sav holds live state; legends data is inside Game data")
         if index.is_retired:
             fp.notes.append("retired fort — world.dat is the legends parse target")
         return fp

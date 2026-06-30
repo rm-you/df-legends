@@ -4,6 +4,8 @@ tests/fixtures/*.dat
 tests/fixtures/*.sav
 tools/df-save-re/tests/fixtures/*.dat
 tools/df-save-re/tests/fixtures/*.sav
+tools/df-save-re/tests/fixtures/**/world.dat
+tools/df-save-re/tests/fixtures/**/world.sav
 tools/df-save-re/.fixture-cache/
 
 # Python

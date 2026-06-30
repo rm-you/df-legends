@@ -10,7 +10,6 @@ from pathlib import Path
 
 from .compression import decompress_file, describe_save_version, is_target_save_version, read_header
 from .deserializers.probe import probe_save
-from .deserializers.world_dat import parse_dat_preamble
 from .hexdump import format_hexdump, scan_int32_values
 from .legends_extract import extract_legends_snapshot, snapshot_to_dict
 from .legends_scan import scan_legends_region
@@ -19,9 +18,12 @@ from .legends_xml import compare_with_save_header, parse_legends_xml
 from .save_bundle import index_save_folder, legends_parse_target
 from .legends_verify import report_to_dict, verify_world_dat_against_text
 from .save_validate import LEGENDS_EXPORT_STEPS, fingerprint_path, fingerprint_to_dict
+from .save_preamble import SavePreambleKind, resolve_save_payload
 from .db import DEFAULT_DATA_DIR, import_world_dat, list_legends
 from .scan import scan_save
 from .target import TARGET_DF_VERSION, TARGET_SAVE_VERSION
+from .deserializers.active_save import SavPreamble
+from .deserializers.world_dat import DatPreamble
 
 
 def cmd_inspect(args: argparse.Namespace) -> int:
@@ -195,13 +197,11 @@ def cmd_probe(args: argparse.Namespace) -> int:
 
 
 def cmd_extract(args: argparse.Namespace) -> int:
-    path = Path(args.path)
-    dec = decompress_file(path)
-    file_header = read_header(path.read_bytes())
-    pre = parse_dat_preamble(dec.payload, save_version=file_header.save_version)
+    resolved = resolve_save_payload(args.path)
+    path = resolved.path
     snap = extract_legends_snapshot(
-        dec.payload,
-        preamble=pre,
+        resolved.payload,
+        preamble=resolved.preamble,
         max_entities=args.max_entities,
     )
     data = snapshot_to_dict(snap)
@@ -320,14 +320,12 @@ def cmd_list_legends(args: argparse.Namespace) -> int:
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
-    """Cross-check world.dat extraction against legends text exports."""
-    path = Path(args.path)
-    dec = decompress_file(path)
-    file_header = read_header(path.read_bytes())
-    pre = parse_dat_preamble(dec.payload, save_version=file_header.save_version)
+    """Cross-check world.dat/sav extraction against legends text exports."""
+    resolved = resolve_save_payload(args.path)
+    path = resolved.path
     snap = extract_legends_snapshot(
-        dec.payload,
-        preamble=pre,
+        resolved.payload,
+        preamble=resolved.preamble,
     )
     report = verify_world_dat_against_text(snap, args.legends_text)
 
@@ -364,10 +362,9 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
 
 def cmd_legends_scan(args: argparse.Namespace) -> int:
-    path = Path(args.path)
-    dec = decompress_file(path)
-    file_header = read_header(path.read_bytes())
-    pre = parse_dat_preamble(dec.payload, save_version=file_header.save_version)
+    resolved = resolve_save_payload(args.path)
+    path = resolved.path
+    pre = resolved.preamble
     post_end = None
     post_lead = None
     post_sections = None
@@ -377,7 +374,7 @@ def cmd_legends_scan(args: argparse.Namespace) -> int:
         from .binary_reader import BinaryReader
         from .deserializers.post_header import PostHeaderRawStream
 
-        reader = BinaryReader(BytesIO(dec.payload))
+        reader = BinaryReader(BytesIO(resolved.payload))
         reader.seek(pre.world_data_offset)
         stream = PostHeaderRawStream.read(reader)
         post_end = reader.tell()
@@ -385,7 +382,7 @@ def cmd_legends_scan(args: argparse.Namespace) -> int:
         post_sections = len(stream.sections)
 
     report = scan_legends_region(
-        dec.payload,
+        resolved.payload,
         preamble_end=pre.world_data_offset,
         post_raws_int32=pre.post_raws_int32,
         header=pre.header,
@@ -450,11 +447,10 @@ def cmd_legends_scan(args: argparse.Namespace) -> int:
 
 
 def cmd_legends_compare(args: argparse.Namespace) -> int:
-    save_path = Path(args.world_dat)
+    resolved = resolve_save_payload(args.world_dat)
+    save_path = resolved.path
     xml_path = Path(args.legends_xml)
-    dec = decompress_file(save_path)
-    file_header = read_header(save_path.read_bytes())
-    pre = parse_dat_preamble(dec.payload, save_version=file_header.save_version)
+    pre = resolved.preamble
     xml_stats = parse_legends_xml(xml_path)
     mismatches = compare_with_save_header(
         xml_stats,
@@ -639,14 +635,57 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 
 def cmd_preamble(args: argparse.Namespace) -> int:
-    path = Path(args.path)
-    dec = decompress_file(path)
-    file_header = read_header(path.read_bytes())
-    pre = parse_dat_preamble(dec.payload, save_version=file_header.save_version)
+    resolved = resolve_save_payload(args.path)
+    path = resolved.path
+    pre = resolved.preamble
+
+    if isinstance(pre, SavPreamble):
+        if args.json:
+            out = {
+                "path": str(path),
+                "save_kind": SavePreambleKind.SAV.value,
+                "world_name": pre.world_name,
+                "game_name": pre.game_name,
+                "gamemode": pre.gamemode,
+                "sav_header_fields": pre.sav_header.fields,
+                "metadata_blob_bytes": len(pre.metadata_blob),
+                "generated_raws_lead": pre.generated_raws_lead,
+                "string_tables_offset": pre.string_tables_offset,
+                "preamble_bytes": pre.bytes_consumed,
+                "game_data_offset": pre.game_data_offset,
+            }
+            print(json.dumps(out, indent=2))
+            return 0
+        print(f"file: {path}")
+        print(f"save_kind: {SavePreambleKind.SAV.value}")
+        print(f"world_name: {pre.world_name}")
+        print(f"game_name:  {pre.game_name}")
+        print(f"gamemode:   {pre.gamemode} ({'fortress' if pre.gamemode == 0 else 'adventure'})")
+        print(f"sav header: {len(pre.sav_header.fields)} int32 fields")
+        print(f"metadata blob: {len(pre.metadata_blob)} bytes")
+        print(f"generated_raws lead: {pre.generated_raws_lead}")
+        if pre.generated_raws_prefix:
+            gr = pre.generated_raws_prefix
+            print(
+                f"generated_raws prefix: {gr.section_count} sections, "
+                f"{gr.total_strings} strings, {gr.bytes_consumed:,} bytes"
+            )
+        if pre.string_tables:
+            st = pre.string_tables
+            print(
+                f"string tables @ 0x{pre.string_tables_offset:x}: "
+                f"{st.section_count} sections, {st.total_names:,} names"
+            )
+        print(f"preamble total: {pre.bytes_consumed:,} bytes")
+        print(f"game_data offset: 0x{pre.game_data_offset:x}")
+        return 0
+
+    assert isinstance(pre, DatPreamble)
 
     if args.json:
         out = {
             "path": str(path),
+            "save_kind": SavePreambleKind.DAT.value,
             "world_name": pre.header.world_name.value if pre.header.world_name else None,
             "header_bytes": pre.header.bytes_consumed,
             "generated_raws": {
@@ -666,6 +705,7 @@ def cmd_preamble(args: argparse.Namespace) -> int:
 
     wh = pre.header
     print(f"file: {path}")
+    print(f"save_kind: {SavePreambleKind.DAT.value}")
     print(f"world_name: {wh.world_name}")
     print(f"header: {wh.bytes_consumed} bytes")
     gr = pre.generated_raws

@@ -57,13 +57,14 @@ def test_index_save_folder_retired(tmp_path: Path):
     assert target.kind == SaveKind.WORLD_DAT
 
 
-def test_index_save_folder_prefers_dat_for_legends(tmp_path: Path):
+def test_index_save_folder_prefers_sav_when_active(tmp_path: Path):
     region = tmp_path / "region3"
     region.mkdir()
     (region / "world.dat").write_bytes(b"\x00")
     (region / "world.sav").write_bytes(b"\x00")
 
     index = index_save_folder(region)
+    assert index.is_active
     target = legends_parse_target(index)
     assert target is not None
-    assert target.kind == SaveKind.WORLD_DAT
+    assert target.kind == SaveKind.WORLD_SAV

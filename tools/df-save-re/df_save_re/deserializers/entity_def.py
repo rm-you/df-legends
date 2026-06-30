@@ -17,6 +17,16 @@ MAX_ENTITY_SCAN_WINDOW = 12_000
 MAX_ENTITY_SEARCH_BYTES = 40_000_000
 
 
+def entity_class_names(block: StringTableBlock) -> set[str]:
+    """Return the short-name section listing civ entity classes (varies by DAT vs SAV layout)."""
+    for section in block.sections:
+        if FIRST_ENTITY_CLASS in section.names:
+            return set(section.names)
+    if len(block.sections) > 7:
+        return set(block.sections[7].names)
+    return set()
+
+
 @dataclass
 class HistoricalEntityHeader:
     entity_type: int
@@ -207,7 +217,7 @@ def catalog_entities(
 
 def scan_entities(payload: bytes, *, max_entities: int = 100) -> EntityScanResult:
     block = parse_string_table_block(payload)
-    entity_classes = set(block.sections[7].names) if len(block.sections) > 7 else set()
+    entity_classes = entity_class_names(block)
     tables_end = block.payload_offset + block.bytes_consumed
 
     reader = BinaryReader(BytesIO(payload))
@@ -244,7 +254,7 @@ def catalog_entity_block(
 ) -> EntityScanResult:
     """Find all validated civ headers in the entity region (by ID, not consecutive scan)."""
     block = parse_string_table_block(payload)
-    entity_classes = set(block.sections[7].names) if len(block.sections) > 7 else set()
+    entity_classes = entity_class_names(block)
     tables_end = block.payload_offset + block.bytes_consumed
 
     reader = BinaryReader(BytesIO(payload))

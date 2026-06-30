@@ -90,8 +90,13 @@ def index_save_folder(folder: Path | str) -> SaveFolderIndex:
 
 
 def legends_parse_target(index: SaveFolderIndex) -> SaveFileEntry | None:
-    """Best file to start legends RE against (prefer retired world.dat)."""
-    for kind in (SaveKind.WORLD_DAT, SaveKind.WORLD_SAV):
+    """Best file to start legends RE against (active → world.sav, retired → world.dat)."""
+    preferred = (
+        (SaveKind.WORLD_SAV, SaveKind.WORLD_DAT)
+        if index.is_active
+        else (SaveKind.WORLD_DAT, SaveKind.WORLD_SAV)
+    )
+    for kind in preferred:
         for e in index.entries:
             if e.kind == kind:
                 return e
