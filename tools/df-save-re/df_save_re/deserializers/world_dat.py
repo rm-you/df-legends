@@ -9,6 +9,9 @@ from ..binary_reader import BinaryReader
 from .primitives import DfString, WorldHeaderHypothesis
 
 
+MAX_GENERATED_RAW_STRINGS = 5_000
+
+
 @dataclass
 class GeneratedRawSection:
     string_count: int
@@ -16,12 +19,20 @@ class GeneratedRawSection:
 
     @classmethod
     def read(cls, reader: BinaryReader) -> GeneratedRawSection:
+        start = reader.tell()
         string_count = reader.read_int32()
-        if string_count < 0:
+        if string_count < 0 or string_count > MAX_GENERATED_RAW_STRINGS:
+            reader.seek(start)
             raise ValueError(
-                f"negative generated-raw string count {string_count} at 0x{reader.tell() - 4:x}"
+                f"implausible generated-raw string count {string_count} at 0x{start:x}"
             )
-        strings = [DfString.read(reader).value for _ in range(string_count)]
+        strings: list[str] = []
+        try:
+            for _ in range(string_count):
+                strings.append(DfString.read(reader).value)
+        except (EOFError, ValueError) as exc:
+            reader.seek(start)
+            raise ValueError(f"generated-raw section truncated at 0x{start:x}") from exc
         return cls(string_count=string_count, strings=strings)
 
 

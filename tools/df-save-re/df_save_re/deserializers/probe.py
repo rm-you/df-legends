@@ -14,6 +14,7 @@ from ..save_bundle import SaveKind, classify_filename
 from .active_save import WorldHeaderSavHypothesis
 from .post_header import PostHeaderRawStream
 from .primitives import BlockWithByteVector, WorldHeaderHypothesis
+from .string_tables import StringTableBlock, find_string_table_block
 from .world_dat import DatPreamble
 
 REGION_MARKERS = [
@@ -38,6 +39,8 @@ class ProbeResult:
     dat_preamble: DatPreamble | None = None
     dat_preamble_error: str | None = None
     post_header_stream: PostHeaderRawStream | None = None
+    string_tables: StringTableBlock | None = None
+    string_tables_error: str | None = None
     legends_scan: LegendsScanReport | None = None
     block_at_markers: dict[str, BlockWithByteVector | str] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
@@ -118,11 +121,25 @@ def probe_save(path: str) -> ProbeResult:
                 reader.seek(pre.world_data_offset)
                 result.post_header_stream = PostHeaderRawStream.read(reader)
                 ph = result.post_header_stream
+                post_end = reader.tell()
                 result.notes.append(
                     f"post-header raw stream: lead={ph.lead_field}, "
                     f"{len(ph.sections)} sections, {ph.total_strings} strings, "
-                    f"ends @ 0x{reader.tell():x}"
+                    f"ends @ 0x{post_end:x}"
                 )
+                tables_off = find_string_table_block(payload, start=pre.world_data_offset)
+                if tables_off is not None:
+                    try:
+                        reader = BinaryReader(BytesIO(payload))
+                        reader.seek(tables_off)
+                        result.string_tables = StringTableBlock.read(reader)
+                        st = result.string_tables
+                        result.notes.append(
+                            f"string tables @ 0x{tables_off:x}: {st.section_count} sections, "
+                            f"{st.total_names:,} names, ends @ 0x{reader.tell():x}"
+                        )
+                    except (EOFError, ValueError) as exc:
+                        result.string_tables_error = str(exc)
                 result.legends_scan = scan_legends_region(
                     payload,
                     preamble_end=pre.world_data_offset,
@@ -130,7 +147,7 @@ def probe_save(path: str) -> ProbeResult:
                     header=pre.header,
                     post_header_lead=ph.lead_field,
                     post_header_sections=len(ph.sections),
-                    post_header_end=reader.tell(),
+                    post_header_end=post_end,
                 )
             except (EOFError, ValueError) as exc:
                 result.legends_scan = scan_legends_region(

@@ -12,6 +12,7 @@ from .compression import decompress_file, describe_save_version, is_target_save_
 from .deserializers.probe import probe_save
 from .deserializers.world_dat import parse_dat_preamble
 from .hexdump import format_hexdump, scan_int32_values
+from .legends_scan import scan_legends_region
 from .legends_xml import compare_with_save_header, parse_legends_xml
 from .save_bundle import index_save_folder, legends_parse_target
 from .scan import scan_save
@@ -103,11 +104,23 @@ def cmd_probe(args: argparse.Namespace) -> int:
                 "total_strings": ph.total_strings,
                 "bytes_consumed": ph.bytes_consumed,
             }
+        if result.string_tables:
+            st = result.string_tables
+            payload["string_tables"] = {
+                "section_count": st.section_count,
+                "total_names": st.total_names,
+                "bytes_consumed": st.bytes_consumed,
+                "first_section_count": st.sections[0].entry_count if st.sections else 0,
+                "first_section_first": st.sections[0].names[0] if st.sections else None,
+            }
+        payload["string_tables_error"] = result.string_tables_error
         if result.legends_scan:
             ls = result.legends_scan
             payload["legends_scan"] = {
                 "preamble_end": ls.preamble_end,
                 "post_header_end": ls.post_header_end,
+                "string_tables_offset": ls.string_tables_offset,
+                "string_tables_end": ls.string_tables_end,
                 "first_region_marker": ls.first_region_marker,
                 "history_anchor": (
                     {
@@ -173,6 +186,92 @@ def cmd_probe(args: argparse.Namespace) -> int:
             print(f"  parsed {key}: field_8={val.field_8} payload={len(val.payload)} bytes")
         else:
             print(f"  {key}: {val}")
+    return 0
+
+
+def cmd_legends_scan(args: argparse.Namespace) -> int:
+    path = Path(args.path)
+    dec = decompress_file(path)
+    file_header = read_header(path.read_bytes())
+    pre = parse_dat_preamble(dec.payload, save_version=file_header.save_version)
+    post_end = None
+    post_lead = None
+    post_sections = None
+    if args.full:
+        from io import BytesIO
+
+        from .binary_reader import BinaryReader
+        from .deserializers.post_header import PostHeaderRawStream
+
+        reader = BinaryReader(BytesIO(dec.payload))
+        reader.seek(pre.world_data_offset)
+        stream = PostHeaderRawStream.read(reader)
+        post_end = reader.tell()
+        post_lead = stream.lead_field
+        post_sections = len(stream.sections)
+
+    report = scan_legends_region(
+        dec.payload,
+        preamble_end=pre.world_data_offset,
+        post_raws_int32=pre.post_raws_int32,
+        header=pre.header,
+        post_header_lead=post_lead,
+        post_header_sections=post_sections,
+        post_header_end=post_end,
+    )
+
+    if args.json:
+        out = {
+            "path": str(path),
+            "world_name": pre.header.world_name.value if pre.header.world_name else None,
+            "max_histfig": pre.header.max_ids[8],
+            "max_event": pre.header.max_ids[9],
+            "preamble_end": report.preamble_end,
+            "post_header_end": report.post_header_end,
+            "string_tables_offset": report.string_tables_offset,
+            "string_tables_sections": report.string_tables_sections,
+            "string_tables_end": report.string_tables_end,
+            "history_anchor": (
+                {
+                    "offset": report.history_anchor.payload_offset,
+                    "event_count": report.history_anchor.event_count,
+                    "fig_nearby_offset": report.history_anchor.nearby_offset,
+                    "posnull_score": report.history_anchor.posnull_score,
+                }
+                if report.history_anchor
+                else None
+            ),
+            "notes": report.notes,
+        }
+        print(json.dumps(out, indent=2))
+        return 0
+
+    print(f"file: {path}")
+    print(f"world_name: {pre.header.world_name}")
+    print(f"max_ids[8] histfig: {pre.header.max_ids[8]:,}")
+    print(f"max_ids[9] event:   {pre.header.max_ids[9]:,}")
+    for note in report.notes:
+        print(f"note: {note}")
+    if report.history_anchor and args.legends_xml:
+        xml_path = Path(args.legends_xml)
+        if xml_path.is_file():
+            xml_stats = parse_legends_xml(xml_path)
+            mismatches = compare_with_save_header(
+                xml_stats,
+                world_name=pre.header.world_name.value if pre.header.world_name else None,
+                max_histfig=pre.header.max_ids[8],
+                max_event=pre.header.max_ids[9],
+            )
+            print(f"legends xml: {xml_path}")
+            print(f"  events: {xml_stats.historical_events:,}  figures: {xml_stats.historical_figures:,}")
+            if mismatches:
+                print("  mismatches:")
+                for line in mismatches:
+                    print(f"    - {line}")
+            else:
+                print("  header/xml counts: OK")
+        else:
+            print(f"legends xml: (not found at {xml_path})")
     return 0
 
 
@@ -418,6 +517,24 @@ def main(argv: list[str] | None = None) -> int:
     p_legends.add_argument("legends_xml")
     p_legends.add_argument("--json", action="store_true")
     p_legends.set_defaults(func=cmd_legends_compare)
+
+    p_lscan = sub.add_parser(
+        "legends-scan",
+        help="Scan world.dat for string tables and world_history anchor candidates",
+    )
+    p_lscan.add_argument("path", help="Path to world.dat")
+    p_lscan.add_argument(
+        "--full",
+        action="store_true",
+        help="Parse post-header raw stream first (slower, more precise offsets)",
+    )
+    p_lscan.add_argument(
+        "--legends-xml",
+        default=None,
+        help="Optional legends.xml path for count cross-check when available",
+    )
+    p_lscan.add_argument("--json", action="store_true")
+    p_lscan.set_defaults(func=cmd_legends_scan)
 
     p_hex = sub.add_parser("hexdump", help="Hexdump decompressed payload region")
     p_hex.add_argument("path")

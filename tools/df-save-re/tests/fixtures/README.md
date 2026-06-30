@@ -9,6 +9,7 @@ fixtures/
 ├── README.md
 ├── small-retired/
 │   └── world.dat          # Compact 0.47.05 world (Namushul) — fast default fixture
+│   └── legends.xml        # Optional — legends export for cross-check (not in repo)
 ├── waterlures-retired/
 │   └── world.dat          # Larger retired fort world (Minbazkar)
 └── ironhand-active/

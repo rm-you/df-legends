@@ -113,12 +113,20 @@ int32 post_raws_field       # 0 on both fixtures — string-table bridge TBD
 Implemented as `GeneratedRawsBlock` in `deserializers/world_dat.py`. Preamble ends with
 `post_raws_field` (0 on fixtures); Namushul preamble = **0x881b** bytes.
 
-### 6. String tables (in progress)
+### 6. String tables (validated Namushul + Waterlures 0.47.05)
 
-Andux documents 19–20 short-name lists after generated raws. On 0.47.05 fixtures the
-bytes after `post_raws_field` continue with item/interaction raw streams before material
-name tables (~`STEEL`, `ADAMANTINE` around payload offset `0x2a39xx` on Namushul).
-Format still under RE — do not assume plain `int32 count + DfString` at offset `0x881b`.
+After a ~2.2 MB generated-raw / entity blob on Namushul, short-name tables appear as:
+
+```
+repeat ~21 sections:
+    int32 entry_count
+    entry_count × DfString   # int16 length + bytes — same as file_compressorst string
+```
+
+First section is **materials** (265 entries on both fixtures: `IRON` … `ADAMANTINE` … soils).
+Located via `IRON` entry signature; Namushul block @ **`0x2a397e`**, ends @ **`0x2b0684`** (20 sections).
+
+Implemented in `deserializers/string_tables.py` (`StringTableBlock`, `find_string_table_block`).
 
 ### 7. Post-header raw stream (validated Namushul)
 
