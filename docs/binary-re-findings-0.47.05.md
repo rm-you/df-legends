@@ -120,6 +120,25 @@ bytes after `post_raws_field` continue with item/interaction raw streams before 
 name tables (~`STEEL`, `ADAMANTINE` around payload offset `0x2a39xx` on Namushul).
 Format still under RE — do not assume plain `int32 count + DfString` at offset `0x881b`.
 
+### 7. Post-header raw stream (validated Namushul)
+
+After `post_raws_field`:
+
+```
+int32 lead_field        # 426 Namushul
+repeat until EOF/error:
+    int32 string_count
+    string_count × DfString
+```
+
+~427 sections / 7541 strings on Namushul, ending ~`0x86d93`. Still generated ITEM/CREATURE
+raw chunks — not short string-table names.
+
+### 8. world_history anchor (heuristic)
+
+Candidate @ **`0x15beb28`**: int32 event count (113,118) with histfig count (12,747) within
+64 bytes and posnull-like vector prefix. Needs confirmation via legends XML + event parse.
+
 ## Polymorphic history events
 
 155 distinct `history_event_*` subclasses (RTTI names extracted to `data/df_47_05_history_event_types.txt`).

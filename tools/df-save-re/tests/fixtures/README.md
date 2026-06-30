@@ -48,3 +48,15 @@ Both worlds use **50 int32 ID counters** after the leading int16.
 | Waterlures | Minbazkar | 229 (`0xE5`) | 46,661 | 531,051 |
 
 After the header, generated raws begin with `int32` count **42**.
+
+## Legends XML cross-check (when available)
+
+Export from Legends mode ([x] in 0.47) or DFHack `exportlegends` for the same world.
+Place alongside the save, e.g. `tests/fixtures/small-retired/legends.xml`, then:
+
+```bash
+df-save-re legends-compare tests/fixtures/small-retired/world.dat tests/fixtures/small-retired/legends.xml
+```
+
+This compares world name and event/figure counts against `max_ids[8]` / `max_ids[9]` in the
+DAT header — useful while RE'ing `world_history` location.

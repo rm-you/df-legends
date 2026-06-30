@@ -12,6 +12,7 @@ from .compression import decompress_file, describe_save_version, is_target_save_
 from .deserializers.probe import probe_save
 from .deserializers.world_dat import parse_dat_preamble
 from .hexdump import format_hexdump, scan_int32_values
+from .legends_xml import compare_with_save_header, parse_legends_xml
 from .save_bundle import index_save_folder, legends_parse_target
 from .scan import scan_save
 from .target import TARGET_DF_VERSION, TARGET_SAVE_VERSION
@@ -94,11 +95,30 @@ def cmd_probe(args: argparse.Namespace) -> int:
                     "bytes_consumed": pre.generated_raws.bytes_consumed,
                 },
             }
+        if result.post_header_stream:
+            ph = result.post_header_stream
+            payload["post_header_stream"] = {
+                "lead_field": ph.lead_field,
+                "section_count": len(ph.sections),
+                "total_strings": ph.total_strings,
+                "bytes_consumed": ph.bytes_consumed,
+            }
         if result.legends_scan:
             ls = result.legends_scan
             payload["legends_scan"] = {
                 "preamble_end": ls.preamble_end,
+                "post_header_end": ls.post_header_end,
                 "first_region_marker": ls.first_region_marker,
+                "history_anchor": (
+                    {
+                        "offset": ls.history_anchor.payload_offset,
+                        "event_count": ls.history_anchor.event_count,
+                        "fig_nearby_offset": ls.history_anchor.nearby_offset,
+                        "posnull_score": ls.history_anchor.posnull_score,
+                    }
+                    if ls.history_anchor
+                    else None
+                ),
                 "id_counter_hits": [
                     {
                         "index": h.index,
@@ -153,6 +173,54 @@ def cmd_probe(args: argparse.Namespace) -> int:
             print(f"  parsed {key}: field_8={val.field_8} payload={len(val.payload)} bytes")
         else:
             print(f"  {key}: {val}")
+    return 0
+
+
+def cmd_legends_compare(args: argparse.Namespace) -> int:
+    save_path = Path(args.world_dat)
+    xml_path = Path(args.legends_xml)
+    dec = decompress_file(save_path)
+    file_header = read_header(save_path.read_bytes())
+    pre = parse_dat_preamble(dec.payload, save_version=file_header.save_version)
+    xml_stats = parse_legends_xml(xml_path)
+    mismatches = compare_with_save_header(
+        xml_stats,
+        world_name=pre.header.world_name.value if pre.header.world_name else None,
+        max_histfig=pre.header.max_ids[8],
+        max_event=pre.header.max_ids[9],
+    )
+
+    if args.json:
+        out = {
+            "save": str(save_path),
+            "legends_xml": str(xml_path),
+            "save_world_name": pre.header.world_name.value if pre.header.world_name else None,
+            "xml_world_name": xml_stats.world_name,
+            "save_max_histfig": pre.header.max_ids[8],
+            "save_max_event": pre.header.max_ids[9],
+            "xml_figures": xml_stats.historical_figures,
+            "xml_events": xml_stats.historical_events,
+            "xml_max_figure_id": xml_stats.max_figure_id,
+            "xml_max_event_id": xml_stats.max_event_id,
+            "mismatches": mismatches,
+        }
+        print(json.dumps(out, indent=2))
+        return 0 if not mismatches else 2
+
+    print(f"save: {save_path}")
+    print(f"xml:  {xml_path}")
+    print(f"save world_name: {pre.header.world_name}")
+    print(f"xml  world_name: {xml_stats.world_name}" + (f" ({xml_stats.alt_name})" if xml_stats.alt_name else ""))
+    print(f"save max_ids[8] histfig: {pre.header.max_ids[8]:,}")
+    print(f"save max_ids[9] event:   {pre.header.max_ids[9]:,}")
+    print(f"xml  historical_figure: {xml_stats.historical_figures:,} (max id {xml_stats.max_figure_id})")
+    print(f"xml  historical_event:  {xml_stats.historical_events:,} (max id {xml_stats.max_event_id})")
+    if mismatches:
+        print("mismatches:")
+        for line in mismatches:
+            print(f"  - {line}")
+        return 2
+    print("header/xml counts: OK (within tolerance)")
     return 0
 
 
@@ -341,6 +409,15 @@ def main(argv: list[str] | None = None) -> int:
     p_preamble.add_argument("path")
     p_preamble.add_argument("--json", action="store_true")
     p_preamble.set_defaults(func=cmd_preamble)
+
+    p_legends = sub.add_parser(
+        "legends-compare",
+        help="Compare legends XML export stats against world.dat header counters",
+    )
+    p_legends.add_argument("world_dat")
+    p_legends.add_argument("legends_xml")
+    p_legends.add_argument("--json", action="store_true")
+    p_legends.set_defaults(func=cmd_legends_compare)
 
     p_hex = sub.add_parser("hexdump", help="Hexdump decompressed payload region")
     p_hex.add_argument("path")

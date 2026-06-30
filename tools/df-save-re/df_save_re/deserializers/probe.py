@@ -12,6 +12,7 @@ from ..legends_scan import LegendsScanReport, scan_legends_region
 from ..target import TARGET_SAVE_VERSION
 from ..save_bundle import SaveKind, classify_filename
 from .active_save import WorldHeaderSavHypothesis
+from .post_header import PostHeaderRawStream
 from .primitives import BlockWithByteVector, WorldHeaderHypothesis
 from .world_dat import DatPreamble
 
@@ -36,6 +37,7 @@ class ProbeResult:
     sav_header_error: str | None = None
     dat_preamble: DatPreamble | None = None
     dat_preamble_error: str | None = None
+    post_header_stream: PostHeaderRawStream | None = None
     legends_scan: LegendsScanReport | None = None
     block_at_markers: dict[str, BlockWithByteVector | str] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
@@ -109,15 +111,40 @@ def probe_save(path: str) -> ProbeResult:
             )
             result.notes.append(
                 f"preamble total {pre.bytes_consumed:,} bytes; "
-                f"world_data starts @ 0x{pre.world_data_offset:x}"
+                f"next section @ 0x{pre.world_data_offset:x}"
             )
-            result.legends_scan = scan_legends_region(
-                payload,
-                preamble_end=pre.world_data_offset,
-                post_raws_int32=pre.post_raws_int32,
-                header=pre.header,
-            )
-            result.notes.extend(result.legends_scan.notes)
+            try:
+                reader = BinaryReader(BytesIO(payload))
+                reader.seek(pre.world_data_offset)
+                result.post_header_stream = PostHeaderRawStream.read(reader)
+                ph = result.post_header_stream
+                result.notes.append(
+                    f"post-header raw stream: lead={ph.lead_field}, "
+                    f"{len(ph.sections)} sections, {ph.total_strings} strings, "
+                    f"ends @ 0x{reader.tell():x}"
+                )
+                result.legends_scan = scan_legends_region(
+                    payload,
+                    preamble_end=pre.world_data_offset,
+                    post_raws_int32=pre.post_raws_int32,
+                    header=pre.header,
+                    post_header_lead=ph.lead_field,
+                    post_header_sections=len(ph.sections),
+                    post_header_end=reader.tell(),
+                )
+            except (EOFError, ValueError) as exc:
+                result.legends_scan = scan_legends_region(
+                    payload,
+                    preamble_end=pre.world_data_offset,
+                    post_raws_int32=pre.post_raws_int32,
+                    header=pre.header,
+                )
+                result.notes.append(f"post-header stream parse partial: {exc}")
+                if result.legends_scan:
+                    result.notes.extend(result.legends_scan.notes)
+            else:
+                if result.legends_scan:
+                    result.notes.extend(result.legends_scan.notes)
         except (EOFError, ValueError) as exc:
             result.dat_preamble_error = str(exc)
             result.world_header_error = str(exc)
