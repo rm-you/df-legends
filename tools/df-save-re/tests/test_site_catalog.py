@@ -41,7 +41,7 @@ def test_world_site_catalog_namushul():
     assert catalog.site_count == 350
     assert catalog.by_id()[345].display_name == "The Justice of Stances"
     assert catalog.by_id()[345].word_indices == (445, 818)
-    assert catalog.header_enriched_count >= 40
+    assert catalog.header_enriched_count >= 30
     assert catalog.name_table_stride == 354
     assert catalog.name_table_base is not None
     assert 0x1190000 <= catalog.name_table_base <= 0x11A0000

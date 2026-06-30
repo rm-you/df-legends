@@ -13,6 +13,34 @@ from .vector_io import skip_stl_byte_vector, skip_stl_int16_vector, skip_stl_int
 
 _STRUCT_CACHE: dict[str, StructDef] = {}
 
+# Minimal stubs for types missing from bundled df-structures (skip-only RE).
+_STUB_STRUCTS: dict[str, list[FieldDef]] = {
+    "artifact_record": [FieldDef(name="id", kind="int32_t")],
+    "nemesis_record": [FieldDef(name="id", kind="int32_t")],
+    "occupation": [
+        FieldDef(name="id", kind="int32_t"),
+        FieldDef(name="histfig_id", kind="int32_t"),
+        FieldDef(name="site_id", kind="int32_t"),
+        FieldDef(name="location_id", kind="int32_t"),
+    ],
+    "entity_site_link": [
+        FieldDef(name="site_id", kind="int32_t"),
+        FieldDef(name="entity_id", kind="int32_t"),
+        FieldDef(name="link_type", kind="int32_t"),
+    ],
+    "entity_event": [
+        FieldDef(name="id", kind="int32_t"),
+        FieldDef(name="year", kind="int32_t"),
+    ],
+    "interaction": [FieldDef(name="id", kind="int32_t")],
+    "entity_population": [FieldDef(name="id", kind="int32_t")],
+    "unit": [FieldDef(name="id", kind="int32_t")],
+    "building": [FieldDef(name="id", kind="int32_t")],
+    "architectural_element": [FieldDef(name="id", kind="int32_t")],
+    "world_site_unk130": [FieldDef(name="index", kind="int32_t")],
+    "historical_figure": [FieldDef(name="id", kind="int32_t")],
+}
+
 
 def default_xml_dir() -> Path:
     return Path(__file__).resolve().parents[4] / "data" / "df-structures"
@@ -44,7 +72,9 @@ def skip_field(reader: BinaryReader, field: FieldDef, *, xml_dir: Path) -> None:
         DfString.read(reader)
     elif kind == "df-flagarray":
         count = reader.read_int32()
-        if count < 0 or count > 256:
+        if count < 0:
+            return
+        if count > 256:
             raise ValueError(f"implausible flagarray count {count}")
         reader.read_bytes(count * 4)
     elif kind == "enum":
@@ -62,11 +92,16 @@ def skip_field(reader: BinaryReader, field: FieldDef, *, xml_dir: Path) -> None:
                 skip_field(reader, child, xml_dir=xml_dir)
         else:
             raise ValueError(f"anonymous compound {field.name!r} needs manual skip")
+    elif kind == "padding":
+        size = field.array_count or 0
+        if size:
+            reader.read_bytes(size)
     elif kind == "pointer":
-        if not reader.read_bool():
-            return
+        present = reader.read_bool()
         while reader.tell() % 4:
             reader.read_uint8()
+        if not present:
+            return
         if field.type_name:
             skip_struct(reader, field.type_name, xml_dir=xml_dir)
         elif field.children:
@@ -99,7 +134,7 @@ def skip_field(reader: BinaryReader, field: FieldDef, *, xml_dir: Path) -> None:
             return
         count = reader.read_int32()
         if count < 0:
-            raise ValueError(f"negative vector length {count}")
+            return
         inline_pointer = (
             field.children[0]
             if len(field.children) == 1 and field.children[0].kind == "pointer"
@@ -107,6 +142,8 @@ def skip_field(reader: BinaryReader, field: FieldDef, *, xml_dir: Path) -> None:
         )
         for _ in range(count):
             if not reader.read_bool():
+                while reader.tell() % 4:
+                    reader.read_uint8()
                 continue
             while reader.tell() % 4:
                 reader.read_uint8()
@@ -135,9 +172,19 @@ def skip_struct(reader: BinaryReader, type_name: str, *, xml_dir: Path | None = 
         reader.read_int32()
         reader.read_int32()
         return reader.tell() - start
+    if type_name == "coord":
+        reader.read_int32()
+        reader.read_int32()
+        reader.read_int32()
+        return reader.tell() - start
 
     struct = _get_struct(type_name, xml_dir)
     if struct is None:
+        stub = _STUB_STRUCTS.get(type_name)
+        if stub is not None:
+            for field in stub:
+                skip_field(reader, field, xml_dir=xml_dir)
+            return reader.tell() - start
         raise ValueError(f"unknown struct {type_name!r}")
     for field in struct.fields:
         if field.kind == "virtual-methods":

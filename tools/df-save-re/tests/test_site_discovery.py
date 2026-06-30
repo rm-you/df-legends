@@ -29,6 +29,6 @@ def test_discover_world_sites_namushul():
         search_end=mid.end,
         max_site_id=349,
     )
-    assert result.catalog.site_count >= 150
+    assert result.catalog.site_count >= 200
     assert all(rec.header_offset is not None for rec in result.catalog.records)
     assert result.catalog.records[0].site_id >= 0

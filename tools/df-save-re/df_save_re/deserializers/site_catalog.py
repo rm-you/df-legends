@@ -70,8 +70,8 @@ def _pick_lowest_offset_hits(
         expected = TEXT_TYPE_TO_ENUM.get(by_id[site_id].site_type.strip().lower())
         if expected is None or site_type != expected:
             continue
-        civ_id = struct.unpack_from("<i", payload, off - 22)[0]
-        cur_owner_id = struct.unpack_from("<i", payload, off - 18)[0]
+        civ_id = struct.unpack_from("<i", payload, off - 18)[0]
+        cur_owner_id = struct.unpack_from("<i", payload, off - 14)[0]
         pos_x = struct.unpack_from("<i", payload, off - 8)[0]
         pos_y = struct.unpack_from("<i", payload, off - 4)[0]
         if civ_id < -1 or civ_id > 500 or cur_owner_id < -1 or cur_owner_id > 500:
@@ -196,7 +196,7 @@ def build_world_site_catalog(
                     cur_owner_id=cur_owner_id,
                     pos_x=pos_x,
                     pos_y=pos_y,
-                    header_offset=off - 22,
+                    header_offset=off - 18,
                 )
             )
             continue

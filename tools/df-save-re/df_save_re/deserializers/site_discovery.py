@@ -8,6 +8,7 @@ from .entity_def import HistoricalEntityHeader, catalog_entity_block
 from .entity_names import resolve_language_name_display
 from .site_catalog import WorldSiteBinaryRecord, WorldSiteCatalog, infer_name_table_layout
 from .site_def import scan_site_headers
+from .site_id_catalog import build_catalog_from_id_fields
 from .site_names import SiteNameMarker
 from .string_tables import StringTableBlock
 
@@ -66,6 +67,24 @@ def _headers_to_catalog(
     )
 
 
+def _merge_catalogs(
+    primary: WorldSiteCatalog,
+    supplemental: WorldSiteCatalog,
+) -> WorldSiteCatalog:
+    by_id = {rec.site_id: rec for rec in primary.records}
+    for rec in supplemental.records:
+        if rec.site_id not in by_id:
+            by_id[rec.site_id] = rec
+    records = [by_id[sid] for sid in sorted(by_id)]
+    return WorldSiteCatalog(
+        records=records,
+        name_table_base=primary.name_table_base or supplemental.name_table_base,
+        name_table_stride=primary.name_table_stride or supplemental.name_table_stride,
+        search_start=min(primary.search_start, supplemental.search_start),
+        search_end=max(primary.search_end, supplemental.search_end),
+    )
+
+
 def discover_world_sites(
     payload: bytes,
     *,
@@ -79,12 +98,21 @@ def discover_world_sites(
     """
     Build a site catalog purely from ``world.dat``.
 
-    Uses a scored header scan across the entity-gap / mid payload, then merges
-    id-field backscan hits for any missing site ids.
+    Primary path: ``site_id`` field probe across entity-gap + mid payload with
+    nearest ``language_name.words`` fingerprint for titles. Header scan fills
+    any remaining ids with lower-confidence hits.
     """
     if entities is None:
         entities = catalog_entity_block(payload, search_end=search_end).entities
     entity_civ_ids = {ent.entity_id for ent in entities}
+
+    id_catalog = build_catalog_from_id_fields(
+        payload,
+        block=block,
+        search_start=search_start,
+        search_end=search_end,
+        max_site_id=max_site_id,
+    )
 
     scanned = scan_site_headers(
         payload,
@@ -94,22 +122,24 @@ def discover_world_sites(
         max_site_id=max_site_id,
         civ_ids=civ_ids,
     )
-
-    catalog = _headers_to_catalog(
+    scan_catalog = _headers_to_catalog(
         payload,
         block=block,
         headers=scanned,
         search_start=search_start,
         search_end=search_end,
     )
+    catalog = _merge_catalogs(id_catalog, scan_catalog)
 
     notes = [
-        f"binary site scan: {len(catalog.records)} headers (ids 0..{max_site_id})",
+        f"id-field probe: {id_catalog.site_count} sites",
+        f"header scan merge: {catalog.site_count} total (ids 0..{max_site_id})",
     ]
-    if len(catalog.records) < max_site_id + 1:
+    missing = max_site_id + 1 - catalog.site_count
+    if missing > 0:
         notes.append(
-            f"missing {max_site_id + 1 - len(catalog.records)} site ids — "
-            "world_site body walk / population parse still open"
+            f"missing {missing} site ids — titles live in region blobs without "
+            "adjacent id fields; full world_site body walk still open"
         )
 
     return SiteDiscoveryResult(

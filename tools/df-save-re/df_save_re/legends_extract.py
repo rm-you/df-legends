@@ -239,7 +239,7 @@ def extract_legends_snapshot(
             payload,
             preamble.header,
             search_start=layout.history_stats,
-            id_chain_limit=512,
+            id_chain_limit=2048,
         )
         if historical_figure_catalog:
             anchor = historical_figure_catalog.anchor

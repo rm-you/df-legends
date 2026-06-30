@@ -49,11 +49,22 @@ def read_language_name(reader: BinaryReader) -> LanguageName:
     )
 
 
+_MAX_NAME_STRING = 64
+
+
 def try_read_language_name(reader: BinaryReader) -> LanguageName | None:
     start = reader.tell()
     try:
+        first_len = reader.read_int16()
+        if first_len < 0 or first_len > _MAX_NAME_STRING:
+            reader.seek(start)
+            return None
+        reader.seek(start)
         name = read_language_name(reader)
     except (EOFError, ValueError):
+        reader.seek(start)
+        return None
+    if len(name.first_name) > _MAX_NAME_STRING or len(name.nickname) > _MAX_NAME_STRING:
         reader.seek(start)
         return None
     if name.language < -1 or name.language > 10_000:

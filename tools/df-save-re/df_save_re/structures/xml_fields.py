@@ -52,6 +52,7 @@ _FIELD_TAGS = {
     "df-flagarray",
     "df-static-flagarray",
     "df-array",
+    "padding",
 }
 
 
@@ -114,22 +115,19 @@ def _parse_fields(elem: ET.Element) -> list[FieldDef]:
             )
         elif child.tag == "virtual-methods":
             fields.append(FieldDef(name="virtual-methods", kind="virtual-methods"))
+        elif child.tag == "padding":
+            size_attr = _attr(child, "size")
+            fields.append(
+                FieldDef(
+                    name=_attr(child, "name") or "padding",
+                    kind="padding",
+                    array_count=int(size_attr) if size_attr and size_attr.isdigit() else None,
+                )
+            )
     return fields
 
 
-_STRUCT_XML_FILES = (
-    "df.history_event.xml",
-    "df.history_figure.xml",
-    "df.history.xml",
-    "df.world.xml",
-    "df.world-data.xml",
-    "df.world-site.xml",
-    "df.entity.xml",
-    "df.language.xml",
-    "df.artifacts.xml",
-    "df.unit.xml",
-)
-
+_STRUCT_XML_GLOB = "df*.xml"
 _STRUCT_CACHE: dict[tuple[str, str], StructDef | None] = {}
 
 
@@ -138,10 +136,7 @@ def load_struct(name: str, xml_dir: Path | str) -> StructDef | None:
     cache_key = (name, str(xml_dir.resolve()))
     if cache_key in _STRUCT_CACHE:
         return _STRUCT_CACHE[cache_key]
-    for rel in _STRUCT_XML_FILES:
-        path = xml_dir / rel
-        if not path.exists():
-            continue
+    for path in sorted(xml_dir.glob(_STRUCT_XML_GLOB)):
         structs = load_structs_from_file(path)
         if name in structs:
             _STRUCT_CACHE[cache_key] = structs[name]

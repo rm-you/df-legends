@@ -15,6 +15,7 @@ from .site_def import (
     WorldSiteHeaderHypothesis,
     try_read_site_header,
 )
+from .site_id_catalog import SITE_ID_OFFSETS, probe_site_id_fields
 from .string_tables import StringTableBlock
 from .vector_io import score_posnull_prefix, skip_posnull_pointer_vector
 
@@ -78,39 +79,25 @@ def probe_site_headers_by_id_field(
     words: list[str],
 ) -> dict[int, WorldSiteHeaderHypothesis]:
     """
-    Locate site headers by scanning plausible ``id`` fields, then walking backward
-    to a matching ``try_read_site_header`` parse.
-
-    Unlike fixed-offset id probing, this tolerates variable ``language_name`` size.
+    Locate site headers via ``site_id`` field probes + optional header backscan.
     """
-    import struct
+    from io import BytesIO
 
-    id_best_off: dict[int, int] = {}
-    for id_off in range(search_start, search_end - 4, 4):
-        site_id = struct.unpack_from("<i", payload, id_off)[0]
-        if site_id < 0 or site_id > max_site_id:
-            continue
-        site_type = struct.unpack_from("<h", payload, id_off - 10)[0]
-        if site_type not in SITE_TYPES:
-            continue
-        civ_id = struct.unpack_from("<i", payload, id_off - 22)[0]
-        cur_owner = struct.unpack_from("<i", payload, id_off - 18)[0]
-        pos_x = struct.unpack_from("<i", payload, id_off - 8)[0]
-        pos_y = struct.unpack_from("<i", payload, id_off - 4)[0]
-        if civ_id < -1 or civ_id > 500 or cur_owner < -1 or cur_owner > 500:
-            continue
-        if abs(pos_x) > 2500 or abs(pos_y) > 2500:
-            continue
-        if site_type == 0 and site_id != 0:
-            continue
-        prev = id_best_off.get(site_id)
-        if prev is None or id_off < prev:
-            id_best_off[site_id] = id_off
-
+    hits = probe_site_id_fields(
+        payload,
+        search_start=search_start,
+        search_end=search_end,
+        max_site_id=max_site_id,
+    )
     best: dict[int, WorldSiteHeaderHypothesis] = {}
     best_score: dict[int, tuple[int, int]] = {}
-    for site_id, id_off in id_best_off.items():
-        for hdr_off in range(max(search_start, id_off - 160), id_off - 18, 2):
+    for site_id, hit in hits.items():
+        id_off = hit.id_field_offset
+        for hdr_off in range(
+            max(search_start, id_off - 512),
+            id_off + SITE_ID_OFFSETS["civ_id"],
+            2,
+        ):
             reader = BinaryReader(BytesIO(payload))
             reader.seek(hdr_off)
             try:
@@ -125,7 +112,7 @@ def probe_site_headers_by_id_field(
                 continue
             score = _score_header(header, words=words, hdr_off=hdr_off)
             prev = best_score.get(site_id)
-            if prev is None or score > prev or (score == prev and hdr_off < prev[1]):
+            if prev is None or score > prev[0] or (score == prev[0] and hdr_off < prev[1]):
                 best[site_id] = header
                 best_score[site_id] = score
     return best
