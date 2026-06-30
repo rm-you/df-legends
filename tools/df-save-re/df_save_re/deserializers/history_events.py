@@ -102,13 +102,35 @@ def build_history_events_catalog(
 ) -> HistoryEventsCatalog | None:
     stats = probe_history_stats(payload, header)
     if stats is None:
-        return None
+        if len(header.max_ids) < 10:
+            return None
+        from .history_stats import HistoryStatsFields
+
+        stats = HistoryStatsProbe(
+            payload_offset=search_start,
+            fields=HistoryStatsFields(
+                event_counter=header.max_ids[9],
+                field_151=-1,
+                field_4=-1,
+                histfig_counter=header.max_ids[8],
+                field_neg1=-1,
+                field_zero=0,
+                field_12748=-1,
+                field_39583846=-1,
+            ),
+            header_matches=True,
+            notes=[
+                "history stats echo not found — using header max_ids[8]/[9] counters",
+                f"search anchor @ 0x{search_start:x}",
+            ],
+        )
 
     event_count = stats.fields.event_counter
     notes = list(stats.notes)
-    notes.append(
-        "stats echo lists vector sizes; events pointer vector is not at this offset"
-    )
+    if stats.payload_offset != search_start or stats.fields.field_151 >= 0:
+        notes.append(
+            "stats echo lists vector sizes; events pointer vector is not at this offset"
+        )
 
     figures = figures_anchor or locate_figures_vector(
         payload,
@@ -121,12 +143,13 @@ def build_history_events_catalog(
             notes.append(f"events_death vector @ 0x{figures.death_events_offset:x}")
 
     death_events: DeathEventsVectorAnchor | None = None
+    death_count = stats.fields.field_151 if stats.fields.field_151 > 0 else 151
     if figures is not None and figures.death_events_offset is not None:
         death_events = locate_death_events_vector(
             payload,
             search_start=figures.bodies_start,
             search_end=min(len(payload), figures.death_events_offset + 256),
-            expected_count=stats.fields.field_151,
+            expected_count=death_count,
         )
         if death_events is None:
             death_events = DeathEventsVectorAnchor(
@@ -142,7 +165,7 @@ def build_history_events_catalog(
                     for b in payload[
                         figures.death_events_offset + 4 : figures.death_events_offset
                         + 4
-                        + stats.fields.field_151
+                        + death_count
                     ]
                     if b == 1
                 ),
@@ -173,6 +196,8 @@ def build_history_events_catalog(
 
     if stats.fields.field_4 == 4:
         notes.append("field_4=4 (relationship_event block count echo)")
+    elif stats.fields.field_4 < 0:
+        notes.append("field_4 unknown (stats echo not located)")
 
     return HistoryEventsCatalog(
         stats=stats,

@@ -31,7 +31,7 @@ from .deserializers.historical_figures import (
 )
 from .deserializers.history_events import HistoryEventsCatalog, build_history_events_catalog
 from .deserializers.history_rulers import RulerCatalog
-from .deserializers.world_layout import WorldLayoutLandmarks, discover_layout_landmarks
+from .deserializers.world_layout import WorldLayoutLandmarks, discover_layout_landmarks, resolve_history_search_start
 
 
 @dataclass
@@ -189,10 +189,9 @@ def extract_legends_snapshot(
             )
     site_discovery: SiteDiscoveryResult | None = None
     world_site_catalog: WorldSiteCatalog | None = None
-    if layout.first_region_block is not None and layout.history_stats is not None:
+    if layout.first_region_block is not None:
         gap = layout.region("entity_gap")
-        mid = layout.region("region_and_mid")
-        if gap is not None and mid is not None:
+        if gap is not None:
             site_discovery = discover_world_sites(
                 payload,
                 block=block,
@@ -206,10 +205,11 @@ def extract_legends_snapshot(
             for line in site_discovery.notes:
                 notes.append(f"sites: {line}")
     if layout.first_region_block is not None:
+        tail = layout.history_tail_start
         notes.append(
             f"layout: region blocks @ 0x{layout.first_region_block:x}; "
-            f"history tail {layout.history_tail_size:,} bytes @ 0x{layout.history_stats:x}"
-            if layout.history_stats is not None and layout.history_tail_size is not None
+            f"history tail {layout.history_tail_size:,} bytes @ 0x{tail:x}"
+            if tail is not None and layout.history_tail_size is not None
             else f"layout: region blocks @ 0x{layout.first_region_block:x}"
         )
     if stats:
@@ -235,11 +235,12 @@ def extract_legends_snapshot(
     historical_figure_catalog: HistoricalFigureCatalog | None = None
     history_events_catalog: HistoryEventsCatalog | None = None
     ruler_catalog: RulerCatalog | None = None
-    if layout.history_stats is not None:
+    history_search_start = resolve_history_search_start(payload, layout, preamble.header)
+    if history_search_start is not None:
         historical_figure_catalog = build_historical_figure_catalog(
             payload,
             preamble.header,
-            search_start=layout.history_stats,
+            search_start=history_search_start,
             id_chain_limit=2048,
         )
         if historical_figure_catalog:
@@ -255,7 +256,7 @@ def extract_legends_snapshot(
         history_events_catalog = build_history_events_catalog(
             payload,
             preamble.header,
-            search_start=layout.history_stats,
+            search_start=history_search_start,
             figures_anchor=(
                 historical_figure_catalog.anchor if historical_figure_catalog else None
             ),
@@ -277,7 +278,7 @@ def extract_legends_snapshot(
         vector_anchors = anchor_history_vectors(
             payload,
             preamble.header,
-            stats_offset=layout.history_stats,
+            stats_offset=history_search_start,
             payload_end=len(payload),
         )
         for anchor in vector_anchors:
@@ -291,9 +292,9 @@ def extract_legends_snapshot(
     if stats_probe:
         for line in stats_probe.notes:
             notes.append(f"history stats probe: {line}")
-    if layout.last_catalog_entity is not None and layout.history_stats is not None:
+    if layout.last_catalog_entity is not None and history_search_start is not None:
         probe_start = layout.last_catalog_entity
-        probe_end = layout.history_stats
+        probe_end = history_search_start
         site_cands = find_posnull_vector_candidates(
             payload,
             count=350,
@@ -306,7 +307,7 @@ def extract_legends_snapshot(
         event_cands = find_posnull_vector_candidates(
             payload,
             count=preamble.header.max_ids[9],
-            search_start=layout.history_stats,
+            search_start=history_search_start,
             search_end=len(payload),
             region="history_tail",
             min_score=50_000,
@@ -315,7 +316,7 @@ def extract_legends_snapshot(
         fig_cands = find_posnull_vector_candidates(
             payload,
             count=preamble.header.max_ids[8],
-            search_start=layout.history_stats,
+            search_start=history_search_start,
             search_end=len(payload),
             region="history_tail",
             min_score=5000,

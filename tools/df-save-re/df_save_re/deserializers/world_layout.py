@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from .entity_def import catalog_entity_block
 from .primitives import WorldHeaderHypothesis
 from .string_tables import parse_string_table_block
-from .world_dat import DatPreamble, parse_dat_preamble
 from ..save_preamble import SavePreamble
 
 
@@ -44,10 +43,18 @@ class WorldLayoutLandmarks:
         return self.first_region_block - self.last_catalog_entity
 
     @property
+    def history_tail_start(self) -> int | None:
+        """Start of history-layer scans — stats echo when found, else first region block."""
+        if self.history_stats is not None:
+            return self.history_stats
+        return self.first_region_block
+
+    @property
     def history_tail_size(self) -> int | None:
-        if self.history_stats is None:
+        start = self.history_tail_start
+        if start is None:
             return None
-        return self.payload_size - self.history_stats
+        return self.payload_size - start
 
     @property
     def regions(self) -> list[PayloadRegion]:
@@ -68,19 +75,20 @@ class WorldLayoutLandmarks:
                     self.first_region_block,
                 )
             )
-        if self.first_region_block is not None and self.history_stats is not None:
+        tail_end = self.history_stats if self.history_stats is not None else self.payload_size
+        if self.first_region_block is not None:
             out.append(
                 PayloadRegion(
                     "region_and_mid",
                     self.first_region_block,
-                    self.history_stats,
+                    tail_end,
                 )
             )
-        if self.history_stats is not None:
+        if start := self.history_tail_start:
             out.append(
                 PayloadRegion(
                     "history_tail",
-                    self.history_stats,
+                    start,
                     self.payload_size,
                 )
             )
@@ -91,6 +99,43 @@ class WorldLayoutLandmarks:
             if region.name == name:
                 return region
         return None
+
+
+def resolve_history_search_start(
+    payload: bytes,
+    layout: WorldLayoutLandmarks,
+    header: WorldHeaderHypothesis,
+) -> int | None:
+    """
+    Pick a scan origin for history vectors that works on both DAT and SAV layouts.
+
+    Namushul places figures after region blocks; active saves may embed the figures
+    vector between the string index and entity catalog (Ironhand @ 0x913af5).
+    """
+    from .historical_figures import locate_figures_vector
+
+    if len(header.max_ids) < 9:
+        return layout.history_tail_start
+
+    candidates: list[int] = []
+    if layout.history_stats is not None:
+        candidates.append(layout.history_stats)
+    if layout.first_region_block is not None:
+        candidates.append(layout.first_region_block)
+    if layout.string_index_end:
+        candidates.append(layout.string_index_end)
+    if layout.first_entity is not None:
+        candidates.append(layout.first_entity)
+
+    seen: set[int] = set()
+    for start in candidates:
+        if start in seen:
+            continue
+        seen.add(start)
+        if locate_figures_vector(payload, header, search_start=start) is not None:
+            return start
+
+    return layout.history_tail_start
 
 
 def find_first_region_block(payload: bytes, *, search_start: int) -> int | None:

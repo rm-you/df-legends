@@ -16,6 +16,17 @@ SHORT_NAME_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_ \-'():]*$")
 
 MATERIALS_IRON_ENTRY = struct.pack("<h", 4) + b"IRON"
 PLANT_TABLE_ANCHOR = struct.pack("<h", len("agave bush")) + b"agave bush"
+# Common first entries in the SAV plant table (world-gen dependent).
+_SAV_PLANT_ANCHORS = (
+    "agave bush",
+    "prickle berry",
+    "plump helmet",
+    "pig tail",
+    "dimple cup",
+    "tower-cap",
+    "cave wheat",
+    "sweet pod",
+)
 
 
 @dataclass
@@ -108,46 +119,69 @@ def find_string_table_block_dat(payload: bytes, *, start: int = 0) -> int | None
     return None
 
 
+def _looks_like_plant_name(name: str) -> bool:
+    if not name or name == "IRON":
+        return False
+    if not SHORT_NAME_RE.match(name):
+        return False
+    return " " in name or name.islower()
+
+
 def _validate_sav_string_table_block(block: StringTableBlock) -> bool:
     if block.section_count < 19 or block.total_names < 3_000:
         return False
-    if not block.sections or block.sections[0].names[0] != "agave bush":
+    if not block.sections:
+        return False
+    first = block.sections[0].names[0] if block.sections[0].names else ""
+    if first == "IRON" or not _looks_like_plant_name(first):
         return False
     if len(block.sections) <= 6:
         return False
-    entity_classes = block.sections[6].names
-    if "SUBTERRANEAN_ANIMAL_PEOPLES" not in entity_classes:
+    if "SUBTERRANEAN_ANIMAL_PEOPLES" not in block.sections[6].names:
         return False
     if len(block.sections) > 7 and block.sections[7].names[0] != "ABBEY":
         return False
     return True
 
 
+def _try_sav_string_table_at(payload: bytes, off: int) -> int | None:
+    from io import BytesIO
+
+    try:
+        reader = BinaryReader(BytesIO(payload))
+        reader.seek(off)
+        block = StringTableBlock.read(reader, max_sections=20)
+    except (EOFError, ValueError):
+        return None
+    if _validate_sav_string_table_block(block):
+        return off
+    return None
+
+
 def find_string_table_block_sav(payload: bytes) -> int | None:
     """
     Locate the 19-section short-name block inside world.sav.
 
-    Active saves do not expose a reliable IRON-count prefix. Anchor on the first
-    plant-table section (count × ``agave bush`` …) and validate the civ/word
-    sections match the expected Andux table order.
+    Active saves do not expose a reliable IRON-count prefix. Try common plant-table
+    anchors, then validate the civ/word sections match the expected Andux order.
     """
-    from io import BytesIO
+    for plant in _SAV_PLANT_ANCHORS:
+        needle = struct.pack("<h", len(plant)) + plant.encode("latin-1")
+        idx = payload.find(needle)
+        while idx >= 4:
+            count = struct.unpack_from("<i", payload, idx - 4)[0]
+            if 50 <= count <= MAX_SHORT_NAME_COUNT:
+                found = _try_sav_string_table_at(payload, idx - 4)
+                if found is not None:
+                    return found
+            idx = payload.find(needle, idx + 1)
 
-    idx = payload.find(PLANT_TABLE_ANCHOR)
-    while idx >= 4:
-        count = struct.unpack_from("<i", payload, idx - 4)[0]
-        if 50 <= count <= MAX_SHORT_NAME_COUNT:
-            off = idx - 4
-            try:
-                reader = BinaryReader(BytesIO(payload))
-                reader.seek(off)
-                block = StringTableBlock.read(reader, max_sections=20)
-            except (EOFError, ValueError):
-                pass
-            else:
-                if _validate_sav_string_table_block(block):
-                    return off
-        idx = payload.find(PLANT_TABLE_ANCHOR, idx + 1)
+    # Fallback: coarse scan in the typical game-data band (after preamble).
+    scan_start = min(len(payload), 0x50_000)
+    scan_end = min(len(payload), 0x10_000_000)
+    for off in range(scan_start, scan_end, 0x1000):
+        if found := _try_sav_string_table_at(payload, off):
+            return found
     return None
 
 

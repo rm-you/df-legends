@@ -21,4 +21,15 @@ Exports (`*-world_history*`, `*-world_sites_and_pops*`, `*-world_gen_param*`) ar
 | Histfig records | not in export | open | body walk |
 | Artifacts | not in export | open | blocked |
 
+## Reliability (0.47.05)
+
+Cross-fixture smoke tests (`tests/test_cross_fixture_reliability.py`) cover Namushul DAT,
+Waterlures DAT, and Ironhand SAV. Extraction must locate string tables, entities, region
+blocks, histfig/event vector anchors, and sites on all three without text exports.
+
+**Not yet world-agnostic:** site id ceiling defaults to 350; history stats echo uses
+Namushul's 12-byte paired layout (Waterlures falls back to header counters + region anchor);
+SAV string tables anchor on common plant names; full record bodies (events, figs, pops,
+rulers, artifacts) remain incomplete.
+
 Status key: **PASS** = binary matches export today; **partial** = count or subset; **open** = not yet from binary.
