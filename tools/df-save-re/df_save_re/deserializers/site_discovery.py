@@ -6,11 +6,18 @@ from dataclasses import dataclass, field
 
 from .entity_def import HistoricalEntityHeader, catalog_entity_block
 from .entity_names import resolve_language_name_display
+from .primitives import WorldHeaderHypothesis
 from .site_catalog import WorldSiteBinaryRecord, WorldSiteCatalog, infer_name_table_layout
 from .site_def import scan_site_headers
 from .site_id_catalog import build_catalog_from_id_fields
+from .site_name_table import (
+    discover_stride_table_layout,
+    expand_catalog_from_stride_table,
+    stride_table_notes,
+)
 from .site_names import SiteNameMarker
 from .string_tables import StringTableBlock
+from .world_header_ids import resolve_max_site_id, resolve_site_ceiling
 
 
 @dataclass(frozen=True)
@@ -92,7 +99,8 @@ def discover_world_sites(
     search_start: int,
     search_end: int,
     entities: list[HistoricalEntityHeader] | None = None,
-    max_site_id: int = 349,
+    header: WorldHeaderHypothesis | None = None,
+    max_site_id: int | None = None,
     civ_ids: set[int] | None = None,
 ) -> SiteDiscoveryResult:
     """
@@ -100,11 +108,18 @@ def discover_world_sites(
 
     Primary path: ``site_id`` field probe across entity-gap + mid payload with
     nearest ``language_name.words`` fingerprint for titles. Header scan fills
-    any remaining ids with lower-confidence hits.
+    any remaining ids with lower-confidence hits. A fixed-stride name table pass
+    fills late ids when ``max_ids[26]+4`` supplies the site ceiling.
     """
+    site_ceiling = resolve_site_ceiling(header) if header is not None else None
+    if max_site_id is None:
+        derived = resolve_max_site_id(header) if header is not None else None
+        max_site_id = derived if derived is not None else 349
+
     if entities is None:
         entities = catalog_entity_block(payload, search_end=search_end).entities
     entity_civ_ids = {ent.entity_id for ent in entities}
+    words = block.sections[8].names if len(block.sections) > 8 else []
 
     id_catalog = build_catalog_from_id_fields(
         payload,
@@ -130,17 +145,53 @@ def discover_world_sites(
         search_end=search_end,
     )
     catalog = _merge_catalogs(id_catalog, scan_catalog)
+    before_stride = catalog.site_count
+
+    markers = [
+        SiteNameMarker(
+            site_id=rec.site_id,
+            display_name=rec.display_name,
+            word_indices=rec.word_indices,
+            payload_offset=rec.name_marker_offset,
+        )
+        for rec in catalog.records
+        if rec.word_indices and rec.name_marker_offset
+    ]
+    stride_layout = discover_stride_table_layout(
+        payload,
+        markers=markers,
+        search_start=search_start,
+        search_end=search_end,
+        max_site_id=max_site_id,
+        words=words,
+    )
+    if stride_layout is not None:
+        catalog = expand_catalog_from_stride_table(
+            payload,
+            catalog,
+            block=block,
+            layout=stride_layout,
+            max_site_id=max_site_id,
+        )
 
     notes = [
+        (
+            f"site ceiling: {site_ceiling} from header max_ids[{26}]+4"
+            if site_ceiling is not None
+            else f"site ceiling: ids 0..{max_site_id} (header slot unset)"
+        ),
         f"id-field probe: {id_catalog.site_count} sites",
-        f"header scan merge: {catalog.site_count} total (ids 0..{max_site_id})",
+        f"header scan merge: {before_stride} total (ids 0..{max_site_id})",
     ]
+    notes.extend(stride_table_notes(stride_layout, added=catalog.site_count - before_stride))
     missing = max_site_id + 1 - catalog.site_count
     if missing > 0:
         notes.append(
-            f"missing {missing} site ids — titles live in region blobs without "
-            "adjacent id fields; full world_site body walk still open"
+            f"missing {missing} site ids — early sites use scattered title markers; "
+            "full world_site body walk still open"
         )
+    elif site_ceiling is not None and catalog.site_count == site_ceiling:
+        notes.append(f"complete site catalog ({catalog.site_count} sites)")
 
     return SiteDiscoveryResult(
         catalog=catalog,

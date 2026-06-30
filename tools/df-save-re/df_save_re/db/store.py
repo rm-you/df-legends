@@ -294,7 +294,7 @@ def import_world_dat(
     *,
     data_dir: Path = DEFAULT_DATA_DIR,
     overwrite: bool = False,
-    expected_site_count: int = 350,
+    expected_site_count: int | None = None,
 ) -> ImportResult:
     """
     Parse ``world.dat`` or ``world.sav``, create ``<slug>.sqlite``, migrate, and persist extract.

@@ -12,6 +12,7 @@ from df_save_re.deserializers.string_tables import (
 )
 from df_save_re.legends_extract import extract_legends_snapshot
 from df_save_re.save_preamble import SavePreambleKind, preamble_kind_for_path, resolve_save_payload
+from df_save_re.deserializers.world_header_ids import resolve_site_ceiling
 from df_save_re.target import TARGET_SAVE_VERSION
 from fixture_paths import resolve_fixture
 
@@ -70,4 +71,9 @@ def test_core_layers_smoke(resolved_fixture):
     assert snap.history_events_catalog.event_count == snap.header.max_ids[9]
 
     assert snap.world_site_catalog is not None
-    assert snap.world_site_catalog.site_count > 0
+    ceiling = resolve_site_ceiling(snap.header)
+    if ceiling is not None:
+        assert snap.world_site_catalog.site_count <= ceiling
+        assert snap.world_site_catalog.site_count > ceiling // 2
+    else:
+        assert snap.world_site_catalog.site_count > 0

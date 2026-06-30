@@ -31,6 +31,7 @@ from .deserializers.historical_figures import (
 )
 from .deserializers.history_events import HistoryEventsCatalog, build_history_events_catalog
 from .deserializers.history_rulers import RulerCatalog
+from .deserializers.world_header_ids import resolve_site_ceiling
 from .deserializers.world_layout import WorldLayoutLandmarks, discover_layout_landmarks, resolve_history_search_start
 
 
@@ -108,9 +109,14 @@ def extract_legends_snapshot(
     preamble: SavePreamble,
     max_entities: int = 50,
     catalog_entities: bool = True,
-    expected_site_count: int = 350,
+    expected_site_count: int | None = None,
 ) -> LegendsSnapshot:
     """Extract legends data from decompressed world.dat or world.sav (no text exports)."""
+    header = preamble.header
+    site_ceiling = expected_site_count
+    if site_ceiling is None:
+        site_ceiling = resolve_site_ceiling(header)
+    max_site_id = site_ceiling - 1 if site_ceiling is not None else None
     block = parse_string_table_block(payload)
     reader = BinaryReader(BytesIO(payload))
     reader.seek(block.payload_offset + block.bytes_consumed)
@@ -198,7 +204,8 @@ def extract_legends_snapshot(
                 search_start=gap.start,
                 search_end=len(payload),
                 entities=catalog,
-                max_site_id=expected_site_count - 1,
+                header=header,
+                max_site_id=max_site_id,
                 civ_ids=None,
             )
             world_site_catalog = site_discovery.catalog
@@ -297,13 +304,13 @@ def extract_legends_snapshot(
         probe_end = history_search_start
         site_cands = find_posnull_vector_candidates(
             payload,
-            count=350,
+            count=site_ceiling or 0,
             search_start=probe_start,
             search_end=probe_end,
             region="entity_gap+mid",
             min_score=280,
             max_hits=5,
-        )
+        ) if site_ceiling else []
         event_cands = find_posnull_vector_candidates(
             payload,
             count=preamble.header.max_ids[9],
@@ -341,9 +348,9 @@ def extract_legends_snapshot(
                     for c in fig_cands
                 ],
             )
-            if site_cands:
+            if site_cands and site_ceiling:
                 notes.append(
-                    f"vector probe: {len(site_cands)} posnull count=350 candidates "
+                    f"vector probe: {len(site_cands)} posnull count={site_ceiling} candidates "
                     f"(best @ {site_cands[0].payload_offset:#x}, score={site_cands[0].posnull_score})"
                 )
 
@@ -383,6 +390,7 @@ def snapshot_to_dict(snapshot: LegendsSnapshot) -> dict:
             "max_histfig": snapshot.header.max_ids[8],
             "max_event": snapshot.header.max_ids[9],
             "max_civ": snapshot.header.max_ids[4],
+            "site_ceiling": resolve_site_ceiling(snapshot.header),
         },
         "offsets": {
             "preamble_end": snapshot.preamble.world_data_offset,

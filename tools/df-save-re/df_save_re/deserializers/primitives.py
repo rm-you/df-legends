@@ -212,6 +212,7 @@ class WorldHeaderHypothesis:
             7: "unk7",
             8: "unk8_max_histfig",
             9: "unk9_max_event",
+            26: "unk26_site_high_water",
         }
         return {
             labels.get(i, f"unk{i}"): v

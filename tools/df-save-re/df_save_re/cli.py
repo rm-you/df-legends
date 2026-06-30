@@ -938,8 +938,8 @@ def main(argv: list[str] | None = None) -> int:
     p_import.add_argument(
         "--expected-sites",
         type=int,
-        default=350,
-        help="Expected site id ceiling for binary discovery (default 350)",
+        default=None,
+        help="Override site id ceiling (default: derive from header max_ids[26]+4)",
     )
     p_import.add_argument("--json", action="store_true")
     p_import.set_defaults(func=cmd_import_db)
