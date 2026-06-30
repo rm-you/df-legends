@@ -1,0 +1,11 @@
+# Local research artifacts (game binaries, extracted saves) — do not commit
+research/
+tests/fixtures/*.dat
+tests/fixtures/*.sav
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/

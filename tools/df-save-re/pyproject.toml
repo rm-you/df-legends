@@ -1,0 +1,17 @@
+[project]
+name = "df-save-re"
+version = "0.1.0"
+description = "Dwarf Fortress save reverse-engineering tools (Path C)"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[project.scripts]
+df-save-re = "df_save_re.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["df_save_re*"]
