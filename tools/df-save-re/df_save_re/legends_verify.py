@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 
+from .deserializers.entity_names import match_civ_name_lists
 from .legends_extract import LegendsSnapshot
 from .legends_text import LegendsTextBundle, load_legends_text
 from .target import TARGET_DF_VERSION
@@ -207,6 +208,23 @@ def verify_snapshot_against_text(
             note="section[7] tokens used by entity header parser",
         )
 
+    if details.get("named_civs") and snapshot.entity_names:
+        text_names = [line.rsplit(", ", 1)[0] for line in details["named_civs"]]
+        binary_names = [n.resolved for n in snapshot.entity_names if n.resolved]
+        matched, unmatched = match_civ_name_lists(text_names, binary_names)
+        ok = matched == len(text_names) == len(binary_names)
+        add(
+            "entities",
+            "named_civ_names",
+            VerifyStatus.PASS if ok else VerifyStatus.FAIL,
+            expected=len(text_names),
+            actual=matched,
+            note=(
+                "language_name word-table resolution vs world_history.txt civ titles"
+                + (f"; unmatched={unmatched[:3]}" if unmatched else "")
+            ),
+        )
+
     # --- targets for unparsed layers (text records expected; binary parse pending) ---
     if text.sites:
         add(
@@ -331,12 +349,15 @@ EXPLORER_ROADMAP = [
     {
         "layer": "entities",
         "status": "partial",
-        "website_use": "Civ list, types, IDs — names need language_name parse",
+        "website_use": "Civ list, types, IDs — language_name names resolved for named civs",
     },
     {
         "layer": "sites",
         "status": "blocked",
-        "website_use": "Site map, populations — 350 sites in your text export",
+        "website_use": (
+            "Site map, populations — 350 sites in text export; "
+            "binary vector between entity region and region blocks (~0x330000–0x86c157) not yet parsed"
+        ),
     },
     {
         "layer": "historical_figures",
@@ -346,7 +367,10 @@ EXPLORER_ROADMAP = [
     {
         "layer": "world_history",
         "status": "blocked",
-        "website_use": "Event timeline — 113,118 events in header",
+        "website_use": (
+            "Event timeline — 113,118 events; stats echo @ history tail "
+            "but polymorphic event vector not yet located"
+        ),
     },
     {
         "layer": "artifacts",

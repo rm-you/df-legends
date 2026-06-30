@@ -8,10 +8,12 @@ from io import BytesIO
 
 from .binary_reader import BinaryReader
 from .deserializers.entity_def import EntityScanResult, HistoricalEntityHeader, catalog_entity_block, scan_entities
+from .deserializers.entity_names import ResolvedEntityName, resolve_named_entities
 from .deserializers.primitives import WorldHeaderHypothesis
 from .deserializers.string_index import StringIndexTable
 from .deserializers.string_tables import StringTableBlock, parse_string_table_block
 from .deserializers.world_dat import DatPreamble
+from .deserializers.world_layout import WorldLayoutLandmarks, discover_layout_landmarks
 
 
 @dataclass
@@ -34,7 +36,9 @@ class LegendsSnapshot:
     string_index: StringIndexTable
     entities: EntityScanResult
     entity_catalog: list[HistoricalEntityHeader] = field(default_factory=list)
+    entity_names: list[ResolvedEntityName] = field(default_factory=list)
     entity_class_counts: dict[str, int] = field(default_factory=dict)
+    layout: WorldLayoutLandmarks | None = None
     history_stats: HistoryStatsBlock | None = None
     notes: list[str] = field(default_factory=list)
 
@@ -101,6 +105,7 @@ def extract_legends_snapshot(
         )
     else:
         notes.append("entities: first civ header not found")
+    entity_names: list[ResolvedEntityName] = []
     if catalog:
         named = sum(1 for ent in catalog if ent.has_name)
         max_id = max(ent.entity_id for ent in catalog)
@@ -110,6 +115,19 @@ def extract_legends_snapshot(
             f"(ids 0..{max_id}, {named} named"
             + (f"; header max_ids[4]={header_civ:,}" if header_civ is not None else "")
             + ")"
+        )
+        entity_names = resolve_named_entities(payload, catalog, block=block)
+        if entity_names:
+            sample = ", ".join(f"{n.entity_id}={n.resolved!r}" for n in entity_names[:3])
+            notes.append(f"entity names: {len(entity_names)} resolved via language_name ({sample}, …)")
+
+    layout = discover_layout_landmarks(payload, preamble)
+    if layout.first_region_block is not None:
+        notes.append(
+            f"layout: region blocks @ 0x{layout.first_region_block:x}; "
+            f"history tail {layout.history_tail_size:,} bytes @ 0x{layout.history_stats:x}"
+            if layout.history_stats is not None and layout.history_tail_size is not None
+            else f"layout: region blocks @ 0x{layout.first_region_block:x}"
         )
     if stats:
         notes.append(
@@ -126,7 +144,9 @@ def extract_legends_snapshot(
         string_index=index,
         entities=entities,
         entity_catalog=catalog,
+        entity_names=entity_names,
         entity_class_counts=class_counts,
+        layout=layout,
         history_stats=stats,
         notes=notes,
     )
@@ -154,6 +174,9 @@ def snapshot_to_dict(snapshot: LegendsSnapshot) -> dict:
             "first_entity": snapshot.entities.first_entity_offset,
             "history_stats": (
                 snapshot.history_stats.payload_offset if snapshot.history_stats else None
+            ),
+            "first_region_block": (
+                snapshot.layout.first_region_block if snapshot.layout else None
             ),
         },
         "string_tables": [
@@ -195,7 +218,30 @@ def snapshot_to_dict(snapshot: LegendsSnapshot) -> dict:
                 for ent in snapshot.entity_catalog
                 if ent.has_name
             ],
+            "resolved_names": [
+                {
+                    "id": name.entity_id,
+                    "class": name.entity_class,
+                    "name": name.resolved,
+                    "source": name.source,
+                }
+                for name in snapshot.entity_names
+            ],
         },
+        "layout": (
+            {
+                "string_tables": snapshot.layout.string_tables,
+                "string_index_end": snapshot.layout.string_index_end,
+                "first_entity": snapshot.layout.first_entity,
+                "last_catalog_entity": snapshot.layout.last_catalog_entity,
+                "first_region_block": snapshot.layout.first_region_block,
+                "history_stats": snapshot.layout.history_stats,
+                "entity_to_region_gap": snapshot.layout.entity_to_region_gap,
+                "history_tail_size": snapshot.layout.history_tail_size,
+            }
+            if snapshot.layout
+            else None
+        ),
         "history_stats": (
             {
                 "offset": snapshot.history_stats.payload_offset,

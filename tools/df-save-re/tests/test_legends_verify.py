@@ -53,9 +53,23 @@ def test_verify_namushul_fixture(tmp_path: Path):
     # 63 subterranean + 15 named civs simulated via minimal header + counts
     lines = ["Namushul", "The Destined Realms"]
     lines += ["Bat men"] * 63
-    for i in range(15):
-        race = ["Dwarves", "Elves", "Humans", "Goblins"][i % 4]
-        lines.append(f"Civ Number {i}, {race}")
+    lines += [
+        "The Hardy Armory, Dwarves",
+        "The Puzzling Mist, Elves",
+        "The Reclusive Realms, Humans",
+        "The Plague of Rushing, Goblins",
+        "Jroshreebus, Kobolds",
+        "The Dessert of Matches, Elves",
+        "The Plague of Dirt, Goblins",
+        "The Kingdoms of Bathing, Humans",
+        "The Matched Sabres, Dwarves",
+        "The Emerald Fountains, Dwarves",
+        "The Failed Hex, Goblins",
+        "The Massive Realm, Humans",
+        "The Heather of Craters, Elves",
+        "The Shell of Beaks, Elves",
+        "The Nightmare of Haunts, Goblins",
+    ]
     hist.write_text("\n".join(lines), encoding="utf-8")
 
     payload = decompress_file(path).payload
@@ -87,7 +101,7 @@ def test_verify_uploaded_exports_if_present():
     report = verify_snapshot_against_text(snap, bundle)
 
     assert report.failed == 0
-    assert report.passed >= 4
+    assert report.passed >= 6
     assert report.pending >= 3
     sites = next(c for c in report.checks if c.field == "site_count")
     assert sites.expected == 350

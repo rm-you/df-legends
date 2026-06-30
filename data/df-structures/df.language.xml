@@ -1,0 +1,445 @@
+<data-definition>
+    <bitfield-type type-name='language_word_flags'>
+        <flag-bit name='front_compound_noun_sing'/>
+        <flag-bit name='front_compound_noun_plur'/>
+        <flag-bit name='front_compound_adj'/>
+        <flag-bit name='front_compound_prefix'/>
+        <flag-bit name='rear_compound_noun_sing'/>
+        <flag-bit name='rear_compound_noun_plur'/>
+        <flag-bit name='rear_compound_adj'/>
+        <flag-bit name='the_noun_sing'/>
+        <flag-bit name='the_noun_plur'/>
+        <flag-bit name='the_compound_noun_sing'/>
+        <flag-bit name='the_compound_noun_plur'/>
+        <flag-bit name='the_compound_adj'/>
+        <flag-bit name='the_compound_prefix'/>
+        <flag-bit name='of_noun_sing'/>
+        <flag-bit name='of_noun_plur'/>
+        <flag-bit name='standard_verb'/>
+    </bitfield-type>
+
+    <enum-type type-name='part_of_speech' base-type='int16_t'>
+        <enum-item name='Noun'/>
+        <enum-item name='NounPlural'/>
+        <enum-item name='Adjective'/>
+        <enum-item name='Prefix'/>
+        <enum-item name='Verb'/>
+        <enum-item name='Verb3rdPerson'/>
+        <enum-item name='VerbPast'/>
+        <enum-item name='VerbPassive'/>
+        <enum-item name='VerbGerund'/>
+    </enum-type>
+
+    <enum-type type-name='language_word_table_index' base-type='int16_t'>
+        <enum-item name='FrontCompound'/>
+        <enum-item name='RearCompound'/>
+        <enum-item name='FirstName'/>
+        <enum-item name='Adjectives'/>
+        <enum-item name='TheX'/>
+        <enum-item name='OfX'/>
+    </enum-type>
+
+    <enum-type type-name='sphere_type' base-type='int16_t'>
+        <enum-item name='NONE' value='-1'/>
+        <enum-item name='AGRICULTURE'/>
+        <enum-item name='ANIMALS'/>
+        <enum-item name='ART'/>
+        <enum-item name='BALANCE'/>
+        <enum-item name='BEAUTY'/>
+        <enum-item name='BIRTH'/>
+        <enum-item name='BLIGHT'/>
+        <enum-item name='BOUNDARIES'/>
+        <enum-item name='CAVERNS'/>
+        <enum-item name='CHAOS'/>
+        <enum-item name='CHARITY'/>
+        <enum-item name='CHILDREN'/>
+        <enum-item name='COASTS'/>
+        <enum-item name='CONSOLATION'/>
+        <enum-item name='COURAGE'/>
+        <enum-item name='CRAFTS'/>
+        <enum-item name='CREATION'/>
+        <enum-item name='DANCE'/>
+        <enum-item name='DARKNESS'/>
+        <enum-item name='DAWN'/>
+        <enum-item name='DAY'/>
+        <enum-item name='DEATH'/>
+        <enum-item name='DEFORMITY'/>
+        <enum-item name='DEPRAVITY'/>
+        <enum-item name='DISCIPLINE'/>
+        <enum-item name='DISEASE'/>
+        <enum-item name='DREAMS'/>
+        <enum-item name='DUSK'/>
+        <enum-item name='DUTY'/>
+        <enum-item name='EARTH'/>
+        <enum-item name='FAMILY'/>
+        <enum-item name='FAME'/>
+        <enum-item name='FATE'/>
+        <enum-item name='FERTILITY'/>
+        <enum-item name='FESTIVALS'/>
+        <enum-item name='FIRE'/>
+        <enum-item name='FISH'/>
+        <enum-item name='FISHING'/>
+        <enum-item name='FOOD'/>
+        <enum-item name='FORGIVENESS'/>
+        <enum-item name='FORTRESSES'/>
+        <enum-item name='FREEDOM'/>
+        <enum-item name='GAMBLING'/>
+        <enum-item name='GAMES'/>
+        <enum-item name='GENEROSITY'/>
+        <enum-item name='HAPPINESS'/>
+        <enum-item name='HEALING'/>
+        <enum-item name='HOSPITALITY'/>
+        <enum-item name='HUNTING'/>
+        <enum-item name='INSPIRATION'/>
+        <enum-item name='JEALOUSY'/>
+        <enum-item name='JEWELS'/>
+        <enum-item name='JUSTICE'/>
+        <enum-item name='LABOR'/>
+        <enum-item name='LAKES'/>
+        <enum-item name='LAWS'/>
+        <enum-item name='LIES'/>
+        <enum-item name='LIGHT'/>
+        <enum-item name='LIGHTNING'/>
+        <enum-item name='LONGEVITY'/>
+        <enum-item name='LOVE'/>
+        <enum-item name='LOYALTY'/>
+        <enum-item name='LUCK'/>
+        <enum-item name='LUST'/>
+        <enum-item name='MARRIAGE'/>
+        <enum-item name='MERCY'/>
+        <enum-item name='METALS'/>
+        <enum-item name='MINERALS'/>
+        <enum-item name='MISERY'/>
+        <enum-item name='MIST'/>
+        <enum-item name='MOON'/>
+        <enum-item name='MOUNTAINS'/>
+        <enum-item name='MUCK'/>
+        <enum-item name='MURDER'/>
+        <enum-item name='MUSIC'/>
+        <enum-item name='NATURE'/>
+        <enum-item name='NIGHT'/>
+        <enum-item name='NIGHTMARES'/>
+        <enum-item name='OATHS'/>
+        <enum-item name='OCEANS'/>
+        <enum-item name='ORDER'/>
+        <enum-item name='PAINTING'/>
+        <enum-item name='PEACE'/>
+        <enum-item name='PERSUASION'/>
+        <enum-item name='PLANTS'/>
+        <enum-item name='POETRY'/>
+        <enum-item name='PREGNANCY'/>
+        <enum-item name='RAIN'/>
+        <enum-item name='RAINBOWS'/>
+        <enum-item name='REBIRTH'/>
+        <enum-item name='REVELRY'/>
+        <enum-item name='REVENGE'/>
+        <enum-item name='RIVERS'/>
+        <enum-item name='RULERSHIP'/>
+        <enum-item name='RUMORS'/>
+        <enum-item name='SACRIFICE'/>
+        <enum-item name='SALT'/>
+        <enum-item name='SCHOLARSHIP'/>
+        <enum-item name='SEASONS'/>
+        <enum-item name='SILENCE'/>
+        <enum-item name='SKY'/>
+        <enum-item name='SONG'/>
+        <enum-item name='SPEECH'/>
+        <enum-item name='STARS'/>
+        <enum-item name='STORMS'/>
+        <enum-item name='STRENGTH'/>
+        <enum-item name='SUICIDE'/>
+        <enum-item name='SUN'/>
+        <enum-item name='THEFT'/>
+        <enum-item name='THRALLDOM'/>
+        <enum-item name='THUNDER'/>
+        <enum-item name='TORTURE'/>
+        <enum-item name='TRADE'/>
+        <enum-item name='TRAVELERS'/>
+        <enum-item name='TREACHERY'/>
+        <enum-item name='TREES'/>
+        <enum-item name='TRICKERY'/>
+        <enum-item name='TRUTH'/>
+        <enum-item name='TWILIGHT'/>
+        <enum-item name='VALOR'/>
+        <enum-item name='VICTORY'/>
+        <enum-item name='VOLCANOS'/>
+        <enum-item name='WAR'/>
+        <enum-item name='WATER'/>
+        <enum-item name='WEALTH'/>
+        <enum-item name='WEATHER'/>
+        <enum-item name='WIND'/>
+        <enum-item name='WISDOM'/>
+        <enum-item name='WRITING'/>
+        <enum-item name='YOUTH'/>
+    </enum-type>
+
+    <struct-type type-name='language_word'
+                 instance-vector='$global.world.raws.language.words'>
+        <stl-string name='word'/>
+
+        <code-helper name='describe'>$.word</code-helper>
+
+        <static-array type-name='stl-string' name='forms' count='9' index-enum='part_of_speech'/>
+
+        <uint8_t name='adj_dist'/>
+
+        <padding size='7' name='pad_1' comment='looks like garbage'/>
+
+        <bitfield name='flags' type-name='language_word_flags'/>
+
+        <stl-vector pointer-type='stl-string' name='str' since='v0.40.01'/>
+    </struct-type>
+
+    <struct-type type-name='language_translation'
+                 instance-vector='$global.world.raws.language.translations'>
+        <stl-string name='name'/>
+
+        <code-helper name='describe'>$.name</code-helper>
+
+        <stl-vector name='unknown1' pointer-type='stl-string' comment='looks like english words'/>
+        <stl-vector name='unknown2' pointer-type='stl-string' comment='looks like translated words'/>
+
+        <stl-vector name='words' index-refers-to='$global.world.raws.language.words[$]' pointer-type='stl-string'/>
+
+        <int32_t name='flags' since='v0.40.01' comment='1 = generated'/>
+        <stl-vector pointer-type='stl-string' name='str' since='v0.40.01'/>
+    </struct-type>
+
+    <struct-type type-name='language_symbol'
+                 instance-vector='$global.world.raws.language.symbols'>
+        <stl-string name='name'/>
+
+        <stl-vector name='unknown' comment='empty'/>
+
+        <stl-vector name='words'>
+            <int32_t ref-target='language_word'/>
+        </stl-vector>
+
+        <int32_t name='flags' since='v0.40.01'/>
+        <stl-vector pointer-type='stl-string' name='str' since='v0.40.01'/>
+    </struct-type>
+
+    <struct-type type-name='language_name'>
+        <stl-string name='first_name'/>
+        <stl-string name='nickname'/>
+
+        <static-array name='words' count='7' index-enum='language_name_component'>
+            <int32_t ref-target='language_word'/>
+        </static-array>
+        <static-array name='parts_of_speech' count='7' index-enum='language_name_component'>
+            <enum base-type='int16_t' type-name='part_of_speech'/>
+        </static-array>
+
+        <int32_t name='language' init-value='0' ref-target='language_translation'/>
+        <enum name='type' type-name='language_name_type'/>
+
+        <bool name='has_name'/>
+
+        <code-helper name='describe'>
+          (when $.has_name
+            (let* ((nick $.nickname)
+                   (lraw $global.world.raws.language)
+                   (language $lraw.translations[$.language])
+                   (english $lraw.words)
+                   (fname $.first_name)
+                   (lwords $language.words))
+              (flet ((get-words (start end)
+                       (loop for i from start to end
+                         for word = $.words[i]
+                         collect $lwords[word].value))
+                     (get-english (start end)
+                       (loop for i from start to end
+                         for word = $.words[i] and ps = $.parts_of_speech[i]
+                         collect $english[word].forms[ps])))
+                (list
+                 (fmt "Name:~:(~@[ ~A~]~@[ '~A'~]~@[ ~{~A~}~]~@[ ~{~A~}~]~@[ ~{~A~}~]~)"
+                      (if (> (length fname) 0) fname)
+                      (if (> (length nick) 0) nick)
+                      (flatten (get-words 0 1))
+                      (flatten (get-words 2 5))
+                      (flatten (get-words 6 6)))
+                 (fmt "aka~:(~@[ ~A~]~@[ ~{~A~}~]~@[ the ~A~]~@[ of ~{~A~}~]~)"
+                      (if (> (length fname) 0) fname)
+                      (flatten (get-english 0 1))
+                      (when (>= $.words[5] 0)
+                        (apply #'format nil "~@[~A ~]~@[~A ~]~@[~A-~]~A" (get-english 2 5)))
+                      (flatten (get-english 6 6)))))))
+        </code-helper>
+    </struct-type>
+
+    <struct-type type-name='language_word_table'>
+        <static-array name='words' index-enum='language_word_table_index' count='6'>
+            <stl-vector index-refers-to='$$._parent._parent.parts[$$._key][$]'>
+                <int32_t ref-target='language_word'/>
+            </stl-vector>
+        </static-array>
+        <static-array name='parts' index-enum='language_word_table_index' count='6'>
+            <stl-vector>
+                <enum base-type='int32_t' type-name='part_of_speech'/>
+            </stl-vector>
+        </static-array>
+    </struct-type>
+
+    <enum-type type-name='language_name_category'>
+        <enum-item name='Unit'/>
+        <enum-item name='Artifact'/>
+        <enum-item name='ArtifactEvil'/>
+        <enum-item name='Swamp'/>
+        <enum-item name='Desert'/>
+        <enum-item name='Forest'/>
+        <enum-item name='Mountains'/>
+        <enum-item name='Lake'/>
+        <enum-item name='Ocean'/>
+        <enum-item name='Glacier'/>
+
+        <enum-item name='Tundra'/>
+        <enum-item name='Grassland'/>
+        <enum-item name='Hills'/>
+        <enum-item name='Region'/>
+        <enum-item name='Cave'/>
+        <enum-item name='SwampEvil'/>
+        <enum-item name='DesertEvil'/>
+        <enum-item name='ForestEvil'/>
+        <enum-item name='MountainsEvil'/>
+        <enum-item name='LakeEvil'/>
+
+        <enum-item name='OceanEvil'/>
+        <enum-item name='GlacierEvil'/>
+        <enum-item name='TundraEvil'/>
+        <enum-item name='GrasslandEvil'/>
+        <enum-item name='HillsEvil'/>
+        <enum-item name='SwampGood'/>
+        <enum-item name='DesertGood'/>
+        <enum-item name='ForestGood'/>
+        <enum-item name='MountainsGood'/>
+        <enum-item name='LakeGood'/>
+
+        <enum-item name='OceanGood'/>
+        <enum-item name='GlacierGood'/>
+        <enum-item name='TundraGood'/>
+        <enum-item name='GrasslandGood'/>
+        <enum-item name='HillsGood'/>
+        <enum-item name='ArtImage'/>
+        <enum-item name='MountainPeak'/>
+        <enum-item name='River'/>
+        <enum-item name='Volcano'/>
+        <enum-item name='SmallIsland'/>
+
+        <enum-item name='Island'/>
+        <enum-item name='Continent'/>
+        <enum-item name='CommonReligion'/>
+        <enum-item name='Temple'/>
+        <enum-item name='Keep'/>
+        <enum-item name='Unknown2'/>
+        <enum-item name='SymbolArtifice'/>
+        <enum-item name='SymbolViolent'/>
+        <enum-item name='SymbolProtect'/>
+        <enum-item name='SymbolDomestic'/>
+
+        <enum-item name='SymbolFood'/>
+        <enum-item name='War'/>
+        <enum-item name='Battle'/>
+        <enum-item name='Siege'/>
+        <enum-item name='Road'/>
+        <enum-item name='Wall'/>
+        <enum-item name='Bridge'/>
+        <enum-item name='Tunnel'/>
+        <enum-item name='Tomb'/>
+        <enum-item name='SymbolProtect2'/>
+
+        <enum-item name='Library'/>
+        <enum-item name='Festival'/>
+        <enum-item name='EntityMerchantCompany'/>
+        <enum-item name='CountingHouse'/>
+        <enum-item name='EntityMerchantCompany2'/>
+        <enum-item name='Guildhall'/>
+        <enum-item name='NecromancerTower'/>
+    </enum-type>
+
+    <enum-type type-name='language_name_type' base-type='int16_t'>
+        <enum-item name='NONE' value='-1'/>
+
+        0
+        <enum-item name='Figure'/>
+        <enum-item name='Artifact'/>
+        <enum-item name='Civilization'/>
+        <enum-item name='Squad'/>
+        <enum-item name='Site'/>
+        <enum-item name='World'/>
+        <enum-item name='Region'/>
+        <enum-item name='Dungeon'/>
+        <enum-item name='LegendaryFigure'/>
+        <enum-item name='FigureNoFirst'/>
+
+        10
+        <enum-item name='FigureFirstOnly'/>
+        <enum-item name='ArtImage'/>
+        <enum-item name='AdventuringGroup'/>
+        <enum-item name='ElfTree'/>
+        <enum-item name='SiteGovernment'/>
+        <enum-item name='NomadicGroup'/> uses site word table. Can also be SiteGovernment founded by a group not belonging to a civ.
+        <enum-item name='Vessel'/>
+        <enum-item name='MilitaryUnit'/>
+        <enum-item name='Religion'/>
+        <enum-item name='MountainPeak'/>
+
+        20
+        <enum-item name='River'/>
+        <enum-item name='Temple'/>
+        <enum-item name='Keep'/>
+        <enum-item name='MeadHall'/>
+        <enum-item name='SymbolArtifice'/>
+        <enum-item name='SymbolViolent'/>
+        <enum-item name='SymbolProtect'/>
+        <enum-item name='SymbolDomestic' comment='Market'/>
+        <enum-item name='SymbolFood' comment='Tavern'/>
+        <enum-item name='War'/>
+
+        30
+        <enum-item name='Battle'/>
+        <enum-item name='Siege'/>
+        <enum-item name='Road'/>
+        <enum-item name='Wall'/>
+        <enum-item name='Bridge'/>
+        <enum-item name='Tunnel'/>
+        <enum-item name='PretentiousEntityPosition'/>
+        <enum-item name='Monument'/>
+        <enum-item name='Tomb'/>
+        <enum-item name='OutcastGroup'/>
+
+        40
+        <enum-item name='Unk40'/>
+        <enum-item name='SymbolProtect2'/>
+        <enum-item name='Unk42'/> uses military unit word table
+        <enum-item name='Library'/>
+        <enum-item name='PoeticForm'/>
+        <enum-item name='MusicalForm'/>
+        <enum-item name='DanceForm'/>
+        <enum-item name='Festival'/>
+        <enum-item name='FalseIdentity'/>
+        <enum-item name='MerchantCompany'/>
+
+        50
+        <enum-item name='CountingHouse'/>
+        <enum-item name='CraftGuild'/>
+        <enum-item name='Guildhall'/>
+        <enum-item name='NecromancerTower'/>
+    </enum-type>
+
+    <enum-type type-name='language_name_component'>
+        <enum-item name='FrontCompound'/>
+        <enum-item name='RearCompound'/>
+        <enum-item name='FirstAdjective'/>
+        <enum-item name='SecondAdjective'/>
+        <enum-item name='HyphenCompound'/>
+        <enum-item name='TheX'/>
+        <enum-item name='OfX'/>
+    </enum-type>
+</data-definition>
+
+<!--
+Local Variables:
+indent-tabs-mode: nil
+nxml-child-indent: 4
+End:
+-->

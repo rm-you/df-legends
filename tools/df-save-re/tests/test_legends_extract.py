@@ -37,3 +37,6 @@ def test_extract_namushul_snapshot():
     assert cat["count"] >= 70
     assert cat["named_count"] >= 10
     assert "PLAINS" in cat["class_counts"]
+    assert len(data["entity_catalog"]["resolved_names"]) >= 10
+    assert data["layout"]["first_region_block"] == 0x86C157
+    assert data["layout"]["history_tail_size"] > 20_000_000
