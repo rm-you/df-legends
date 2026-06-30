@@ -9,10 +9,11 @@ import sys
 from pathlib import Path
 
 from .compression import decompress_file, describe_save_version, is_target_save_version, read_header
-from .target import TARGET_DF_VERSION, TARGET_SAVE_VERSION
 from .deserializers.probe import probe_save
 from .hexdump import format_hexdump, scan_int32_values
+from .save_bundle import index_save_folder, legends_parse_target
 from .scan import scan_save
+from .target import TARGET_DF_VERSION, TARGET_SAVE_VERSION
 
 
 def cmd_inspect(args: argparse.Namespace) -> int:
@@ -63,9 +64,11 @@ def cmd_probe(args: argparse.Namespace) -> int:
 
         payload = {
             "path": result.path,
+            "save_kind": result.save_kind.value,
             "payload_size": result.payload_size,
             "marker_offsets": result.marker_offsets,
             "world_header_error": result.world_header_error,
+            "sav_header_error": result.sav_header_error,
             "notes": result.notes,
         }
         if result.world_header:
@@ -76,6 +79,8 @@ def cmd_probe(args: argparse.Namespace) -> int:
                 "world_name": str(wh.world_name) if wh.world_name else None,
                 "has_name": wh.has_name,
             }
+        if result.sav_header:
+            payload["sav_header"] = {"fields": result.sav_header.fields}
         payload["blocks"] = {
             k: (
                 {"magic": v.magic.value, "field_8": v.field_8, "payload_len": len(v.payload)}
@@ -88,18 +93,28 @@ def cmd_probe(args: argparse.Namespace) -> int:
         return 0
 
     print(f"file: {result.path}")
+    print(f"save_kind: {result.save_kind.value}")
     print(f"payload: {result.payload_size:,} bytes")
     for note in result.notes:
         print(f"note: {note}")
     if result.world_header_error:
-        print(f"world header hypothesis: FAILED ({result.world_header_error})")
+        print(f"DAT world header hypothesis: FAILED ({result.world_header_error})")
     elif result.world_header:
         wh = result.world_header
-        print(f"world header hypothesis: OK")
+        print("DAT world header hypothesis: OK")
         print(f"  world_name: {wh.world_name}")
         for k, v in wh.id_summary().items():
             if "max" in k or v > 0:
                 print(f"  {k}: {v}")
+    if result.sav_header_error:
+        print(f"SAV world header hypothesis: FAILED ({result.sav_header_error})")
+    elif result.sav_header:
+        sh = result.sav_header
+        print(f"SAV world header hypothesis: OK ({len(sh.fields)} int32 fields)")
+        preview = ", ".join(str(v) for v in sh.fields[:6])
+        if len(sh.fields) > 6:
+            preview += ", ..."
+        print(f"  fields: [{preview}]")
     if result.marker_offsets:
         print("region markers:")
         for m, offs in result.marker_offsets.items():
@@ -143,6 +158,41 @@ def cmd_fields(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_folder(args: argparse.Namespace) -> int:
+    index = index_save_folder(args.path)
+    target = legends_parse_target(index)
+    if args.json:
+        payload = {
+            "folder": str(index.folder),
+            "region_name": index.region_name,
+            "is_active": index.is_active,
+            "is_retired": index.is_retired,
+            "legends_parse_target": str(target.path) if target else None,
+            "entries": [
+                {
+                    "path": str(e.path),
+                    "kind": e.kind.value,
+                    "index": e.index,
+                }
+                for e in index.entries
+            ],
+        }
+        print(json.dumps(payload, indent=2))
+        return 0
+
+    print(f"folder: {index.folder}")
+    print(f"region: {index.region_name}")
+    print(f"active: {index.is_active}")
+    print(f"retired: {index.is_retired}")
+    if target:
+        print(f"legends target: {target.path.name} ({target.kind.value})")
+    print("files:")
+    for e in index.entries:
+        idx = f" #{e.index}" if e.index is not None else ""
+        print(f"  {e.kind.value:18} {e.path.name}{idx}")
+    return 0
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     report = scan_save(args.path)
     if args.json:
@@ -180,6 +230,14 @@ def main(argv: list[str] | None = None) -> int:
         description="Dwarf Fortress save reverse-engineering tools (Path C, Layer 1)",
     )
     sub = parser.add_subparsers(dest="command", required=True)
+
+    p_folder = sub.add_parser(
+        "folder",
+        help="Inventory a region save folder (world.sav/dat + sidecars)",
+    )
+    p_folder.add_argument("path", help="Path to region folder (e.g. data/save/region1)")
+    p_folder.add_argument("--json", action="store_true")
+    p_folder.set_defaults(func=cmd_folder)
 
     p_inspect = sub.add_parser("inspect", help="Show save header and compression info")
     p_inspect.add_argument("path", help="Path to world.sav or world.dat")
