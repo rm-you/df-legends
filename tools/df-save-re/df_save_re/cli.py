@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from .compression import decompress_file, describe_save_version, read_header
+from .deserializers.probe import probe_save
 from .scan import scan_save
 
 
@@ -44,6 +45,62 @@ def cmd_decompress(args: argparse.Namespace) -> int:
     out = Path(args.output)
     out.write_bytes(dec.payload)
     print(f"wrote {len(dec.payload):,} bytes to {out}")
+    return 0
+
+
+def cmd_probe(args: argparse.Namespace) -> int:
+    result = probe_save(args.path)
+    if args.json:
+        import json
+
+        payload = {
+            "path": result.path,
+            "payload_size": result.payload_size,
+            "marker_offsets": result.marker_offsets,
+            "world_header_error": result.world_header_error,
+            "notes": result.notes,
+        }
+        if result.world_header:
+            wh = result.world_header
+            payload["world_header"] = {
+                "unknown_int16": wh.unknown_int16,
+                "id_summary": wh.id_summary(),
+                "world_name": str(wh.world_name) if wh.world_name else None,
+                "has_name": wh.has_name,
+            }
+        payload["blocks"] = {
+            k: (
+                {"magic": v.magic.value, "field_8": v.field_8, "payload_len": len(v.payload)}
+                if hasattr(v, "magic")
+                else v
+            )
+            for k, v in result.block_at_markers.items()
+        }
+        print(json.dumps(payload, indent=2))
+        return 0
+
+    print(f"file: {result.path}")
+    print(f"payload: {result.payload_size:,} bytes")
+    for note in result.notes:
+        print(f"note: {note}")
+    if result.world_header_error:
+        print(f"world header hypothesis: FAILED ({result.world_header_error})")
+    elif result.world_header:
+        wh = result.world_header
+        print(f"world header hypothesis: OK")
+        print(f"  world_name: {wh.world_name}")
+        for k, v in wh.id_summary().items():
+            if "max" in k or v > 0:
+                print(f"  {k}: {v}")
+    if result.marker_offsets:
+        print("region markers:")
+        for m, offs in result.marker_offsets.items():
+            print(f"  {m}: {len(offs)} hit(s), first @ {offs[0]:#x}")
+    for key, val in result.block_at_markers.items():
+        if hasattr(val, "magic"):
+            print(f"  parsed {key}: field_8={val.field_8} payload={len(val.payload)} bytes")
+        else:
+            print(f"  {key}: {val}")
     return 0
 
 
@@ -98,6 +155,14 @@ def main(argv: list[str] | None = None) -> int:
     p_scan.add_argument("path")
     p_scan.add_argument("--json", action="store_true")
     p_scan.set_defaults(func=cmd_scan)
+
+    p_probe = sub.add_parser(
+        "probe",
+        help="Try RE-derived structure guesses against decompressed payload",
+    )
+    p_probe.add_argument("path")
+    p_probe.add_argument("--json", action="store_true")
+    p_probe.set_defaults(func=cmd_probe)
 
     args = parser.parse_args(argv)
     try:

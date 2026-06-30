@@ -16,7 +16,7 @@ df-save-re inspect /path/to/region1/world.dat
 df-save-re scan /path/to/region1/world.dat
 ```
 
-Layer 1 handles save headers and zlib decompression. Layer 2 (typed deserialization) is in progress and requires Ghidra analysis against `Dwarf_Fortress` 0.47.05.
+Layer 1 handles save headers and zlib decompression. Layer 2 hypothesis deserializers are in progress — see `docs/binary-re-findings-0.47.05.md`.
 
 ## Reference data
 
