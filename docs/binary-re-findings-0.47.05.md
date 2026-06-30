@@ -117,11 +117,83 @@ Each will have its own `read_file(file_compressorst&, loadversion)` with:
 5. From world load, identify call sequence: header → generated raws → string tables → world_data
 6. For one `history_event_*` vtable, locate `read_file` override via Ghidra type hierarchy or RTTI name search
 
+## Save path construction (VA ~0x995140)
+
+The game builds save file paths at runtime:
+
+```
+"data/save/" + <region_name> + "/world.sav"   // active fort/adventure
+"data/save/" + <region_name> + "/world.dat"   // retired world (append ".dat")
+```
+
+Discovered by decoding string constants in `open_file` call chain @ `0x995198`.
+
+## Polymorphic object factory (VA ~0x40ebc0 / ~0x40f878)
+
+Pointer vectors in saves use `file_compressorst::load_posnull_pointer()`:
+
+| Step | Behavior |
+|------|----------|
+| 1 | Optional byte blob read (context-dependent) |
+| 2 | `load_posnull_pointer()` — if false, store null pointer |
+| 3 | If true, `operator new(0x40)` + call **`0x40ebc0`** (likely `history_event::read_file` or similar) |
+| 4 | Version branches on `loadversion` in `r13d` (e.g. `cmp $0x5e4`, `cmp $0x5f9`) |
+
+PLT address for posnull: **`0x4058A0`**
+
+## world_history layout (df-structures)
+
+From `df.history.xml` struct `world_history`:
+
+```
+events                    stl-vector<history_event*>
+events_death              stl-vector<history_event*>
+relationship_events       stl-vector<relationship_event*>  (since 0.47.01)
+relationship_event_supplements
+figures                   stl-vector<historical_figure*>
+event_collections         ...
+eras                      stl-vector<history_era*>
+...
+```
+
+## history_event base fields (df-structures)
+
+From `df.history_event.xml` class-type `history_event`:
+
+| Field | Type |
+|-------|------|
+| year | int32 |
+| seconds | int32 (season_count) |
+| flags | df-flagarray |
+| id | int32 (global_id) |
+
+Subclasses add fields after base in their `read_file` vmethod, e.g. `history_event_created_sitest`:
+
+- civ, site_civ, resident_civ_id, site, builder_hf (all int32)
+
+## df-structures reference copies
+
+Local copies for offline RE cross-reference:
+
+- `data/df-structures/df.history_event.xml`
+- `data/df-structures/df.history_figure.xml`
+- `data/df-structures/df.history.xml`
+- `data/df-structures/df.world.xml`
+
+Query field layouts:
+
+```bash
+df-save-re fields history_event
+df-save-re fields history_event_created_sitest
+```
+
 ## When world.dat arrives
 
 ```bash
 df-save-re inspect tests/fixtures/world.dat
 df-save-re probe tests/fixtures/world.dat --json
+df-save-re hexdump tests/fixtures/world.dat -o 0 -l 512 --scan-ids
+df-save-re fields history_event
 ```
 
 `probe` will:

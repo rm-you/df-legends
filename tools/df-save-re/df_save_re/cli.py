@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .compression import decompress_file, describe_save_version, read_header
 from .deserializers.probe import probe_save
+from .hexdump import format_hexdump, scan_int32_values
 from .scan import scan_save
 
 
@@ -104,6 +105,37 @@ def cmd_probe(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_hexdump(args: argparse.Namespace) -> int:
+    dec = decompress_file(args.path)
+    data = dec.payload
+    start = args.offset
+    length = args.length or min(256, len(data) - start)
+    print(format_hexdump(data, start=start, length=length))
+    if args.scan_ids:
+        print("\nplausible int32 values (0..10M) in range:")
+        for off, val in scan_int32_values(data, start=start, end=start + length):
+            print(f"  0x{off:08x}  {val}")
+    return 0
+
+
+def cmd_fields(args: argparse.Namespace) -> int:
+    from .structures.xml_fields import load_struct, summarize_fields
+
+    repo_root = Path(__file__).resolve().parents[3]
+    xml_dir = Path(args.xml_dir) if args.xml_dir else repo_root / "data" / "df-structures"
+    struct = load_struct(args.type_name, xml_dir)
+    if struct is None:
+        print(f"error: struct {args.type_name!r} not found under {xml_dir}", file=sys.stderr)
+        return 1
+    print(f"struct {struct.type_name} (original: {struct.original_name})")
+    if struct.inherits:
+        print(f"  inherits: {struct.inherits}")
+    print("fields:")
+    for line in summarize_fields(struct):
+        print(line)
+    return 0
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     report = scan_save(args.path)
     if args.json:
@@ -163,6 +195,18 @@ def main(argv: list[str] | None = None) -> int:
     p_probe.add_argument("path")
     p_probe.add_argument("--json", action="store_true")
     p_probe.set_defaults(func=cmd_probe)
+
+    p_hex = sub.add_parser("hexdump", help="Hexdump decompressed payload region")
+    p_hex.add_argument("path")
+    p_hex.add_argument("-o", "--offset", type=lambda x: int(x, 0), default=0)
+    p_hex.add_argument("-l", "--length", type=lambda x: int(x, 0), default=None)
+    p_hex.add_argument("--scan-ids", action="store_true", help="List plausible int32 IDs in range")
+    p_hex.set_defaults(func=cmd_hexdump)
+
+    p_fields = sub.add_parser("fields", help="Show df-structures field layout for a type")
+    p_fields.add_argument("type_name", help="e.g. history_event or history_event_created_sitest")
+    p_fields.add_argument("--xml-dir", default=None)
+    p_fields.set_defaults(func=cmd_fields)
 
     args = parser.parse_args(argv)
     try:
