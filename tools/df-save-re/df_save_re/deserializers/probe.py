@@ -8,10 +8,12 @@ from pathlib import Path
 
 from ..binary_reader import BinaryReader
 from ..compression import decompress_file, read_header
+from ..legends_scan import LegendsScanReport, scan_legends_region
 from ..target import TARGET_SAVE_VERSION
 from ..save_bundle import SaveKind, classify_filename
 from .active_save import WorldHeaderSavHypothesis
 from .primitives import BlockWithByteVector, WorldHeaderHypothesis
+from .world_dat import DatPreamble
 
 REGION_MARKERS = [
     "*START REGION SAVE*",
@@ -32,6 +34,9 @@ class ProbeResult:
     world_header_error: str | None = None
     sav_header: WorldHeaderSavHypothesis | None = None
     sav_header_error: str | None = None
+    dat_preamble: DatPreamble | None = None
+    dat_preamble_error: str | None = None
+    legends_scan: LegendsScanReport | None = None
     block_at_markers: dict[str, BlockWithByteVector | str] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
 
@@ -81,11 +86,13 @@ def probe_save(path: str) -> ProbeResult:
         try:
             file_header = read_header(Path(path).read_bytes())
             reader = BinaryReader(BytesIO(payload))
-            result.world_header = WorldHeaderHypothesis.read(
+            result.dat_preamble = DatPreamble.read(
                 reader,
                 save_version=file_header.save_version,
             )
-            wh = result.world_header
+            pre = result.dat_preamble
+            result.world_header = pre.header
+            wh = pre.header
             result.notes.append(
                 f"DAT world header hypothesis consumed {wh.bytes_consumed} bytes "
                 f"({len(wh.max_ids)} id counters, save_version {file_header.save_version})"
@@ -94,7 +101,25 @@ def probe_save(path: str) -> ProbeResult:
                 result.notes.append(
                     "warning: world_name looks like generated raws — header alignment may be wrong"
                 )
+            gr = pre.generated_raws
+            result.notes.append(
+                f"generated raws: {gr.section_count} sections, "
+                f"{gr.total_strings} strings @ 0x{gr.payload_offset:x} "
+                f"({gr.bytes_consumed:,} bytes)"
+            )
+            result.notes.append(
+                f"preamble total {pre.bytes_consumed:,} bytes; "
+                f"world_data starts @ 0x{pre.world_data_offset:x}"
+            )
+            result.legends_scan = scan_legends_region(
+                payload,
+                preamble_end=pre.world_data_offset,
+                post_raws_int32=pre.post_raws_int32,
+                header=pre.header,
+            )
+            result.notes.extend(result.legends_scan.notes)
         except (EOFError, ValueError) as exc:
+            result.dat_preamble_error = str(exc)
             result.world_header_error = str(exc)
     elif kind == SaveKind.WORLD_SAV:
         try:

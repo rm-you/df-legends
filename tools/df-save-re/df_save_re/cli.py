@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .compression import decompress_file, describe_save_version, is_target_save_version, read_header
 from .deserializers.probe import probe_save
+from .deserializers.world_dat import parse_dat_preamble
 from .hexdump import format_hexdump, scan_int32_values
 from .save_bundle import index_save_folder, legends_parse_target
 from .scan import scan_save
@@ -81,6 +82,34 @@ def cmd_probe(args: argparse.Namespace) -> int:
             }
         if result.sav_header:
             payload["sav_header"] = {"fields": result.sav_header.fields}
+        if result.dat_preamble:
+            pre = result.dat_preamble
+            payload["dat_preamble"] = {
+                "bytes_consumed": pre.bytes_consumed,
+                "world_data_offset": pre.world_data_offset,
+                "post_raws_int32": pre.post_raws_int32,
+                "generated_raws": {
+                    "section_count": pre.generated_raws.section_count,
+                    "total_strings": pre.generated_raws.total_strings,
+                    "bytes_consumed": pre.generated_raws.bytes_consumed,
+                },
+            }
+        if result.legends_scan:
+            ls = result.legends_scan
+            payload["legends_scan"] = {
+                "preamble_end": ls.preamble_end,
+                "first_region_marker": ls.first_region_marker,
+                "id_counter_hits": [
+                    {
+                        "index": h.index,
+                        "label": h.label,
+                        "value": h.value,
+                        "offset": h.payload_offset,
+                    }
+                    for h in ls.id_counter_hits[:20]
+                ],
+            }
+        payload["dat_preamble_error"] = result.dat_preamble_error
         payload["blocks"] = {
             k: (
                 {"magic": v.magic.value, "field_8": v.field_8, "payload_len": len(v.payload)}
@@ -124,6 +153,50 @@ def cmd_probe(args: argparse.Namespace) -> int:
             print(f"  parsed {key}: field_8={val.field_8} payload={len(val.payload)} bytes")
         else:
             print(f"  {key}: {val}")
+    return 0
+
+
+def cmd_preamble(args: argparse.Namespace) -> int:
+    path = Path(args.path)
+    dec = decompress_file(path)
+    file_header = read_header(path.read_bytes())
+    pre = parse_dat_preamble(dec.payload, save_version=file_header.save_version)
+
+    if args.json:
+        out = {
+            "path": str(path),
+            "world_name": pre.header.world_name.value if pre.header.world_name else None,
+            "header_bytes": pre.header.bytes_consumed,
+            "generated_raws": {
+                "section_count": pre.generated_raws.section_count,
+                "total_strings": pre.generated_raws.total_strings,
+                "bytes_consumed": pre.generated_raws.bytes_consumed,
+                "first_section_strings": pre.generated_raws.sections[0].string_count
+                if pre.generated_raws.sections
+                else 0,
+            },
+            "post_raws_int32": pre.post_raws_int32,
+            "preamble_bytes": pre.bytes_consumed,
+            "world_data_offset": pre.world_data_offset,
+        }
+        print(json.dumps(out, indent=2))
+        return 0
+
+    wh = pre.header
+    print(f"file: {path}")
+    print(f"world_name: {wh.world_name}")
+    print(f"header: {wh.bytes_consumed} bytes")
+    gr = pre.generated_raws
+    print(
+        f"generated_raws: {gr.section_count} sections, {gr.total_strings} strings, "
+        f"{gr.bytes_consumed:,} bytes"
+    )
+    if gr.sections:
+        s0 = gr.sections[0]
+        print(f"  section[0]: {s0.string_count} strings, first={s0.strings[0]!r}")
+    print(f"post_raws int32: {pre.post_raws_int32}")
+    print(f"preamble total: {pre.bytes_consumed:,} bytes")
+    print(f"world_data offset: 0x{pre.world_data_offset:x}")
     return 0
 
 
@@ -260,6 +333,14 @@ def main(argv: list[str] | None = None) -> int:
     p_probe.add_argument("path")
     p_probe.add_argument("--json", action="store_true")
     p_probe.set_defaults(func=cmd_probe)
+
+    p_preamble = sub.add_parser(
+        "preamble",
+        help="Parse world.dat header + generated raws block",
+    )
+    p_preamble.add_argument("path")
+    p_preamble.add_argument("--json", action="store_true")
+    p_preamble.set_defaults(func=cmd_preamble)
 
     p_hex = sub.add_parser("hexdump", help="Hexdump decompressed payload region")
     p_hex.add_argument("path")

@@ -98,6 +98,28 @@ From [Andux WORLD.DAT research](https://dwarffortresswiki.org/index.php/User:And
 
 Expected validation: `max_ids[8]` ≈ max historical figure ID, `max_ids[9]` ≈ max event ID (compare via DFHack).
 
+### 5. Generated raws (validated 0.47.05)
+
+Immediately after the world header:
+
+```
+int32 section_count     # 42 on Waterlures + Namushul fixtures
+repeat section_count:
+    int32 string_count
+    string_count × DfString   # generated MATERIAL/ITEM/CREATURE/INTERACTION chunks
+int32 post_raws_field       # 0 on both fixtures — string-table bridge TBD
+```
+
+Implemented as `GeneratedRawsBlock` in `deserializers/world_dat.py`. Preamble ends with
+`post_raws_field` (0 on fixtures); Namushul preamble = **0x881b** bytes.
+
+### 6. String tables (in progress)
+
+Andux documents 19–20 short-name lists after generated raws. On 0.47.05 fixtures the
+bytes after `post_raws_field` continue with item/interaction raw streams before material
+name tables (~`STEEL`, `ADAMANTINE` around payload offset `0x2a39xx` on Namushul).
+Format still under RE — do not assume plain `int32 count + DfString` at offset `0x881b`.
+
 ## Polymorphic history events
 
 155 distinct `history_event_*` subclasses (RTTI names extracted to `data/df_47_05_history_event_types.txt`).

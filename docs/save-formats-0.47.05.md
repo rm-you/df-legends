@@ -117,8 +117,8 @@ flowchart TB
 
 ```bash
 cd tools/df-save-re
-python3 scripts/fetch_fixtures.py    # downloads Waterlures world.dat
+python3 scripts/fetch_fixtures.py
 python3 -m pytest
-df-save-re folder /path/to/region1
-df-save-re probe tests/fixtures/waterlures-retired/world.dat
+df-save-re preamble tests/fixtures/small-retired/world.dat
+df-save-re probe tests/fixtures/small-retired/world.dat --json
 ```
