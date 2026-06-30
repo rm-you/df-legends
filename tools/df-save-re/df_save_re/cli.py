@@ -14,6 +14,7 @@ from .deserializers.world_dat import parse_dat_preamble
 from .hexdump import format_hexdump, scan_int32_values
 from .legends_extract import extract_legends_snapshot, snapshot_to_dict
 from .legends_scan import scan_legends_region
+from .legends_text import compare_text_with_save, load_legends_text, text_bundle_to_dict
 from .legends_xml import compare_with_save_header, parse_legends_xml
 from .save_bundle import index_save_folder, legends_parse_target
 from .save_validate import LEGENDS_EXPORT_STEPS, fingerprint_path, fingerprint_to_dict
@@ -387,7 +388,10 @@ def cmd_validate(args: argparse.Namespace) -> int:
     path = Path(args.path)
     fp = fingerprint_path(path)
     mismatches: list[str] = []
+    xml_mismatches: list[str] = []
+    text_mismatches: list[str] = []
     xml_stats = None
+    text_bundle = None
 
     if args.legends_xml:
         xml_path = Path(args.legends_xml)
@@ -395,12 +399,22 @@ def cmd_validate(args: argparse.Namespace) -> int:
             print(f"error: legends xml not found: {xml_path}", file=sys.stderr)
             return 1
         xml_stats = parse_legends_xml(xml_path)
-        mismatches = compare_with_save_header(
+        xml_mismatches = compare_with_save_header(
             xml_stats,
             world_name=fp.world_name,
             max_histfig=fp.max_histfig,
             max_event=fp.max_event,
         )
+        mismatches.extend(xml_mismatches)
+
+    if args.legends_text:
+        text_path = Path(args.legends_text)
+        if not text_path.exists():
+            print(f"error: legends text export not found: {text_path}", file=sys.stderr)
+            return 1
+        text_bundle = load_legends_text(text_path)
+        text_mismatches = compare_text_with_save(text_bundle, world_name=fp.world_name)
+        mismatches.extend(text_mismatches)
 
     if args.json:
         out = fingerprint_to_dict(fp)
@@ -414,7 +428,11 @@ def cmd_validate(args: argparse.Namespace) -> int:
                 "max_figure_id": xml_stats.max_figure_id,
                 "format_notes": xml_stats.notes,
             }
-            out["xml_mismatches"] = mismatches
+            out["xml_mismatches"] = xml_mismatches
+        if text_bundle is not None:
+            out["legends_text"] = str(args.legends_text)
+            out["legends_text_export"] = text_bundle_to_dict(text_bundle)
+            out["text_mismatches"] = text_mismatches
         print(json.dumps(out, indent=2))
         return 0 if not mismatches else 2
 
@@ -455,18 +473,54 @@ def cmd_validate(args: argparse.Namespace) -> int:
         print(f"  xml events: {xml_stats.historical_events:,}  figures: {xml_stats.historical_figures:,}")
         for note in xml_stats.notes:
             print(f"  note: {note}")
-        if mismatches:
+        if xml_mismatches:
             print("  mismatches (XML may be from a different world or export):")
-            for line in mismatches:
+            for line in xml_mismatches:
                 print(f"    - {line}")
         else:
             print("  header/xml counts: OK")
+
+    if text_bundle is not None:
+        print(f"\nlegends text export: {args.legends_text}")
+        if text_bundle.history:
+            print(f"  world_name: {text_bundle.history.world_name!r}")
+            if text_bundle.history.alt_name:
+                print(f"  alt_name:   {text_bundle.history.alt_name!r}")
+            print(f"  ruler entries: {text_bundle.history.ruler_entries}")
+        if text_bundle.sites:
+            print(
+                f"  sites: {text_bundle.sites.site_count:,}  "
+                f"total pop: {text_bundle.sites.total_population:,}"
+                if text_bundle.sites.total_population
+                else f"  sites: {text_bundle.sites.site_count:,}"
+            )
+        if text_bundle.world_gen:
+            print(
+                f"  world_gen: DF {text_bundle.world_gen.df_version or '?'}  "
+                f"end_year={text_bundle.world_gen.end_year}"
+            )
+        for note in text_bundle.notes:
+            print(f"  note: {note}")
+        if text_mismatches:
+            print("  mismatches:")
+            for line in text_mismatches:
+                print(f"    - {line}")
+        elif text_bundle.history:
+            print("  world name matches save header")
 
     if args.export_help:
         print()
         hist = f"{fp.max_histfig:,}" if fp.max_histfig is not None else "?"
         ev = f"{fp.max_event:,}" if fp.max_event is not None else "?"
-        print(LEGENDS_EXPORT_STEPS.format(max_histfig=hist, max_event=ev))
+        wn = fp.world_name or "?"
+        print(
+            LEGENDS_EXPORT_STEPS.format(
+                max_histfig=hist,
+                max_event=ev,
+                world_name=wn,
+                target_df=TARGET_DF_VERSION,
+            )
+        )
 
     return 0 if not mismatches else 2
 
@@ -707,9 +761,14 @@ def main(argv: list[str] | None = None) -> int:
         help="Path to world.dat, world.sav, or region save folder",
     )
     p_validate.add_argument(
+        "--legends-text",
+        default=None,
+        help="Legends p-key export (world_history.txt or folder with text exports)",
+    )
+    p_validate.add_argument(
         "--legends-xml",
         default=None,
-        help="Optional legends.xml to compare against header counters",
+        help="Optional legends.xml (not normally used; event count cross-check only)",
     )
     p_validate.add_argument(
         "--export-help",

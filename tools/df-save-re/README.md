@@ -9,49 +9,47 @@ cd tools/df-save-re
 pip install -e .
 ```
 
-## Quick start (no legends XML required)
-
-Confirm you have the right save and see what we can already extract:
+## Quick start
 
 ```bash
 # Fingerprint — world name, SHA-256, header counters
 df-save-re validate /path/to/region1/world.dat
-
-# Same, plus step-by-step legends export instructions
-df-save-re validate /path/to/region1/world.dat --export-help
 
 # Extract string tables, entity catalog, history landmarks
 df-save-re extract /path/to/region1/world.dat
 df-save-re extract /path/to/region1/world.dat --json
 ```
 
-If you pass a **region folder** instead of a file, `validate` and `folder` pick `world.dat` (retired) or `world.sav` (active) automatically.
+If you pass a **region folder** instead of a file, `validate` picks `world.dat` (retired) or `world.sav` (active) automatically.
 
-## Legends XML cross-check (optional)
+## Optional legends text cross-check
 
-Export from the **same world** as your `world.dat`:
-
-1. Retire or abandon the fort so the region folder contains `world.dat`.
-2. Main menu → Legends → select that world → press **[x]** to export.
-3. DF writes `legends.xml` into the region folder.
-
-Then:
+If you exported from Legends mode with **[p]** (Map/Gen information), you can confirm the save matches:
 
 ```bash
-df-save-re validate /path/to/region1/world.dat --legends-xml /path/to/region1/legends.xml
-df-save-re legends-compare /path/to/region1/world.dat /path/to/region1/legends.xml
+df-save-re validate /path/to/world.dat --legends-text /path/to/region3-...-world_history.txt
+# or pass the DF root folder containing all p-key .txt files:
+df-save-re validate /path/to/world.dat --legends-text /path/to/df-install/
 ```
 
-Matching exports should have `historical_figures ≈ max_ids[8]` and `historical_events ≈ max_ids[9]` from the DAT header. Mismatches usually mean the XML came from a different world or export session.
+This checks world name (and DF version when `world_gen_param.txt` is present). Text exports are **optional** — the project does not require or generate them in CI.
+
+Press **[p]** in Legends mode, not **[x]**. The `[p]` files land in your DF install directory.
+
+```bash
+df-save-re validate /path/to/world.dat --export-help   # full instructions
+```
 
 ## Other commands
 
 ```bash
-df-save-re inspect /path/to/world.dat      # compression + save_version
-df-save-re folder /path/to/region1         # inventory save folder
+df-save-re inspect /path/to/world.dat
+df-save-re folder /path/to/region1
 df-save-re legends-scan /path/to/world.dat --full
 df-save-re probe /path/to/world.dat --json
 ```
+
+`legends-compare` / `--legends-xml` remain available if you happen to have `legends.xml`, but are not part of the normal workflow.
 
 ## Test fixtures
 

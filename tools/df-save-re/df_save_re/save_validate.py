@@ -132,35 +132,35 @@ def fingerprint_path(path: Path) -> SaveFingerprint:
 
 
 LEGENDS_EXPORT_STEPS = """
-Legends XML export (DF 0.47.05) — must match THIS save folder / world name
-============================================================================
+Legends text export for validation (DF 0.47.05)
+===============================================
 
-Vanilla (recommended for cross-check):
-  1. Copy the entire region folder (e.g. data/save/regionNN) — not just world.dat.
-  2. For an active fort: Abandon the fortress (or retire it) so the folder contains
-     world.dat instead of (or in addition to) world.sav.
-  3. Main menu → Legends → select the same region/world name shown above.
-  4. Press [x] to export. DF writes legends.xml into the region folder.
-  5. Run:
-       df-save-re legends-compare <world.dat> <region-folder>/legends.xml
+Press [p] in Legends mode (Export Map/Gen information). DF writes to the game
+root directory (not the save folder):
 
-DFHack (alternative; exports from loaded in-memory world):
-  1. Load the save in DF, open the DFHack terminal.
-  2. Run: exportlegends
-  3. Output is typically legends.xml in the DF game directory (not always the save folder).
-  4. Compare using the world.dat from the same session/world:
-       df-save-re legends-compare path/to/world.dat path/to/legends.xml
+  • regionNN-world_gen_param.txt
+  • regionNN-YYYY-MM-DD-world_history.txt      ← required for name cross-check
+  • regionNN-YYYY-MM-DD-world_sites_and_pops.txt
+  • regionNN-YYYY-MM-DD-world_map.bmp
 
-Common mistakes:
-  • Comparing XML from a different world or a regen with the same region slot.
-  • Using world.sav from an active fort while XML came from an older retired copy.
-  • Exporting before abandon/retire — XML reflects the loaded legends view, not always
-    the on-disk world.dat you copied elsewhere.
-  • Expecting counts to match site/unit sidecars — compare against world.dat header only.
+Workflow:
+  1. Main menu → Legends → select the same world as your world.dat.
+  2. Press [p] once and wait for files in your DF install directory.
+  3. Validate (pass the history file or a folder containing the exports):
 
-Expected counts for a matching export (from this file's header):
-  historical_figures ≈ {max_histfig} (max_ids[8])
-  historical_events  ≈ {max_event} (max_ids[9])
+       df-save-re validate <world.dat> --legends-text path/to/world_history.txt
+       df-save-re validate <world.dat> --legends-text path/to/df-root/
+
+Checks performed:
+  • world name in world_history.txt matches world.dat header ({world_name})
+  • DF version in world_gen_param.txt matches target {target_df}
+
+This save's header counters (for RE reference, not checked against text exports):
+  max_histfig (max_ids[8]) = {max_histfig}
+  max_event   (max_ids[9]) = {max_event}
+
+Note: [x] produces legends.xml — optional and not required for this project.
+Text exports do not include event/figure counts.
 """.strip()
 
 

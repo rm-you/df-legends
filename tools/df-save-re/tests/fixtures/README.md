@@ -9,7 +9,6 @@ fixtures/
 ├── README.md
 ├── small-retired/
 │   └── world.dat          # Compact 0.47.05 world (Namushul) — fast default fixture
-│   └── legends.xml        # Optional — legends export for cross-check (not in repo)
 ├── waterlures-retired/
 │   └── world.dat          # Larger retired fort world (Minbazkar)
 └── ironhand-active/
@@ -50,32 +49,23 @@ Both worlds use **50 int32 ID counters** after the leading int16.
 
 After the header, generated raws begin with `int32` count **42**.
 
-## Legends XML cross-check (when available)
+## Optional legends text cross-check
 
-**Start here if export is failing:**
+Legends mode **[p]** exports plain-text files to your DF install directory. These are
+**optional** — not stored in the repo and not required for tests.
 
 ```bash
 df-save-re validate tests/fixtures/small-retired/world.dat --export-help
-```
-
-That prints vanilla + DFHack steps and the expected event/figure counts from the save header.
-
-Export from Legends mode ([x] in 0.47) or DFHack `exportlegends` for the **same world** as your `world.dat`.
-Place alongside the save, e.g. `tests/fixtures/small-retired/legends.xml`, then:
-
-```bash
 df-save-re validate tests/fixtures/small-retired/world.dat \
-  --legends-xml tests/fixtures/small-retired/legends.xml
-df-save-re legends-compare tests/fixtures/small-retired/world.dat tests/fixtures/small-retired/legends.xml
+  --legends-text /path/to/regionNN-...-world_history.txt
 ```
 
-This compares world name and event/figure counts against `max_ids[8]` / `max_ids[9]` in the
-DAT header — useful while RE'ing `world_history` location.
+Checks: world name matches header; DF version when `world_gen_param.txt` is included.
+Pass a folder to load all p-key exports at once.
 
 Scan string-table and history-anchor landmarks:
 
 ```bash
 df-save-re legends-scan tests/fixtures/small-retired/world.dat --full
 df-save-re extract tests/fixtures/small-retired/world.dat --json
-df-save-re legends-scan tests/fixtures/small-retired/world.dat --full --legends-xml tests/fixtures/small-retired/legends.xml
 ```
