@@ -8,6 +8,7 @@ from enum import Enum
 
 from .deserializers.entity_names import match_civ_name_lists
 from .legends_extract import LegendsSnapshot
+from .legends_oracle import LegendsOracle, resolve_oracle
 from .legends_text import LegendsTextBundle, load_legends_text
 from .target import TARGET_DF_VERSION
 
@@ -95,9 +96,65 @@ def parse_history_details(text: str) -> dict:
     }
 
 
+def _add_oracle_checks(
+    report: LegendsVerificationReport,
+    snapshot: LegendsSnapshot,
+    oracle: LegendsOracle,
+    add,
+) -> None:
+    """Field-level checks against a DFHack exportlegends XML when available.
+
+    Counts use header counters as the authoritative cap; the oracle gives the
+    exact expected record total and lets us spot-check field values once each
+    layer's deterministic walk produces records.
+    """
+    report.save_summary["legends_oracle"] = oracle.path
+    # Site count vs oracle (header-derived ceiling already covers the cap).
+    oracle_sites = oracle.count("sites")
+    if oracle_sites:
+        binary_sites = (
+            snapshot.world_site_catalog.site_count
+            if snapshot.world_site_catalog
+            else None
+        )
+        add(
+            "sites",
+            "oracle_site_count",
+            VerifyStatus.PASS if binary_sites == oracle_sites else VerifyStatus.PENDING,
+            expected=oracle_sites,
+            actual=binary_sites,
+            note="exportlegends site count (oracle)",
+            source="compare",
+        )
+    oracle_figs = oracle.count("figures")
+    if oracle_figs:
+        add(
+            "world_history",
+            "oracle_figure_count",
+            VerifyStatus.PENDING,
+            expected=oracle_figs,
+            actual=None,
+            note="exportlegends historical_figure count (oracle)",
+            source="compare",
+        )
+    oracle_events = oracle.count("events")
+    if oracle_events:
+        add(
+            "world_history",
+            "oracle_event_count",
+            VerifyStatus.PENDING,
+            expected=oracle_events,
+            actual=None,
+            note="exportlegends historical_event count (oracle)",
+            source="compare",
+        )
+
+
 def verify_snapshot_against_text(
     snapshot: LegendsSnapshot,
     text: LegendsTextBundle,
+    *,
+    oracle: LegendsOracle | None = None,
 ) -> LegendsVerificationReport:
     """Compare parsed world.dat layers to legends text export ground truth."""
     details: dict = {}
@@ -453,19 +510,27 @@ def verify_snapshot_against_text(
             ),
         )
 
+    if oracle is not None:
+        _add_oracle_checks(report, snapshot, oracle, add)
+
     report.notes.append(
         "PASS = binary parse matches text export for that layer. "
         "PENDING = text gives a target; world.dat layer not extracted yet."
     )
+    if oracle is not None:
+        report.notes.append(f"legends oracle: {oracle.path}")
     return report
 
 
 def verify_world_dat_against_text(
     snapshot: LegendsSnapshot,
     text_path: str,
+    *,
+    save_path: str | None = None,
 ) -> LegendsVerificationReport:
     bundle = load_legends_text(text_path)
-    return verify_snapshot_against_text(snapshot, bundle)
+    oracle = resolve_oracle(save_path=save_path)
+    return verify_snapshot_against_text(snapshot, bundle, oracle=oracle)
 
 
 def report_to_dict(report: LegendsVerificationReport) -> dict:
