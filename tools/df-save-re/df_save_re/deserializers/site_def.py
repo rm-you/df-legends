@@ -103,6 +103,8 @@ def scan_site_headers(
     search_start: int,
     search_end: int | None = None,
     max_sites: int = 500,
+    max_site_id: int | None = None,
+    civ_ids: set[int] | None = None,
 ) -> list[WorldSiteHeaderHypothesis]:
     search_end = len(payload) if search_end is None else search_end
     by_id: dict[int, WorldSiteHeaderHypothesis] = {}
@@ -116,6 +118,15 @@ def scan_site_headers(
         except EOFError:
             break
         if site is not None:
+            if max_site_id is not None and site.site_id > max_site_id:
+                pos += step
+                continue
+            if civ_ids is not None and site.civ_id not in civ_ids:
+                pos += step
+                continue
+            if abs(site.pos_x) > 2500 or abs(site.pos_y) > 2500:
+                pos += step
+                continue
             prev = by_id.get(site.site_id)
             if prev is None or site.payload_offset < prev.payload_offset:
                 by_id[site.site_id] = site

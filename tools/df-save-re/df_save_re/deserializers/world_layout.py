@@ -12,6 +12,19 @@ from .world_dat import DatPreamble
 
 
 @dataclass(frozen=True)
+class PayloadRegion:
+    """Named byte range inside decompressed world.dat payload."""
+
+    name: str
+    start: int
+    end: int
+
+    @property
+    def size(self) -> int:
+        return self.end - self.start
+
+
+@dataclass(frozen=True)
 class WorldLayoutLandmarks:
     """Offsets discovered on Namushul; useful for continued RE."""
 
@@ -34,6 +47,49 @@ class WorldLayoutLandmarks:
         if self.history_stats is None:
             return None
         return self.payload_size - self.history_stats
+
+    @property
+    def regions(self) -> list[PayloadRegion]:
+        """Bounded regions for layer-specific binary scans."""
+        out: list[PayloadRegion] = [
+            PayloadRegion("preamble", 0, self.string_tables),
+            PayloadRegion("string_tables", self.string_tables, self.string_index_end),
+        ]
+        ent_start = self.first_entity or self.string_index_end
+        ent_end = self.last_catalog_entity or self.first_region_block or self.payload_size
+        if self.first_entity is not None:
+            out.append(PayloadRegion("entity_catalog", ent_start, ent_end))
+        if self.last_catalog_entity is not None and self.first_region_block is not None:
+            out.append(
+                PayloadRegion(
+                    "entity_gap",
+                    self.last_catalog_entity,
+                    self.first_region_block,
+                )
+            )
+        if self.first_region_block is not None and self.history_stats is not None:
+            out.append(
+                PayloadRegion(
+                    "region_and_mid",
+                    self.first_region_block,
+                    self.history_stats,
+                )
+            )
+        if self.history_stats is not None:
+            out.append(
+                PayloadRegion(
+                    "history_tail",
+                    self.history_stats,
+                    self.payload_size,
+                )
+            )
+        return out
+
+    def region(self, name: str) -> PayloadRegion | None:
+        for region in self.regions:
+            if region.name == name:
+                return region
+        return None
 
 
 def find_first_region_block(payload: bytes, *, search_start: int) -> int | None:

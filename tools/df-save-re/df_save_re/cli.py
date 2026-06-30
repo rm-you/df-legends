@@ -12,7 +12,6 @@ from .compression import decompress_file, describe_save_version, is_target_save_
 from .deserializers.probe import probe_save
 from .deserializers.world_dat import parse_dat_preamble
 from .hexdump import format_hexdump, scan_int32_values
-from .deserializers.site_names import parse_site_names_from_text
 from .legends_extract import extract_legends_snapshot, snapshot_to_dict
 from .legends_scan import scan_legends_region
 from .legends_text import compare_text_with_save, load_legends_text, text_bundle_to_dict
@@ -258,23 +257,9 @@ def cmd_verify(args: argparse.Namespace) -> int:
     dec = decompress_file(path)
     file_header = read_header(path.read_bytes())
     pre = parse_dat_preamble(dec.payload, save_version=file_header.save_version)
-    text_bundle = load_legends_text(args.legends_text)
-    site_names: dict[int, str] | None = None
-    sites_text: str | None = None
-    history_text: str | None = None
-    if text_bundle.sites:
-        sites_text = Path(text_bundle.sites.path).read_bytes().decode("latin-1")
-        site_names = parse_site_names_from_text(sites_text)
-    if text_bundle.history:
-        history_text = Path(text_bundle.history.path).read_text(
-            encoding="utf-8", errors="replace"
-        )
     snap = extract_legends_snapshot(
         dec.payload,
         preamble=pre,
-        site_names=site_names,
-        sites_text=sites_text,
-        history_text=history_text,
     )
     report = verify_world_dat_against_text(snap, args.legends_text)
 

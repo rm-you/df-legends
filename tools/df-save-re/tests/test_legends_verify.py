@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 
 from df_save_re.compression import decompress_file, read_header
-from df_save_re.deserializers.site_names import parse_site_names_from_text
 from df_save_re.deserializers.world_dat import parse_dat_preamble
 from df_save_re.legends_extract import extract_legends_snapshot
 from df_save_re.legends_verify import VerifyStatus, parse_history_details, verify_snapshot_against_text
@@ -98,36 +97,18 @@ def test_verify_uploaded_exports_if_present():
     payload = decompress_file(world).payload
     pre = parse_dat_preamble(payload, save_version=read_header(world.read_bytes()).save_version)
     bundle = load_legends_text(upload)
-    sites_text = None
-    history_text = None
-    if bundle.sites:
-        sites_text = Path(bundle.sites.path).read_bytes().decode("latin-1")
-        site_names = parse_site_names_from_text(sites_text)
-    if bundle.history:
-        history_text = Path(bundle.history.path).read_text(
-            encoding="utf-8", errors="replace"
-        )
-    snap = extract_legends_snapshot(
-        payload,
-        preamble=pre,
-        site_names=site_names,
-        sites_text=sites_text,
-        history_text=history_text,
-    )
+    snap = extract_legends_snapshot(payload, preamble=pre)
     report = verify_snapshot_against_text(snap, bundle)
 
     assert report.failed == 0
-    assert report.passed >= 16
-    assert report.pending >= 1
-    rulers = next(c for c in report.checks if c.field == "ruler_entries")
-    assert rulers.status == VerifyStatus.PASS
-    events = next(c for c in report.checks if c.field == "historical_event_count")
-    assert events.status == VerifyStatus.PASS
+    assert report.passed >= 10
+    assert report.pending >= 2
     sites = next(c for c in report.checks if c.field == "site_count")
     assert sites.expected == 350
-    assert sites.status == VerifyStatus.PASS
+    assert sites.source == "compare"
+    assert sites.status == VerifyStatus.PENDING
     world_sites = next(c for c in report.checks if c.field == "world_site_catalog")
-    assert world_sites.actual == 350
-    markers = next(c for c in report.checks if c.field == "site_name_markers")
-    assert markers.actual >= 340
-    assert markers.status == VerifyStatus.PASS
+    assert world_sites.actual is not None
+    assert world_sites.actual < 350
+    rulers = next(c for c in report.checks if c.field == "ruler_entries")
+    assert rulers.status == VerifyStatus.PENDING

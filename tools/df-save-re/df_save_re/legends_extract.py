@@ -21,16 +21,15 @@ from .deserializers.string_tables import StringTableBlock, parse_string_table_bl
 from .deserializers.world_dat import DatPreamble
 from .deserializers.history_stats import probe_history_stats
 from .deserializers.vector_probe import find_posnull_vector_candidates
-from .deserializers.site_names import SiteNameScanResult, scan_site_name_markers
-from .deserializers.site_catalog import WorldSiteCatalog, build_world_site_catalog
-from .deserializers.site_text import SiteTextCatalog, parse_site_text_catalog
-from .deserializers.history_text import HistoryTextCatalog, parse_history_text_catalog
+from .deserializers.site_catalog import WorldSiteCatalog
+from .deserializers.site_discovery import SiteDiscoveryResult, discover_world_sites
+from .deserializers.vector_anchor import anchor_history_vectors
 from .deserializers.historical_figures import (
     HistoricalFigureCatalog,
     build_historical_figure_catalog,
 )
 from .deserializers.history_events import HistoryEventsCatalog, build_history_events_catalog
-from .deserializers.history_rulers import RulerCatalog, build_ruler_catalog
+from .deserializers.history_rulers import RulerCatalog
 from .deserializers.world_layout import WorldLayoutLandmarks, discover_layout_landmarks
 
 
@@ -65,10 +64,8 @@ class LegendsSnapshot:
     entity_class_counts: dict[str, int] = field(default_factory=dict)
     layout: WorldLayoutLandmarks | None = None
     history_stats: HistoryStatsBlock | None = None
-    site_name_scan: SiteNameScanResult | None = None
+    site_discovery: SiteDiscoveryResult | None = None
     world_site_catalog: WorldSiteCatalog | None = None
-    site_text_catalog: SiteTextCatalog | None = None
-    history_text_catalog: HistoryTextCatalog | None = None
     entity_catalog_region: EntityCatalogRegion | None = None
     historical_figure_catalog: HistoricalFigureCatalog | None = None
     history_events_catalog: HistoryEventsCatalog | None = None
@@ -110,10 +107,9 @@ def extract_legends_snapshot(
     preamble: DatPreamble,
     max_entities: int = 50,
     catalog_entities: bool = True,
-    site_names: dict[int, str] | None = None,
-    sites_text: str | None = None,
-    history_text: str | None = None,
+    expected_site_count: int = 350,
 ) -> LegendsSnapshot:
+    """Extract legends data from decompressed world.dat only (no text exports)."""
     block = parse_string_table_block(payload)
     reader = BinaryReader(BytesIO(payload))
     reader.seek(block.payload_offset + block.bytes_consumed)
@@ -190,30 +186,22 @@ def extract_legends_snapshot(
                 f"skip target @ 0x{entity_catalog_region.region_end:x} "
                 f"(gap {entity_catalog_region.gap_after_catalog_bytes:,} bytes)"
             )
-    site_name_scan: SiteNameScanResult | None = None
+    site_discovery: SiteDiscoveryResult | None = None
     world_site_catalog: WorldSiteCatalog | None = None
-    if (
-        layout.first_region_block is not None
-        and layout.history_stats is not None
-        and site_names
-    ):
-        site_name_scan = scan_site_name_markers(
-            payload,
-            block=block,
-            region_start=layout.first_region_block,
-            region_end=layout.history_stats,
-            site_names=site_names,
-            search_start=layout.last_catalog_entity,
-        )
-    site_text_catalog = parse_site_text_catalog(sites_text) if sites_text else None
-    if site_name_scan and site_text_catalog:
-        world_site_catalog = build_world_site_catalog(
-            payload,
-            name_scan=site_name_scan,
-            text_catalog=site_text_catalog,
-            search_start=layout.last_catalog_entity,
-            search_end=layout.history_stats,
-        )
+    if layout.first_region_block is not None and layout.history_stats is not None:
+        mid = layout.region("region_and_mid")
+        if mid is not None:
+            site_discovery = discover_world_sites(
+                payload,
+                block=block,
+                search_start=layout.last_catalog_entity or mid.start,
+                search_end=mid.end,
+                entities=catalog,
+                max_site_id=expected_site_count - 1,
+            )
+            world_site_catalog = site_discovery.catalog
+            for line in site_discovery.notes:
+                notes.append(f"sites: {line}")
     if layout.first_region_block is not None:
         notes.append(
             f"layout: region blocks @ 0x{layout.first_region_block:x}; "
@@ -227,18 +215,10 @@ def extract_legends_snapshot(
             f"(events={stats.event_counter:,}, figs={stats.histfig_counter:,}; "
             f"not verified as world_history vector start)"
         )
-    history_text_catalog = (
-        parse_history_text_catalog(history_text) if history_text else None
-    )
-    if site_text_catalog:
-        notes.append(
-            f"site text catalog: {site_text_catalog.site_count} sites parsed from export "
-            f"(populations, owners — text ground truth)"
-        )
     if world_site_catalog:
         notes.append(
-            f"world_site catalog: {world_site_catalog.site_count} marker-anchored records "
-            f"({world_site_catalog.header_enriched_count} with civ/type/pos fields"
+            f"world_site catalog: {world_site_catalog.site_count} binary records "
+            f"({world_site_catalog.header_enriched_count} with header fields"
             + (
                 f"; name table @ 0x{world_site_catalog.name_table_base:x} "
                 f"stride {world_site_catalog.name_table_stride}"
@@ -247,17 +227,6 @@ def extract_legends_snapshot(
                 else ""
             )
             + ")"
-        )
-    if history_text_catalog:
-        notes.append(
-            f"history text catalog: {history_text_catalog.named_civ_count} named civs, "
-            f"{history_text_catalog.subterranean_count} subterranean, "
-            f"{history_text_catalog.ruler_count} ruler entries"
-        )
-    if site_name_scan:
-        notes.append(
-            f"site name markers: {site_name_scan.located_count} titles located "
-            f"in mid region 0x{site_name_scan.region_start:x}–0x{site_name_scan.region_end:x}"
         )
 
     historical_figure_catalog: HistoricalFigureCatalog | None = None
@@ -302,22 +271,17 @@ def extract_legends_snapshot(
             for line in history_events_catalog.notes:
                 notes.append(f"  events: {line}")
 
-        if history_text and historical_figure_catalog:
-            words = block.sections[8].names if len(block.sections) > 8 else []
-            ruler_catalog = build_ruler_catalog(
-                history_text,
-                payload,
-                words=words,
-                search_start=layout.history_stats,
-                search_end=historical_figure_catalog.anchor.bodies_start,
+        vector_anchors = anchor_history_vectors(
+            payload,
+            preamble.header,
+            stats_offset=layout.history_stats,
+            payload_end=len(payload),
+        )
+        for anchor in vector_anchors:
+            notes.append(
+                f"vector anchor {anchor.name} @ 0x{anchor.payload_offset:x} "
+                f"(count={anchor.count:,}, present={anchor.present_count:,})"
             )
-            if ruler_catalog.ruler_count:
-                notes.append(
-                    f"ruler catalog: {ruler_catalog.ruler_count} text entries, "
-                    f"{ruler_catalog.matched_count} with binary name markers"
-                )
-                for line in ruler_catalog.notes:
-                    notes.append(f"  rulers: {line}")
 
     vector_probe: VectorProbeSummary | None = None
     stats_probe = probe_history_stats(payload, preamble.header)
@@ -391,10 +355,8 @@ def extract_legends_snapshot(
         entity_class_counts=class_counts,
         layout=layout,
         history_stats=stats,
-        site_name_scan=site_name_scan,
+        site_discovery=site_discovery,
         world_site_catalog=world_site_catalog,
-        site_text_catalog=site_text_catalog,
-        history_text_catalog=history_text_catalog,
         entity_catalog_region=entity_catalog_region,
         historical_figure_catalog=historical_figure_catalog,
         history_events_catalog=history_events_catalog,
@@ -490,6 +452,10 @@ def snapshot_to_dict(snapshot: LegendsSnapshot) -> dict:
                 "history_stats": snapshot.layout.history_stats,
                 "entity_to_region_gap": snapshot.layout.entity_to_region_gap,
                 "history_tail_size": snapshot.layout.history_tail_size,
+                "regions": [
+                    {"name": r.name, "start": r.start, "end": r.end, "size": r.size}
+                    for r in snapshot.layout.regions
+                ],
             }
             if snapshot.layout
             else None
@@ -505,21 +471,12 @@ def snapshot_to_dict(snapshot: LegendsSnapshot) -> dict:
             if snapshot.history_stats
             else None
         ),
-        "site_name_scan": (
+        "site_discovery": (
             {
-                "located_count": snapshot.site_name_scan.located_count,
-                "region_start": snapshot.site_name_scan.region_start,
-                "region_end": snapshot.site_name_scan.region_end,
-                "sample": [
-                    {
-                        "site_id": m.site_id,
-                        "name": m.display_name,
-                        "offset": m.payload_offset,
-                    }
-                    for m in snapshot.site_name_scan.markers[:10]
-                ],
+                "site_count": snapshot.site_discovery.catalog.site_count,
+                "notes": snapshot.site_discovery.notes,
             }
-            if snapshot.site_name_scan
+            if snapshot.site_discovery
             else None
         ),
         "world_site_catalog": (
@@ -551,34 +508,6 @@ def snapshot_to_dict(snapshot: LegendsSnapshot) -> dict:
                 "gap_after_catalog_bytes": snapshot.entity_catalog_region.gap_after_catalog_bytes,
             }
             if snapshot.entity_catalog_region
-            else None
-        ),
-        "site_text_catalog": (
-            {
-                "site_count": snapshot.site_text_catalog.site_count,
-                "total_population": snapshot.site_text_catalog.total_population,
-                "sample": [
-                    {
-                        "id": rec.site_id,
-                        "name": rec.display_name,
-                        "type": rec.site_type,
-                        "civ": rec.civ_name,
-                        "owner": rec.owner,
-                        "pop_lines": len(rec.populations),
-                    }
-                    for rec in snapshot.site_text_catalog.records[:10]
-                ],
-            }
-            if snapshot.site_text_catalog
-            else None
-        ),
-        "history_text_catalog": (
-            {
-                "named_civ_count": snapshot.history_text_catalog.named_civ_count,
-                "subterranean_count": snapshot.history_text_catalog.subterranean_count,
-                "ruler_count": snapshot.history_text_catalog.ruler_count,
-            }
-            if snapshot.history_text_catalog
             else None
         ),
         "history_events_catalog": (

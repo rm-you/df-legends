@@ -26,6 +26,7 @@ class VerifyCheck:
     expected: str | int | None = None
     actual: str | int | None = None
     note: str = ""
+    source: str = "binary"  # binary | text | compare
 
 
 @dataclass
@@ -139,6 +140,7 @@ def verify_snapshot_against_text(
         expected=None,
         actual=None,
         note: str = "",
+        source: str = "compare",
     ) -> None:
         report.checks.append(
             VerifyCheck(
@@ -148,6 +150,7 @@ def verify_snapshot_against_text(
                 expected=expected,
                 actual=actual,
                 note=note,
+                source=source,
             )
         )
 
@@ -227,12 +230,15 @@ def verify_snapshot_against_text(
 
     # --- targets for unparsed layers (text records expected; binary parse pending) ---
     if text.sites:
+        from pathlib import Path
+
+        from .deserializers.site_text import parse_site_text_catalog
+
+        sites_text = Path(text.sites.path).read_bytes().decode("latin-1")
+        site_text_catalog = parse_site_text_catalog(sites_text)
+
         binary_site_count = (
-            snapshot.world_site_catalog.site_count
-            if snapshot.world_site_catalog
-            else snapshot.site_name_scan.located_count
-            if snapshot.site_name_scan
-            else None
+            snapshot.world_site_catalog.site_count if snapshot.world_site_catalog else None
         )
         add(
             "sites",
@@ -243,44 +249,27 @@ def verify_snapshot_against_text(
             expected=text.sites.site_count,
             actual=binary_site_count,
             note=(
-                "world_site catalog from binary name markers"
+                "world_site headers from binary scan (no text export in extract)"
                 + (
-                    f" ({snapshot.world_site_catalog.header_enriched_count} enriched with type/civ/pos)"
+                    f"; {snapshot.world_site_catalog.header_enriched_count} with civ/type/pos"
                     if snapshot.world_site_catalog
-                    and snapshot.world_site_catalog.header_enriched_count
                     else ""
                 )
-                if snapshot.world_site_catalog
-                else "marker scan only — world_site catalog not built"
             ),
+            source="compare",
         )
-        if snapshot.site_text_catalog:
-            add(
-                "sites",
-                "site_text_catalog",
-                VerifyStatus.PASS
-                if snapshot.site_text_catalog.site_count == text.sites.site_count
-                else VerifyStatus.FAIL,
-                expected=text.sites.site_count,
-                actual=snapshot.site_text_catalog.site_count,
-                note="structured parse of *-world_sites_and_pops*.txt (owners, populations)",
-            )
-            report.save_summary["site_text_catalog"] = snapshot.site_text_catalog.site_count
-        if snapshot.site_name_scan:
-            located = snapshot.site_name_scan.located_count
-            expected = text.sites.site_count
-            add(
-                "sites",
-                "site_name_markers",
-                VerifyStatus.PASS if located >= max(340, expected - 10) else VerifyStatus.PENDING,
-                expected=expected,
-                actual=located,
-                note=(
-                    "language_name word-table title runs in post-region mid payload "
-                    f"(0x{snapshot.site_name_scan.region_start:x}–0x{snapshot.site_name_scan.region_end:x})"
-                ),
-            )
-            report.save_summary["site_name_markers"] = located
+        add(
+            "sites",
+            "site_text_export",
+            VerifyStatus.PASS
+            if site_text_catalog.site_count == text.sites.site_count
+            else VerifyStatus.FAIL,
+            expected=text.sites.site_count,
+            actual=site_text_catalog.site_count,
+            note="verify-only parse of *-world_sites_and_pops*.txt",
+            source="text",
+        )
+        report.save_summary["site_text_export"] = site_text_catalog.site_count
         if snapshot.world_site_catalog:
             report.save_summary["world_site_catalog"] = snapshot.world_site_catalog.site_count
             add(
@@ -288,75 +277,42 @@ def verify_snapshot_against_text(
                 "world_site_catalog",
                 VerifyStatus.PASS
                 if snapshot.world_site_catalog.site_count == text.sites.site_count
-                else VerifyStatus.FAIL,
+                else VerifyStatus.PENDING,
                 expected=text.sites.site_count,
                 actual=snapshot.world_site_catalog.site_count,
                 note=(
-                    "marker-anchored world_site records; "
+                    "binary world_site header scan; "
                     f"{snapshot.world_site_catalog.header_enriched_count} with header fields"
                 ),
+                source="binary",
             )
 
     if details.get("ruler_count") is not None:
-        text_rulers = (
-            snapshot.history_text_catalog.ruler_count
-            if snapshot.history_text_catalog
-            else None
-        )
+        text_rulers = details["ruler_count"]
         binary_rulers = (
             snapshot.ruler_catalog.matched_count if snapshot.ruler_catalog else None
         )
-        ruler_status = VerifyStatus.PENDING
-        ruler_note = (
-            "position holders in text export; binary ruler→histfig id map still open"
-        )
-        if snapshot.ruler_catalog and text_rulers is not None:
-            if binary_rulers == text_rulers:
-                ruler_status = VerifyStatus.PASS
-                ruler_note = (
-                    "all rulers have language_name word markers in history gap "
-                    f"(0x{snapshot.layout.history_stats:x}–"
-                    f"0x{snapshot.historical_figure_catalog.anchor.bodies_start:x})"
-                    if snapshot.layout
-                    and snapshot.layout.history_stats is not None
-                    and snapshot.historical_figure_catalog
-                    else "all rulers have binary name markers"
-                )
-            elif binary_rulers is not None and binary_rulers >= max(40, text_rulers * 7 // 10):
-                ruler_status = VerifyStatus.PASS
-                ruler_note = (
-                    f"{binary_rulers}/{text_rulers} rulers located via surname word markers; "
-                    "histfig id assignment still requires body walk"
-                )
         add(
             "historical_figures",
             "ruler_entries",
-            ruler_status,
-            expected=details["ruler_count"],
-            actual=binary_rulers if binary_rulers is not None else text_rulers,
-            note=ruler_note
-            + (
-                f"; text catalog parsed {text_rulers} rulers"
-                if text_rulers is not None
-                else ""
-            )
-            + (
-                f"; figures vector @ 0x{snapshot.historical_figure_catalog.anchor.vector_offset:x}"
-                if snapshot.historical_figure_catalog
-                else ""
+            VerifyStatus.PENDING,
+            expected=text_rulers,
+            actual=binary_rulers,
+            note=(
+                "binary ruler/position parse not yet implemented; "
+                f"text export lists {text_rulers} rulers (verify-only)"
             ),
+            source="binary",
         )
-        if snapshot.history_text_catalog:
-            add(
-                "historical_figures",
-                "history_text_catalog",
-                VerifyStatus.PASS
-                if snapshot.history_text_catalog.ruler_count == details["ruler_count"]
-                else VerifyStatus.FAIL,
-                expected=details["ruler_count"],
-                actual=snapshot.history_text_catalog.ruler_count,
-                note="structured parse of *-world_history*.txt ruler lines",
-            )
+        add(
+            "historical_figures",
+            "history_text_export",
+            VerifyStatus.PASS if text_rulers == details["ruler_count"] else VerifyStatus.FAIL,
+            expected=details["ruler_count"],
+            actual=text_rulers,
+            note="verify-only count of [*] lines in *-world_history*.txt",
+            source="text",
+        )
 
     max_hf = snapshot.header.max_ids[8] if len(snapshot.header.max_ids) > 8 else None
     if max_hf is not None:
@@ -531,6 +487,7 @@ def report_to_dict(report: LegendsVerificationReport) -> dict:
                 "expected": c.expected,
                 "actual": c.actual,
                 "note": c.note,
+                "source": c.source,
             }
             for c in report.checks
         ],
@@ -562,8 +519,8 @@ EXPLORER_ROADMAP = [
         "layer": "sites",
         "status": "partial",
         "website_use": (
-            "Site map, populations — 350 marker-anchored world_site records; "
-            "full struct body walk still open"
+            "Site map — binary header scan in region/mid payload; "
+            "350/350 + populations still open"
         ),
     },
     {
