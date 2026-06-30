@@ -17,6 +17,11 @@ class FieldDef:
     type_name: str | None = None
     since: str | None = None
     original_name: str | None = None
+    array_count: int | None = None
+    pointer_type: str | None = None
+    ref_type: str | None = None
+    base_type: str | None = None
+    children: list[FieldDef] = field(default_factory=list)
 
 
 @dataclass
@@ -90,6 +95,7 @@ def _parse_fields(elem: ET.Element) -> list[FieldDef]:
     fields: list[FieldDef] = []
     for child in elem:
         if child.tag in _FIELD_TAGS:
+            nested = _parse_fields(child) if child.tag in ("compound", "pointer") and not _attr(child, "type-name") else []
             fields.append(
                 FieldDef(
                     name=_attr(child, "name") or child.tag,
@@ -97,6 +103,13 @@ def _parse_fields(elem: ET.Element) -> list[FieldDef]:
                     type_name=_attr(child, "type-name"),
                     since=_attr(child, "since"),
                     original_name=_attr(child, "original-name"),
+                    array_count=int(_attr(child, "count"))
+                    if _attr(child, "count") and _attr(child, "count").isdigit()
+                    else None,
+                    pointer_type=_attr(child, "pointer-type"),
+                    ref_type=_attr(child, "ref-target"),
+                    base_type=_attr(child, "base-type"),
+                    children=nested,
                 )
             )
         elif child.tag == "virtual-methods":
@@ -104,21 +117,36 @@ def _parse_fields(elem: ET.Element) -> list[FieldDef]:
     return fields
 
 
+_STRUCT_XML_FILES = (
+    "df.history_event.xml",
+    "df.history_figure.xml",
+    "df.history.xml",
+    "df.world.xml",
+    "df.world-data.xml",
+    "df.world-site.xml",
+    "df.entity.xml",
+    "df.language.xml",
+    "df.artifacts.xml",
+    "df.unit.xml",
+)
+
+_STRUCT_CACHE: dict[tuple[str, str], StructDef | None] = {}
+
+
 def load_struct(name: str, xml_dir: Path | str) -> StructDef | None:
     xml_dir = Path(xml_dir)
-    # Map type names to files heuristically
-    candidates = [
-        xml_dir / "df.history_event.xml",
-        xml_dir / "df.history_figure.xml",
-        xml_dir / "df.history.xml",
-        xml_dir / "df.world.xml",
-    ]
-    for path in candidates:
+    cache_key = (name, str(xml_dir.resolve()))
+    if cache_key in _STRUCT_CACHE:
+        return _STRUCT_CACHE[cache_key]
+    for rel in _STRUCT_XML_FILES:
+        path = xml_dir / rel
         if not path.exists():
             continue
         structs = load_structs_from_file(path)
         if name in structs:
+            _STRUCT_CACHE[cache_key] = structs[name]
             return structs[name]
+    _STRUCT_CACHE[cache_key] = None
     return None
 
 

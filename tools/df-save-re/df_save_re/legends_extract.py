@@ -189,15 +189,17 @@ def extract_legends_snapshot(
     site_discovery: SiteDiscoveryResult | None = None
     world_site_catalog: WorldSiteCatalog | None = None
     if layout.first_region_block is not None and layout.history_stats is not None:
+        gap = layout.region("entity_gap")
         mid = layout.region("region_and_mid")
-        if mid is not None:
+        if gap is not None and mid is not None:
             site_discovery = discover_world_sites(
                 payload,
                 block=block,
-                search_start=layout.last_catalog_entity or mid.start,
+                search_start=gap.start,
                 search_end=mid.end,
                 entities=catalog,
                 max_site_id=expected_site_count - 1,
+                civ_ids=None,
             )
             world_site_catalog = site_discovery.catalog
             for line in site_discovery.notes:
@@ -237,7 +239,7 @@ def extract_legends_snapshot(
             payload,
             preamble.header,
             search_start=layout.history_stats,
-            id_chain_limit=32,
+            id_chain_limit=512,
         )
         if historical_figure_catalog:
             anchor = historical_figure_catalog.anchor

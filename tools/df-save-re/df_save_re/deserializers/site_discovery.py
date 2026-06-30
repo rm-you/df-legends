@@ -19,35 +19,15 @@ class SiteDiscoveryResult:
     notes: list[str] = field(default_factory=list)
 
 
-def discover_world_sites(
+def _headers_to_catalog(
     payload: bytes,
     *,
     block: StringTableBlock,
+    headers,
     search_start: int,
     search_end: int,
-    entities: list[HistoricalEntityHeader] | None = None,
-    max_site_id: int = 349,
-) -> SiteDiscoveryResult:
-    """
-    Build a site catalog purely from ``world.dat``.
-
-    Scans for ``world_site`` headers (language_name + civ/type/coords/id) in the
-    entity-gap / mid payload, validating civ ids against the entity catalog.
-    """
-    if entities is None:
-        entities = catalog_entity_block(payload, search_end=search_end).entities
-    civ_ids = {ent.entity_id for ent in entities}
+) -> WorldSiteCatalog:
     words = block.sections[8].names if len(block.sections) > 8 else []
-
-    headers = scan_site_headers(
-        payload,
-        search_start=search_start,
-        search_end=search_end,
-        max_sites=max_site_id + 1,
-        max_site_id=max_site_id,
-        civ_ids=civ_ids,
-    )
-
     markers: list[SiteNameMarker] = []
     records: list[WorldSiteBinaryRecord] = []
     for header in headers:
@@ -76,23 +56,64 @@ def discover_world_sites(
                 header_offset=header.payload_offset,
             )
         )
-
     table_base, table_stride = infer_name_table_layout(markers)
-
-    notes = [
-        f"binary site scan: {len(records)} headers (ids 0..{max_site_id}, civ-validated)",
-    ]
-    if len(records) < max_site_id + 1:
-        notes.append(
-            f"missing {max_site_id + 1 - len(records)} site ids — "
-            "full vector walk / population parse still open"
-        )
-
-    catalog = WorldSiteCatalog(
+    return WorldSiteCatalog(
         records=records,
         name_table_base=table_base,
         name_table_stride=table_stride,
         search_start=search_start,
         search_end=search_end,
     )
-    return SiteDiscoveryResult(catalog=catalog, civ_ids=civ_ids, notes=notes)
+
+
+def discover_world_sites(
+    payload: bytes,
+    *,
+    block: StringTableBlock,
+    search_start: int,
+    search_end: int,
+    entities: list[HistoricalEntityHeader] | None = None,
+    max_site_id: int = 349,
+    civ_ids: set[int] | None = None,
+) -> SiteDiscoveryResult:
+    """
+    Build a site catalog purely from ``world.dat``.
+
+    Uses a scored header scan across the entity-gap / mid payload, then merges
+    id-field backscan hits for any missing site ids.
+    """
+    if entities is None:
+        entities = catalog_entity_block(payload, search_end=search_end).entities
+    entity_civ_ids = {ent.entity_id for ent in entities}
+
+    scanned = scan_site_headers(
+        payload,
+        search_start=search_start,
+        search_end=search_end,
+        max_sites=max_site_id + 1,
+        max_site_id=max_site_id,
+        civ_ids=civ_ids,
+    )
+
+    catalog = _headers_to_catalog(
+        payload,
+        block=block,
+        headers=scanned,
+        search_start=search_start,
+        search_end=search_end,
+    )
+
+    notes = [
+        f"binary site scan: {len(catalog.records)} headers (ids 0..{max_site_id})",
+    ]
+    if len(catalog.records) < max_site_id + 1:
+        notes.append(
+            f"missing {max_site_id + 1 - len(catalog.records)} site ids — "
+            "world_site body walk / population parse still open"
+        )
+
+    return SiteDiscoveryResult(
+        catalog=catalog,
+        civ_ids=entity_civ_ids,
+        notes=notes,
+    )

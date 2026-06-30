@@ -35,9 +35,9 @@ def skip_field(reader: BinaryReader, field: FieldDef, *, xml_dir: Path) -> None:
     elif kind in ("int16_t", "uint16_t"):
         reader.read_int16() if kind == "int16_t" else reader.read_uint16()
     elif kind in ("int32_t", "uint32_t"):
-        reader.read_int32() if kind == "int32_t" else reader.read_uint32()
+        reader.read_int32()
     elif kind == "uint64_t":
-        reader.read_uint64()
+        reader.read_bytes(8)
     elif kind == "bool":
         reader.read_bool()
     elif kind == "stl-string":
@@ -48,12 +48,18 @@ def skip_field(reader: BinaryReader, field: FieldDef, *, xml_dir: Path) -> None:
             raise ValueError(f"implausible flagarray count {count}")
         reader.read_bytes(count * 4)
     elif kind == "enum":
-        reader.read_int32()
+        if field.base_type == "int16_t":
+            reader.read_int16()
+        else:
+            reader.read_int32()
     elif kind == "bitfield":
-        reader.read_uint32()
+        reader.read_int32()
     elif kind == "compound":
         if field.type_name:
             skip_struct(reader, field.type_name, xml_dir=xml_dir)
+        elif field.children:
+            for child in field.children:
+                skip_field(reader, child, xml_dir=xml_dir)
         else:
             raise ValueError(f"anonymous compound {field.name!r} needs manual skip")
     elif kind == "pointer":
@@ -63,25 +69,57 @@ def skip_field(reader: BinaryReader, field: FieldDef, *, xml_dir: Path) -> None:
             reader.read_uint8()
         if field.type_name:
             skip_struct(reader, field.type_name, xml_dir=xml_dir)
+        elif field.children:
+            for child in field.children:
+                skip_field(reader, child, xml_dir=xml_dir)
+    elif kind == "static-array":
+        elem_type = field.type_name or "int32_t"
+        count = field.array_count or 0
+        for _ in range(count):
+            if elem_type == "int32_t":
+                reader.read_int32()
+            elif elem_type == "int16_t":
+                reader.read_int16()
+            elif elem_type == "compound":
+                raise ValueError(f"anonymous static-array compound {field.name!r} needs manual skip")
+            else:
+                skip_field(
+                    FieldDef(name=field.name, kind=elem_type, type_name=elem_type),
+                    xml_dir=xml_dir,
+                )
     elif kind == "stl-vector":
-        if field.type_name == "int32_t":
-            skip_stl_int32_vector(reader)
-        elif field.type_name == "int16_t":
-            skip_stl_int16_vector(reader)
-        elif field.type_name == "uint8_t":
-            skip_stl_byte_vector(reader)
-        elif field.type_name:
-            count = reader.read_int32()
-            if count < 0:
-                raise ValueError(f"negative vector length {count}")
-            for _ in range(count):
-                if not reader.read_bool():
-                    continue
-                while reader.tell() % 4:
-                    reader.read_uint8()
-                skip_struct(reader, field.type_name, xml_dir=xml_dir)
-        else:
-            raise ValueError(f"unsupported stl-vector {field.type_name!r}")
+        elem_type = field.type_name or field.pointer_type
+        if elem_type in ("int32_t", "int16_t", "uint8_t"):
+            if elem_type == "int32_t":
+                skip_stl_int32_vector(reader)
+            elif elem_type == "int16_t":
+                skip_stl_int16_vector(reader)
+            else:
+                skip_stl_byte_vector(reader)
+            return
+        count = reader.read_int32()
+        if count < 0:
+            raise ValueError(f"negative vector length {count}")
+        inline_pointer = (
+            field.children[0]
+            if len(field.children) == 1 and field.children[0].kind == "pointer"
+            else None
+        )
+        for _ in range(count):
+            if not reader.read_bool():
+                continue
+            while reader.tell() % 4:
+                reader.read_uint8()
+            if elem_type:
+                skip_struct(reader, elem_type, xml_dir=xml_dir)
+            elif inline_pointer is not None:
+                if inline_pointer.type_name:
+                    skip_struct(reader, inline_pointer.type_name, xml_dir=xml_dir)
+                else:
+                    for child in inline_pointer.children:
+                        skip_field(reader, child, xml_dir=xml_dir)
+            else:
+                raise ValueError(f"unsupported stl-vector {field.name!r}")
     else:
         raise ValueError(f"unsupported field kind {kind!r}")
 

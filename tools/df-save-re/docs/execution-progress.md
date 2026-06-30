@@ -13,7 +13,9 @@ Binary-only extract is now enforced; text exports are verify-only.
 | 1 | `PayloadRegion` + `layout.regions` | done |
 | 1 | `vector_anchor.py` | done |
 | 1 | `body_skipper.py` (XML-driven skip skeleton) | done |
-| 3 | `site_discovery.py` — binary header scan | partial (~209/350 on Namushul) |
+| 3 | `site_discovery.py` — binary header scan (entity gap + mid) | partial (~207/350 on Namushul) |
+| 2 | `entity_positions.py` — body span stub | started |
+| 1 | `body_skipper.py` — world_site XML skip (in progress) | partial |
 
 ## Next (critical path)
 

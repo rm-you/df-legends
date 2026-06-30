@@ -105,12 +105,14 @@ def scan_site_headers(
     max_sites: int = 500,
     max_site_id: int | None = None,
     civ_ids: set[int] | None = None,
+    words: list[str] | None = None,
 ) -> list[WorldSiteHeaderHypothesis]:
     search_end = len(payload) if search_end is None else search_end
     by_id: dict[int, WorldSiteHeaderHypothesis] = {}
+    best_score: dict[int, tuple[int, int]] = {}
     step = 4
     pos = search_start
-    while pos < search_end and len(by_id) < max_sites:
+    while pos < search_end:
         reader = BinaryReader(BytesIO(payload))
         reader.seek(pos)
         try:
@@ -127,9 +129,25 @@ def scan_site_headers(
             if abs(site.pos_x) > 2500 or abs(site.pos_y) > 2500:
                 pos += step
                 continue
-            prev = by_id.get(site.site_id)
-            if prev is None or site.payload_offset < prev.payload_offset:
+            if site.site_type not in SITE_TYPES:
+                pos += step
+                continue
+            score = site.payload_offset
+            if words is not None:
+                from .entity_names import resolve_language_name_display
+
+                pos_words = [w for w in site.name.words if w >= 0]
+                if len(pos_words) >= 2 and len(set(pos_words)) == 1:
+                    pos += step
+                    continue
+                display, _ = resolve_language_name_display(site.name, words=words)
+                score = len(display) + len(pos_words) * 5
+                if site.site_type != 0:
+                    score += 10
+            prev = best_score.get(site.site_id)
+            if prev is None or score > prev[0] or (score == prev[0] and site.payload_offset < prev[1]):
                 by_id[site.site_id] = site
+                best_score[site.site_id] = (score, site.payload_offset)
         pos += step
     return [by_id[k] for k in sorted(by_id)]
 
