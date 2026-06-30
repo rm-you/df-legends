@@ -312,6 +312,13 @@ def skip_struct(reader: BinaryReader, type_name: str, *, xml_dir: Path | None = 
     if type_name in _SPECIAL_SIZES:
         reader.read_bytes(_SPECIAL_SIZES[type_name])
         return reader.tell() - start
+    # Tolerate primitive / string type-names used as vector or array element types.
+    if type_name in _PRIMITIVE_TYPE_WIDTH:
+        reader.read_bytes(_PRIMITIVE_TYPE_WIDTH[type_name])
+        return reader.tell() - start
+    if type_name in ("stl-string", "ptr-string"):
+        DfString.read(reader)
+        return reader.tell() - start
 
     struct = _struct_def(type_name, xml_dir)
     if struct is None:

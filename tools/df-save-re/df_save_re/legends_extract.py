@@ -34,6 +34,7 @@ from .deserializers.history_rulers import RulerCatalog
 from .deserializers.engine_layers import (
     LayerWalk,
     summarize_layer_walks,
+    walk_entities_layer,
     walk_events_death_layer,
     walk_figures_layer,
     walk_sites_layer,
@@ -382,6 +383,14 @@ def extract_legends_snapshot(
 
     if layout is not None:
         engine_walks.append(walk_sites_layer(payload, preamble.header, layout))
+        engine_walks.append(
+            walk_entities_layer(
+                payload,
+                preamble.header,
+                layout,
+                entities.first_entity_offset,
+            )
+        )
 
     for line in summarize_layer_walks(engine_walks):
         notes.append(line)

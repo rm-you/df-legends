@@ -13,9 +13,11 @@ fabricates records it cannot deterministically walk.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 
-from .body_skipper import default_xml_dir
+from ..binary_reader import BinaryReader
+from .body_skipper import SkipError, default_xml_dir, skip_struct
 from .engine_walk import WalkResult, walk_pointer_vector
 from .historical_figures import FiguresVectorAnchor, locate_figures_vector
 from .primitives import WorldHeaderHypothesis
@@ -224,6 +226,75 @@ def walk_sites_layer(
         layer="sites",
         element_type="world_site",
         authoritative_count=ceiling,
+        result=result,
+        note=note,
+    )
+
+
+def walk_entities_layer(
+    payload: bytes,
+    header: WorldHeaderHypothesis,
+    layout: WorldLayoutLandmarks,
+    first_entity_offset: int | None,
+    *,
+    xml_dir: Path | None = None,
+) -> LayerWalk:
+    """Walk consecutive historical_entity bodies from the first entity header.
+
+    Authoritative capacity is header max_ids[4]. Records the desync offset when
+    the entity body tail (positions, links, worship) diverges from df-structures.
+    """
+    xml_dir = default_xml_dir() if xml_dir is None else Path(xml_dir)
+    capacity = header.max_ids[4] if len(header.max_ids) > 4 else None
+    if first_entity_offset is None:
+        return LayerWalk(
+            layer="entities",
+            element_type="historical_entity",
+            authoritative_count=capacity,
+            result=None,
+            note="first entity header not located",
+        )
+
+    reader = BinaryReader(BytesIO(payload))
+    reader.seek(first_entity_offset)
+    parsed = 0
+    error = None
+    error_offset = None
+    for _ in range(2):  # measure just the first couple bodies for landing signal
+        body_start = reader.tell()
+        try:
+            skip_struct(reader, "historical_entity", xml_dir=xml_dir)
+            parsed += 1
+        except (SkipError, EOFError, ValueError) as exc:
+            error = f"{type(exc).__name__}: {exc}"
+            error_offset = body_start
+            break
+    result = WalkResult(
+        element_type="historical_entity",
+        vector_offset=first_entity_offset,
+        declared_count=capacity or 0,
+        present_count=0,
+        parsed_count=parsed,
+        flags_end=first_entity_offset,
+        bodies_start=first_entity_offset,
+        end_offset=reader.tell(),
+        ok=error is None and parsed >= 1,
+        landed_on_anchor=None,
+        error=error,
+        error_offset=error_offset,
+    )
+    note = (
+        f"entity capacity={capacity} (header max_ids[4]); "
+        + (
+            f"body walk desynced after {parsed} ({error})"
+            if error
+            else f"{parsed} entity bodies skipped (no anchor to confirm landing)"
+        )
+    )
+    return LayerWalk(
+        layer="entities",
+        element_type="historical_entity",
+        authoritative_count=capacity,
         result=result,
         note=note,
     )
