@@ -16,6 +16,7 @@ from .legends_extract import extract_legends_snapshot, snapshot_to_dict
 from .legends_scan import scan_legends_region
 from .legends_xml import compare_with_save_header, parse_legends_xml
 from .save_bundle import index_save_folder, legends_parse_target
+from .save_validate import LEGENDS_EXPORT_STEPS, fingerprint_path, fingerprint_to_dict
 from .scan import scan_save
 from .target import TARGET_DF_VERSION, TARGET_SAVE_VERSION
 
@@ -222,6 +223,22 @@ def cmd_extract(args: argparse.Namespace) -> int:
     for ent in data["entities"][: min(15, len(data["entities"]))]:
         name = " (named)" if ent["has_name"] else ""
         print(f"  id={ent['id']:4} {ent['class']!r}{name}")
+    cat = data.get("entity_catalog") or {}
+    if cat.get("count"):
+        print(
+            f"\nentity catalog: {cat['count']} civ headers, "
+            f"{cat['named_count']} named, max id {cat['max_id_found']}"
+        )
+        for cls, count in sorted(
+            (cat.get("class_counts") or {}).items(),
+            key=lambda kv: (-kv[1], kv[0]),
+        ):
+            print(f"  {cls}: {count}")
+        named = cat.get("named_entities") or []
+        if named:
+            print("named civs (sample):")
+            for ent in named[:10]:
+                print(f"  id={ent['id']:4} {ent['class']!r}")
     if snap.history_stats:
         hs = snap.history_stats
         print(
@@ -364,6 +381,94 @@ def cmd_legends_compare(args: argparse.Namespace) -> int:
         return 2
     print("header/xml counts: OK (within tolerance)")
     return 0
+
+
+def cmd_validate(args: argparse.Namespace) -> int:
+    path = Path(args.path)
+    fp = fingerprint_path(path)
+    mismatches: list[str] = []
+    xml_stats = None
+
+    if args.legends_xml:
+        xml_path = Path(args.legends_xml)
+        if not xml_path.is_file():
+            print(f"error: legends xml not found: {xml_path}", file=sys.stderr)
+            return 1
+        xml_stats = parse_legends_xml(xml_path)
+        mismatches = compare_with_save_header(
+            xml_stats,
+            world_name=fp.world_name,
+            max_histfig=fp.max_histfig,
+            max_event=fp.max_event,
+        )
+
+    if args.json:
+        out = fingerprint_to_dict(fp)
+        if xml_stats is not None:
+            out["legends_xml"] = str(args.legends_xml)
+            out["xml_stats"] = {
+                "world_name": xml_stats.world_name,
+                "historical_events": xml_stats.historical_events,
+                "historical_figures": xml_stats.historical_figures,
+                "max_event_id": xml_stats.max_event_id,
+                "max_figure_id": xml_stats.max_figure_id,
+                "format_notes": xml_stats.notes,
+            }
+            out["xml_mismatches"] = mismatches
+        print(json.dumps(out, indent=2))
+        return 0 if not mismatches else 2
+
+    print(f"path: {fp.path}")
+    if fp.folder:
+        print(f"folder: {fp.folder} ({fp.region_name})")
+        print(f"legends target: {fp.legends_target}")
+        if fp.is_retired:
+            print("status: retired (world.dat present)")
+        if fp.is_active:
+            print("status: active (world.sav present)")
+    print(f"kind: {fp.kind}")
+    print(f"size: {fp.file_size:,} bytes")
+    print(f"sha256: {fp.sha256}")
+    if fp.known_fixture:
+        print(f"known fixture: {fp.known_fixture}")
+    print(
+        f"save_version: {fp.save_version} ({fp.save_version_label}) "
+        f"target {TARGET_DF_VERSION} ({TARGET_SAVE_VERSION})"
+    )
+    if fp.payload_size is not None:
+        print(f"payload: {fp.payload_size:,} bytes decompressed")
+    print(f"world_name: {fp.world_name}")
+    if fp.max_histfig is not None:
+        print(f"max_histfig (max_ids[8]): {fp.max_histfig:,}")
+    if fp.max_event is not None:
+        print(f"max_event   (max_ids[9]): {fp.max_event:,}")
+    if fp.max_civ is not None:
+        print(f"max_civ     (max_ids[4]): {fp.max_civ:,}")
+    for note in fp.notes:
+        print(f"note: {note}")
+    for warn in fp.warnings:
+        print(f"warning: {warn}", file=sys.stderr)
+
+    if xml_stats is not None:
+        print(f"\nlegends xml: {args.legends_xml}")
+        print(f"  xml world_name: {xml_stats.world_name}")
+        print(f"  xml events: {xml_stats.historical_events:,}  figures: {xml_stats.historical_figures:,}")
+        for note in xml_stats.notes:
+            print(f"  note: {note}")
+        if mismatches:
+            print("  mismatches (XML may be from a different world or export):")
+            for line in mismatches:
+                print(f"    - {line}")
+        else:
+            print("  header/xml counts: OK")
+
+    if args.export_help:
+        print()
+        hist = f"{fp.max_histfig:,}" if fp.max_histfig is not None else "?"
+        ev = f"{fp.max_event:,}" if fp.max_event is not None else "?"
+        print(LEGENDS_EXPORT_STEPS.format(max_histfig=hist, max_event=ev))
+
+    return 0 if not mismatches else 2
 
 
 def cmd_preamble(args: argparse.Namespace) -> int:
@@ -592,6 +697,27 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_extract.add_argument("--json", action="store_true")
     p_extract.set_defaults(func=cmd_extract)
+
+    p_validate = sub.add_parser(
+        "validate",
+        help="Fingerprint world.dat/sav and verify legends XML matches (optional)",
+    )
+    p_validate.add_argument(
+        "path",
+        help="Path to world.dat, world.sav, or region save folder",
+    )
+    p_validate.add_argument(
+        "--legends-xml",
+        default=None,
+        help="Optional legends.xml to compare against header counters",
+    )
+    p_validate.add_argument(
+        "--export-help",
+        action="store_true",
+        help="Print step-by-step vanilla/DFHack legends export instructions",
+    )
+    p_validate.add_argument("--json", action="store_true")
+    p_validate.set_defaults(func=cmd_validate)
 
     p_hex = sub.add_parser("hexdump", help="Hexdump decompressed payload region")
     p_hex.add_argument("path")

@@ -52,10 +52,20 @@ After the header, generated raws begin with `int32` count **42**.
 
 ## Legends XML cross-check (when available)
 
-Export from Legends mode ([x] in 0.47) or DFHack `exportlegends` for the same world.
+**Start here if export is failing:**
+
+```bash
+df-save-re validate tests/fixtures/small-retired/world.dat --export-help
+```
+
+That prints vanilla + DFHack steps and the expected event/figure counts from the save header.
+
+Export from Legends mode ([x] in 0.47) or DFHack `exportlegends` for the **same world** as your `world.dat`.
 Place alongside the save, e.g. `tests/fixtures/small-retired/legends.xml`, then:
 
 ```bash
+df-save-re validate tests/fixtures/small-retired/world.dat \
+  --legends-xml tests/fixtures/small-retired/legends.xml
 df-save-re legends-compare tests/fixtures/small-retired/world.dat tests/fixtures/small-retired/legends.xml
 ```
 

@@ -38,7 +38,11 @@ def _count_tag(root: ET.Element, tag: str) -> int:
 
 def parse_legends_xml(path: Path | str) -> LegendsXmlStats:
     path = Path(path)
-    root = ET.parse(path).getroot()
+    try:
+        root = ET.parse(path).getroot()
+    except ET.ParseError as exc:
+        raise ValueError(f"invalid XML in {path}: {exc}") from exc
+
     stats = LegendsXmlStats(path=str(path))
 
     # DF 0.47 legends.xml root is often <df_world> or similar; exportlegends may differ.
@@ -49,8 +53,18 @@ def parse_legends_xml(path: Path | str) -> LegendsXmlStats:
     if alt is not None and alt.text:
         stats.alt_name = alt.text.strip()
 
+    if stats.world_name is None:
+        # Some exports nest world info under <world_info> or use attributes.
+        for tag in ("world_info", "world"):
+            wi = root.find(f".//{tag}")
+            if wi is not None:
+                wname = wi.find("name")
+                if wname is not None and wname.text:
+                    stats.world_name = wname.text.strip()
+                    break
+
     if stats.world_name is None and root.tag:
-        stats.notes.append(f"root tag={root.tag!r}; no <name> element")
+        stats.notes.append(f"root tag={root.tag!r}; no <name> element found")
 
     stats.historical_events = _count_tag(root, "historical_event")
     stats.historical_figures = _count_tag(root, "historical_figure")
@@ -59,6 +73,12 @@ def parse_legends_xml(path: Path | str) -> LegendsXmlStats:
     stats.artifacts = _count_tag(root, "artifact")
     stats.max_event_id = _max_id("historical_event", root)
     stats.max_figure_id = _max_id("historical_figure", root)
+
+    if stats.historical_events == 0 and stats.historical_figures == 0:
+        stats.notes.append(
+            "no historical_event or historical_figure elements — "
+            "file may be a partial export, wrong format, or not legends XML"
+        )
 
     for event in root.iter("historical_event"):
         type_elem = event.find("type")

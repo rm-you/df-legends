@@ -33,3 +33,7 @@ def test_extract_namushul_snapshot():
     assert "TOAD" in data["creatures_sample"]
     assert len(data["entities"]) == 15
     assert data["entities"][0]["class"] == "SUBTERRANEAN_ANIMAL_PEOPLES"
+    cat = data["entity_catalog"]
+    assert cat["count"] >= 70
+    assert cat["named_count"] >= 10
+    assert "PLAINS" in cat["class_counts"]

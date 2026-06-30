@@ -7,6 +7,8 @@ import pytest
 from df_save_re.compression import decompress_file
 from df_save_re.deserializers.entity_def import (
     FIRST_ENTITY_CLASS,
+    catalog_entity_block,
+    find_entity_by_id,
     scan_entities,
     scan_entity_headers,
 )
@@ -54,3 +56,25 @@ def test_first_entity_waterlures():
     assert result.first_entity_offset == 0x12B0B24
     assert len(result.entities) >= 10
     assert result.entities[0].entity_class == FIRST_ENTITY_CLASS
+
+
+def test_entity_catalog_namushul():
+    path = resolve_fixture("small-retired", "world.dat")
+    if path is None:
+        pytest.skip("fixture missing")
+    payload = decompress_file(path).payload
+    result = catalog_entity_block(payload, search_end=0x15BEB28)
+    assert len(result.entities) >= 70
+    assert result.entities[0].entity_id == 0
+    named = [e for e in result.entities if e.has_name]
+    assert len(named) >= 10
+    plains = find_entity_by_id(
+        payload,
+        67,
+        entity_classes=set(result.entity_classes),
+        search_start=result.string_index_end,
+        search_end=0x15BEB28,
+    )
+    assert plains is not None
+    assert plains.entity_class == "PLAINS"
+    assert plains.has_name

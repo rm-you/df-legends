@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from io import BytesIO
 
 from .binary_reader import BinaryReader
-from .deserializers.entity_def import EntityScanResult, scan_entities
+from .deserializers.entity_def import EntityScanResult, HistoricalEntityHeader, catalog_entity_block, scan_entities
 from .deserializers.primitives import WorldHeaderHypothesis
 from .deserializers.string_index import StringIndexTable
 from .deserializers.string_tables import StringTableBlock, parse_string_table_block
@@ -33,6 +33,8 @@ class LegendsSnapshot:
     string_tables: StringTableBlock
     string_index: StringIndexTable
     entities: EntityScanResult
+    entity_catalog: list[HistoricalEntityHeader] = field(default_factory=list)
+    entity_class_counts: dict[str, int] = field(default_factory=dict)
     history_stats: HistoryStatsBlock | None = None
     notes: list[str] = field(default_factory=list)
 
@@ -69,6 +71,7 @@ def extract_legends_snapshot(
     *,
     preamble: DatPreamble,
     max_entities: int = 50,
+    catalog_entities: bool = True,
 ) -> LegendsSnapshot:
     block = parse_string_table_block(payload)
     reader = BinaryReader(BytesIO(payload))
@@ -77,6 +80,15 @@ def extract_legends_snapshot(
 
     entities = scan_entities(payload, max_entities=max_entities)
     stats = find_history_stats_block(payload, preamble.header)
+
+    catalog: list[HistoricalEntityHeader] = []
+    class_counts: dict[str, int] = {}
+    if catalog_entities:
+        search_end = stats.payload_offset if stats else None
+        catalog_result = catalog_entity_block(payload, search_end=search_end)
+        catalog = catalog_result.entities
+        for ent in catalog:
+            class_counts[ent.entity_class] = class_counts.get(ent.entity_class, 0) + 1
 
     notes = [
         f"string tables: {block.section_count} sections, {block.total_names:,} names",
@@ -89,6 +101,16 @@ def extract_legends_snapshot(
         )
     else:
         notes.append("entities: first civ header not found")
+    if catalog:
+        named = sum(1 for ent in catalog if ent.has_name)
+        max_id = max(ent.entity_id for ent in catalog)
+        header_civ = preamble.header.max_ids[4] if len(preamble.header.max_ids) > 4 else None
+        notes.append(
+            f"entity catalog: {len(catalog)} validated civ headers "
+            f"(ids 0..{max_id}, {named} named"
+            + (f"; header max_ids[4]={header_civ:,}" if header_civ is not None else "")
+            + ")"
+        )
     if stats:
         notes.append(
             f"history stats block @ 0x{stats.payload_offset:x} "
@@ -103,6 +125,8 @@ def extract_legends_snapshot(
         string_tables=block,
         string_index=index,
         entities=entities,
+        entity_catalog=catalog,
+        entity_class_counts=class_counts,
         history_stats=stats,
         notes=notes,
     )
@@ -153,6 +177,25 @@ def snapshot_to_dict(snapshot: LegendsSnapshot) -> dict:
             }
             for ent in snapshot.entities.entities
         ],
+        "entity_catalog": {
+            "count": len(snapshot.entity_catalog),
+            "named_count": sum(1 for ent in snapshot.entity_catalog if ent.has_name),
+            "max_id_found": (
+                max(ent.entity_id for ent in snapshot.entity_catalog)
+                if snapshot.entity_catalog
+                else None
+            ),
+            "class_counts": snapshot.entity_class_counts,
+            "named_entities": [
+                {
+                    "id": ent.entity_id,
+                    "class": ent.entity_class,
+                    "offset": ent.payload_offset,
+                }
+                for ent in snapshot.entity_catalog
+                if ent.has_name
+            ],
+        },
         "history_stats": (
             {
                 "offset": snapshot.history_stats.payload_offset,
