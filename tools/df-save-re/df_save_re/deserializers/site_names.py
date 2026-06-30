@@ -33,6 +33,16 @@ def _word_index(words: list[str]) -> dict[str, int]:
     return {name.upper(): idx for idx, name in enumerate(words)}
 
 
+def _word_phrase_index(words: list[str]) -> dict[str, int]:
+    """Map space-stripped table phrases (SCALE SKIN → SCALESKIN)."""
+    out: dict[str, int] = {}
+    for idx, name in enumerate(words):
+        collapsed = re.sub(r"[^A-Z0-9]", "", name.upper())
+        if len(collapsed) >= 4:
+            out.setdefault(collapsed, idx)
+    return out
+
+
 def _exact_word_index(token: str, word_idx: dict[str, int]) -> int | None:
     return word_idx.get(token)
 
@@ -69,6 +79,10 @@ def _piece_variants(piece: str) -> list[str]:
         variants.append(piece[:-2])
     if len(piece) > 5 and piece.endswith("ING"):
         variants.append(piece[:-3])
+    if piece.endswith("AVES"):
+        variants.append("LEAF")
+    if piece.endswith("D") and len(piece) > 4:
+        variants.append(piece[:-1])
     out: list[str] = []
     seen: set[str] = set()
     for item in variants:
@@ -78,8 +92,12 @@ def _piece_variants(piece: str) -> list[str]:
     return out
 
 
+_GLUE_SUFFIXES = ("ING", "ED", "ES", "D", "S")
+
+
 def _resolve_word_piece_exact(piece: str, word_idx: dict[str, int]) -> int | None:
-    return _exact_word_index(piece, word_idx) or _prefix_word_index(piece, word_idx)
+    """Exact word-table hits only (no prefix expansion)."""
+    return _exact_word_index(piece, word_idx)
 
 
 def _resolve_word_piece(piece: str, word_idx: dict[str, int]) -> int | None:
@@ -93,33 +111,31 @@ def _resolve_word_piece(piece: str, word_idx: dict[str, int]) -> int | None:
     return None
 
 
-def decompose_display_name_to_word_indices(
-    display_name: str,
-    *,
-    words: list[str],
-) -> tuple[int, ...] | None:
-    """
-    Map a legends text site title to language_name word indices (section 8 word table).
+def _strip_glued_suffix(remaining: str, word_idx: dict[str, int]) -> str:
+    """Drop past-tense/plural glue (BRISTLED→D, LEAVES→S) when the rest resolves."""
+    for suffix in _GLUE_SUFFIXES:
+        if remaining.upper().startswith(suffix):
+            trial = remaining[len(suffix) :]
+            if trial and _resolve_word_piece(trial, word_idx) is not None:
+                return trial
+    return remaining
 
-    Uses greedy longest-match tokenization on uppercase alnum tokens; strips a leading THE.
-    """
-    word_idx = _word_index(words)
-    text = re.sub(r"[^A-Za-z0-9 ]", " ", display_name.upper())
-    text = re.sub(r"\s+", " ", text).strip()
-    if not text:
-        return None
 
-    tokens = [t for t in text.split() if t not in _STOP_WORDS]
+def _token_rewrite_variants(token: str) -> list[str]:
+    variants = [token]
+    if token.startswith("STOLEN"):
+        variants.append("STEAL" + token[6:])
+    return variants
 
-    indices: list[int] = []
-    for token in tokens:
-        exact = _exact_word_index(token, word_idx)
-        if exact is not None:
-            indices.append(exact)
-            continue
-        # Compound single-token titles (Incensecross, Birthshadows, …)
+
+def _decompose_token(token: str, word_idx: dict[str, int], phrase_idx: dict[str, int]) -> tuple[int, ...] | None:
+    """Greedy compound split for a single alnum token."""
+    for variant in _token_rewrite_variants(token):
+        phrase = phrase_idx.get(variant)
+        if phrase is not None:
+            return (phrase,)
         parts: list[int] = []
-        remaining = token
+        remaining = variant
         while remaining:
             match_idx: int | None = None
             match_len = 0
@@ -131,20 +147,88 @@ def decompose_display_name_to_word_indices(
                     match_len = size
                     break
             if match_idx is None:
-                # Allow plural/suffix variants on the final piece of a compound token.
                 idx = _resolve_word_piece(remaining, word_idx)
                 if idx is None:
-                    return None
+                    break
                 parts.append(idx)
                 break
             parts.append(match_idx)
-            remaining = remaining[match_len:]
-            if remaining and _resolve_word_piece(remaining, word_idx) is not None:
+            remaining = _strip_glued_suffix(remaining[match_len:], word_idx)
+            if not remaining:
+                break
+            if _resolve_word_piece(remaining, word_idx) is not None:
                 parts.append(_resolve_word_piece(remaining, word_idx))  # type: ignore[arg-type]
                 break
-        indices.extend(parts)
+        if len(parts) >= 2:
+            return tuple(parts)
+    return None
 
-    return tuple(indices[:7]) if indices else None
+
+def _decompose_tokens_backtracking(
+    tokens: list[str],
+    word_idx: dict[str, int],
+    phrase_idx: dict[str, int],
+    *,
+    max_depth: int = 7,
+) -> list[tuple[int, ...]]:
+    """Enumerate word-index sequences for spaced tokens."""
+    solutions: list[tuple[int, ...]] = []
+
+    def rec(token_idx: int, acc: list[int]) -> None:
+        if len(solutions) >= 16:
+            return
+        if token_idx >= len(tokens):
+            if len(acc) >= 2:
+                solutions.append(tuple(acc[:max_depth]))
+            return
+        token = tokens[token_idx]
+        exact = _exact_word_index(token, word_idx)
+        if exact is not None:
+            rec(token_idx + 1, acc + [exact])
+        compound = _decompose_token(token, word_idx, phrase_idx)
+        if compound:
+            rec(token_idx + 1, acc + list(compound))
+
+    rec(0, [])
+    return solutions
+
+
+def decompose_display_name_to_word_indices(
+    display_name: str,
+    *,
+    words: list[str],
+) -> tuple[int, ...] | None:
+    """
+    Map a legends text site title to language_name word indices (section 8 word table).
+
+    Uses greedy longest-match tokenization on uppercase alnum tokens; strips a leading THE.
+    """
+    word_idx = _word_index(words)
+    phrase_idx = _word_phrase_index(words)
+    text = re.sub(r"[^A-Za-z0-9 ]", " ", display_name.upper())
+    text = re.sub(r"\s+", " ", text).strip()
+    if not text:
+        return None
+
+    tokens = [t for t in text.split() if t not in _STOP_WORDS]
+
+    if len(tokens) > 1:
+        backtracked = _decompose_tokens_backtracking(tokens, word_idx, phrase_idx)
+        if backtracked:
+            return backtracked[0]
+
+    indices: list[int] = []
+    for token in tokens:
+        exact = _exact_word_index(token, word_idx)
+        if exact is not None:
+            indices.append(exact)
+            continue
+        compound = _decompose_token(token, word_idx, phrase_idx)
+        if compound is None:
+            return None
+        indices.extend(compound)
+
+    return tuple(indices[:7]) if len(indices) >= 2 else None
 
 
 def decompose_display_name_candidates(
@@ -164,8 +248,17 @@ def decompose_display_name_candidates(
 
     add(decompose_display_name_to_word_indices(display_name, words=words))
 
+    word_idx = _word_index(words)
+    phrase_idx = _word_phrase_index(words)
+    text = re.sub(r"[^A-Za-z0-9 ]", " ", display_name.upper())
+    text = re.sub(r"\s+", " ", text).strip()
+    tokens = [t for t in text.split() if t not in _STOP_WORDS]
+    for seq in _decompose_tokens_backtracking(tokens, word_idx, phrase_idx):
+        add(seq)
+
     collapsed = re.sub(r"[^A-Za-z0-9]", "", display_name.upper())
     if collapsed:
+        add(_decompose_token(collapsed, word_idx, phrase_idx))
         add(decompose_display_name_to_word_indices(collapsed, words=words))
 
     spaced = re.sub(r"[^A-Za-z0-9 ]", " ", display_name.upper())
@@ -174,7 +267,73 @@ def decompose_display_name_candidates(
     if no_stop and no_stop != spaced:
         add(decompose_display_name_to_word_indices(no_stop, words=words))
 
+    # Prefix pairs for long titles when full run is not stored contiguously.
+    primary = decompose_display_name_to_word_indices(display_name, words=words)
+    if primary and len(primary) >= 3:
+        add(primary[:2])
+        add(primary[:3])
+
     return candidates[:max_candidates]
+
+
+def _normalize_title(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
+def _pair_display(indices: tuple[int, ...], words: list[str]) -> str:
+    parts: list[str] = []
+    for idx in indices:
+        if 0 <= idx < len(words):
+            parts.append(re.sub(r"[^a-z0-9]", "", words[idx].lower()))
+    return "".join(parts)
+
+
+def build_word_pair_index(
+    payload: bytes,
+    *,
+    start: int,
+    end: int,
+    max_word_index: int = 4000,
+) -> dict[tuple[int, int], int]:
+    """Index first occurrence of consecutive int32 word-index pairs in a range."""
+    index: dict[tuple[int, int], int] = {}
+    for off in range(start, end - 8, 4):
+        a = int.from_bytes(payload[off : off + 4], "little", signed=True)
+        b = int.from_bytes(payload[off + 4 : off + 8], "little", signed=True)
+        if a < 0 or b < 0 or a > max_word_index or b > max_word_index:
+            continue
+        key = (a, b)
+        if key not in index:
+            index[key] = off
+    return index
+
+
+def match_title_to_word_pair(
+    display_name: str,
+    *,
+    words: list[str],
+    pair_index: dict[tuple[int, int], int],
+) -> tuple[tuple[int, int], int] | None:
+    """Fuzzy-match a site title to a indexed word pair (e.g. Scalystop → SCALE SKIN + STOP)."""
+    target = _normalize_title(display_name)
+    if len(target) < 4:
+        return None
+    best: tuple[tuple[int, int], int, int] | None = None
+    for pair, off in pair_index.items():
+        display = _pair_display(pair, words)
+        if len(display) < 4:
+            continue
+        if display == target or display in target or target in display:
+            score = len(display)
+            if best is None or score > best[2]:
+                best = (pair, off, score)
+        elif target[:4] == display[:4] and len(display) >= 6:
+            score = len(display) - 1
+            if best is None or score > best[2]:
+                best = (pair, off, score)
+    if best is None:
+        return None
+    return best[0], best[1]
 
 
 def find_word_sequence(
@@ -183,13 +342,11 @@ def find_word_sequence(
     *,
     start: int,
     end: int,
+    min_words: int = 2,
 ) -> int | None:
-    if len(word_indices) < 1:
+    if len(word_indices) < min_words:
         return None
-    if len(word_indices) == 1:
-        needle = struct.pack("<i", word_indices[0])
-    else:
-        needle = struct.pack("<" + "i" * len(word_indices), *word_indices)
+    needle = struct.pack("<" + "i" * len(word_indices), *word_indices)
     off = payload.find(needle, start, end)
     return None if off < 0 else off
 
@@ -201,11 +358,14 @@ def scan_site_name_markers(
     region_start: int,
     region_end: int,
     site_names: dict[int, str],
+    search_start: int | None = None,
 ) -> SiteNameScanResult:
     """Find site title word runs in the post-region mid payload (Namushul: ~0x86c157–0x15beb28)."""
     words = block.sections[8].names if len(block.sections) > 8 else []
     markers: list[SiteNameMarker] = []
     failures: list[tuple[int, str]] = []
+    scan_start = region_start if search_start is None else search_start
+    pair_index = build_word_pair_index(payload, start=scan_start, end=region_end)
 
     for site_id, display_name in sorted(site_names.items()):
         located: SiteNameMarker | None = None
@@ -215,7 +375,7 @@ def scan_site_name_markers(
             off = find_word_sequence(
                 payload,
                 word_indices,
-                start=region_start,
+                start=scan_start,
                 end=region_end,
             )
             if off is None:
@@ -227,6 +387,20 @@ def scan_site_name_markers(
                 payload_offset=off,
             )
             break
+        if located is None:
+            pair_hit = match_title_to_word_pair(
+                display_name,
+                words=words,
+                pair_index=pair_index,
+            )
+            if pair_hit is not None:
+                pair, off = pair_hit
+                located = SiteNameMarker(
+                    site_id=site_id,
+                    display_name=display_name,
+                    word_indices=pair,
+                    payload_offset=off,
+                )
         if located is None:
             failures.append((site_id, display_name))
             continue

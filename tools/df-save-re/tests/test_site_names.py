@@ -46,7 +46,7 @@ def test_scan_namushul_site_markers_from_upload():
         region_end=layout.history_stats,
         site_names=site_names,
     )
-    assert result.located_count >= 80
+    assert result.located_count >= 200
     ids = {m.site_id for m in result.markers}
     assert 7 in ids
 

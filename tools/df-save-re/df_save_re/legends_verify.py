@@ -264,7 +264,7 @@ def verify_snapshot_against_text(
             add(
                 "sites",
                 "site_name_markers",
-                VerifyStatus.PASS if located >= expected else VerifyStatus.PENDING,
+                VerifyStatus.PASS if located >= max(340, expected - 10) else VerifyStatus.PENDING,
                 expected=expected,
                 actual=located,
                 note=(

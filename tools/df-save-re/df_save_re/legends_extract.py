@@ -7,12 +7,15 @@ from dataclasses import dataclass, field
 from io import BytesIO
 
 from .binary_reader import BinaryReader
+from .deserializers.entity_bodies import sample_entity_body_spans
 from .deserializers.entity_def import EntityScanResult, HistoricalEntityHeader, catalog_entity_block, scan_entities
 from .deserializers.entity_names import ResolvedEntityName, resolve_named_entities
 from .deserializers.primitives import WorldHeaderHypothesis
 from .deserializers.string_index import StringIndexTable
 from .deserializers.string_tables import StringTableBlock, parse_string_table_block
 from .deserializers.world_dat import DatPreamble
+from .deserializers.history_stats import probe_history_stats
+from .deserializers.vector_probe import find_posnull_vector_candidates
 from .deserializers.site_names import SiteNameScanResult, scan_site_name_markers
 from .deserializers.site_text import SiteTextCatalog, parse_site_text_catalog
 from .deserializers.history_text import HistoryTextCatalog, parse_history_text_catalog
@@ -31,6 +34,13 @@ class HistoryStatsBlock:
 
 
 @dataclass
+class VectorProbeSummary:
+    site_candidates: list[dict]
+    event_candidates: list[dict]
+    histfig_candidates: list[dict]
+
+
+@dataclass
 class LegendsSnapshot:
     world_name: str | None
     header: WorldHeaderHypothesis
@@ -46,6 +56,7 @@ class LegendsSnapshot:
     site_name_scan: SiteNameScanResult | None = None
     site_text_catalog: SiteTextCatalog | None = None
     history_text_catalog: HistoryTextCatalog | None = None
+    vector_probe: VectorProbeSummary | None = None
     notes: list[str] = field(default_factory=list)
 
 
@@ -129,6 +140,14 @@ def extract_legends_snapshot(
         if entity_names:
             sample = ", ".join(f"{n.entity_id}={n.resolved!r}" for n in entity_names[:3])
             notes.append(f"entity names: {len(entity_names)} resolved via language_name ({sample}, …)")
+        body_samples = sample_entity_body_spans(payload, catalog, max_samples=5)
+        if body_samples:
+            spans = [s.span_bytes for s in body_samples if s.span_bytes is not None]
+            if spans:
+                notes.append(
+                    f"entity body spans (header→next header): "
+                    f"min={min(spans):,} max={max(spans):,} bytes ({len(spans)} samples)"
+                )
 
     layout = discover_layout_landmarks(payload, preamble)
     site_name_scan: SiteNameScanResult | None = None
@@ -143,6 +162,7 @@ def extract_legends_snapshot(
             region_start=layout.first_region_block,
             region_end=layout.history_stats,
             site_names=site_names,
+            search_start=layout.last_catalog_entity,
         )
     if layout.first_region_block is not None:
         notes.append(
@@ -179,6 +199,66 @@ def extract_legends_snapshot(
             f"(language_name word runs; full world_site parse still open)"
         )
 
+    vector_probe: VectorProbeSummary | None = None
+    stats_probe = probe_history_stats(payload, preamble.header)
+    if stats_probe:
+        for line in stats_probe.notes:
+            notes.append(f"history stats probe: {line}")
+    if layout.last_catalog_entity is not None and layout.history_stats is not None:
+        probe_start = layout.last_catalog_entity
+        probe_end = layout.history_stats
+        site_cands = find_posnull_vector_candidates(
+            payload,
+            count=350,
+            search_start=probe_start,
+            search_end=probe_end,
+            region="entity_gap+mid",
+            min_score=280,
+            max_hits=5,
+        )
+        event_cands = find_posnull_vector_candidates(
+            payload,
+            count=preamble.header.max_ids[9],
+            search_start=layout.history_stats,
+            search_end=len(payload),
+            region="history_tail",
+            min_score=50_000,
+            max_hits=3,
+        )
+        fig_cands = find_posnull_vector_candidates(
+            payload,
+            count=preamble.header.max_ids[8],
+            search_start=layout.history_stats,
+            search_end=len(payload),
+            region="history_tail",
+            min_score=5000,
+            max_hits=3,
+        )
+        if site_cands or event_cands or fig_cands:
+            vector_probe = VectorProbeSummary(
+                site_candidates=[
+                    {
+                        "offset": hex(c.payload_offset),
+                        "score": c.posnull_score,
+                        "present_sample": c.present_flags_sample,
+                    }
+                    for c in site_cands
+                ],
+                event_candidates=[
+                    {"offset": hex(c.payload_offset), "score": c.posnull_score}
+                    for c in event_cands
+                ],
+                histfig_candidates=[
+                    {"offset": hex(c.payload_offset), "score": c.posnull_score}
+                    for c in fig_cands
+                ],
+            )
+            if site_cands:
+                notes.append(
+                    f"vector probe: {len(site_cands)} posnull count=350 candidates "
+                    f"(best @ {site_cands[0].payload_offset:#x}, score={site_cands[0].posnull_score})"
+                )
+
     return LegendsSnapshot(
         world_name=preamble.header.world_name.value if preamble.header.world_name else None,
         header=preamble.header,
@@ -194,6 +274,7 @@ def extract_legends_snapshot(
         site_name_scan=site_name_scan,
         site_text_catalog=site_text_catalog,
         history_text_catalog=history_text_catalog,
+        vector_probe=vector_probe,
         notes=notes,
     )
 
@@ -342,6 +423,15 @@ def snapshot_to_dict(snapshot: LegendsSnapshot) -> dict:
                 "ruler_count": snapshot.history_text_catalog.ruler_count,
             }
             if snapshot.history_text_catalog
+            else None
+        ),
+        "vector_probe": (
+            {
+                "sites": snapshot.vector_probe.site_candidates,
+                "events": snapshot.vector_probe.event_candidates,
+                "histfigs": snapshot.vector_probe.histfig_candidates,
+            }
+            if snapshot.vector_probe
             else None
         ),
         "notes": snapshot.notes,

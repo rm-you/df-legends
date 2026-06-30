@@ -33,7 +33,7 @@ df-save-re verify /path/to/world.dat /path/to/folder-with-txt-exports/
 - **PASS** — binary parse matches text export for that layer
 - **PENDING** — text records a target; that layer is not parsed from the save yet
 
-On Namushul: world name, 15 named civs, 63 subterranean peoples all **PASS**. Sites (350), figures (12,747), and events (113,118) are **PENDING**.
+On Namushul: world name, 15 named civs, 63 subterranean peoples, 350 site text records, and 71 ruler lines all **PASS**. Site title word markers reach **346/350** in binary (full `world_site` struct still open). Figures (12,747) and events (113,118) are **PENDING**.
 
 ```bash
 df-save-re validate /path/to/world.dat --export-help   # how to get p-key exports
