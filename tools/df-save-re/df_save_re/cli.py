@@ -17,6 +17,7 @@ from .legends_scan import scan_legends_region
 from .legends_text import compare_text_with_save, load_legends_text, text_bundle_to_dict
 from .legends_xml import compare_with_save_header, parse_legends_xml
 from .save_bundle import index_save_folder, legends_parse_target
+from .legends_verify import report_to_dict, verify_world_dat_against_text
 from .save_validate import LEGENDS_EXPORT_STEPS, fingerprint_path, fingerprint_to_dict
 from .scan import scan_save
 from .target import TARGET_DF_VERSION, TARGET_SAVE_VERSION
@@ -248,6 +249,47 @@ def cmd_extract(args: argparse.Namespace) -> int:
             f"(mid fields {hs.field_151}, {hs.field_4})"
         )
     return 0
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    """Cross-check world.dat extraction against legends text exports."""
+    path = Path(args.path)
+    dec = decompress_file(path)
+    file_header = read_header(path.read_bytes())
+    pre = parse_dat_preamble(dec.payload, save_version=file_header.save_version)
+    snap = extract_legends_snapshot(dec.payload, preamble=pre)
+    report = verify_world_dat_against_text(snap, args.legends_text)
+
+    if args.json:
+        print(json.dumps(report_to_dict(report), indent=2))
+        return 0 if report.ok_for_parsed_layers() else 2
+
+    print(f"file: {path}")
+    print(f"world_name: {snap.world_name}")
+    print(f"legends text: {args.legends_text}")
+    print(
+        f"checks: {report.passed} pass, {report.failed} fail, "
+        f"{report.pending} pending (unparsed layers)"
+    )
+    print()
+    for check in report.checks:
+        mark = {"pass": "OK", "fail": "FAIL", "pending": "…"}[check.status.value]
+        exp = check.expected if check.expected is not None else "—"
+        act = check.actual if check.actual is not None else "—"
+        print(f"  [{mark:4}] {check.layer}.{check.field}: expected={exp} actual={act}")
+        if check.note:
+            print(f"         {check.note}")
+
+    if report.failed == 0 and report.passed > 0:
+        print("\nParsed layers match text export.")
+    if report.pending:
+        print(f"\n{report.pending} layer(s) still to parse before a full legends website.")
+
+    print("\nExplorer roadmap:")
+    for row in report_to_dict(report)["explorer_roadmap"]:
+        print(f"  {row['layer']:22} {row['status']:8}  {row['website_use']}")
+
+    return 0 if report.ok_for_parsed_layers() else 2
 
 
 def cmd_legends_scan(args: argparse.Namespace) -> int:
@@ -751,6 +793,18 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_extract.add_argument("--json", action="store_true")
     p_extract.set_defaults(func=cmd_extract)
+
+    p_verify = sub.add_parser(
+        "verify",
+        help="Cross-check world.dat parse against legends text exports (p key)",
+    )
+    p_verify.add_argument("path", help="Path to world.dat")
+    p_verify.add_argument(
+        "legends_text",
+        help="world_history.txt or folder with p-key text exports",
+    )
+    p_verify.add_argument("--json", action="store_true")
+    p_verify.set_defaults(func=cmd_verify)
 
     p_validate = sub.add_parser(
         "validate",
