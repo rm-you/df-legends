@@ -30,8 +30,26 @@ class BinaryReader:
     def read_int16(self) -> int:
         return struct.unpack("<h", self.read_bytes(2))[0]
 
+    def read_uint16(self) -> int:
+        return struct.unpack("<H", self.read_bytes(2))[0]
+
     def read_int32(self) -> int:
         return struct.unpack("<i", self.read_bytes(4))[0]
+
+    def read_uint32(self) -> int:
+        return struct.unpack("<I", self.read_bytes(4))[0]
+
+    def read_int64(self) -> int:
+        return struct.unpack("<q", self.read_bytes(8))[0]
+
+    def read_uint64(self) -> int:
+        return struct.unpack("<Q", self.read_bytes(8))[0]
+
+    def read_float(self) -> float:
+        return struct.unpack("<f", self.read_bytes(4))[0]
+
+    def read_double(self) -> float:
+        return struct.unpack("<d", self.read_bytes(8))[0]
 
     def read_bool(self) -> bool:
         return self.read_int8() != 0
