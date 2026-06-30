@@ -253,3 +253,121 @@ class VectorAnchor(Base):
     posnull_score: Mapped[int | None] = mapped_column(Integer)
 
     __table_args__ = (UniqueConstraint("name", "payload_offset", name="uq_vector_anchor_name_offset"),)
+
+
+class LayerStatus(Base):
+    """Per-layer extraction status from the serialization engine walk.
+
+    Populated for every import: authoritative record count (from header /
+    confirmed vector) plus whether the deterministic body walk lands, and the
+    exact desync offset when it does not. Drives the explorer's status panel.
+    """
+
+    __tablename__ = "layer_status"
+
+    layer: Mapped[str] = mapped_column(String(32), primary_key=True)
+    element_type: Mapped[str | None] = mapped_column(String(64))
+    authoritative_count: Mapped[int | None] = mapped_column(Integer)
+    deterministic: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    declared_count: Mapped[int | None] = mapped_column(Integer)
+    parsed_count: Mapped[int | None] = mapped_column(Integer)
+    vector_offset: Mapped[int | None] = mapped_column(Integer)
+    end_offset: Mapped[int | None] = mapped_column(Integer)
+    error_offset: Mapped[int | None] = mapped_column(Integer)
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+class SitePopulation(Base):
+    """Site inhabitant / animal populations (from world_site body walk)."""
+
+    __tablename__ = "site_population"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    site_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    race: Mapped[str | None] = mapped_column(String(128))
+    race_id: Mapped[int | None] = mapped_column(Integer)
+    count: Mapped[int | None] = mapped_column(Integer)
+    is_animal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    __table_args__ = (Index("ix_site_population_site_id", "site_id"),)
+
+
+class HistoryEvent(Base):
+    """Polymorphic history_event records (from the events body walk)."""
+
+    __tablename__ = "history_event"
+
+    event_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    year: Mapped[int | None] = mapped_column(Integer)
+    seconds: Mapped[int | None] = mapped_column(Integer)
+    event_type: Mapped[str | None] = mapped_column(String(64))
+    civ_id: Mapped[int | None] = mapped_column(Integer)
+    site_id: Mapped[int | None] = mapped_column(Integer)
+    hfid: Mapped[int | None] = mapped_column(Integer)
+    fields_json: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        Index("ix_history_event_year", "year"),
+        Index("ix_history_event_type", "event_type"),
+    )
+
+
+class EntityPosition(Base):
+    """entity_position definitions + assignments (from entity body walk)."""
+
+    __tablename__ = "entity_position"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    entity_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    position_id: Mapped[int | None] = mapped_column(Integer)
+    name: Mapped[str | None] = mapped_column(Text)
+    name_male: Mapped[str | None] = mapped_column(Text)
+    name_female: Mapped[str | None] = mapped_column(Text)
+    assigned_hfid: Mapped[int | None] = mapped_column(Integer)
+
+    __table_args__ = (Index("ix_entity_position_entity_id", "entity_id"),)
+
+
+class Artifact(Base):
+    """artifact_record headers (from the artifacts body walk)."""
+
+    __tablename__ = "artifact"
+
+    artifact_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name_display: Mapped[str | None] = mapped_column(Text)
+    item_type: Mapped[int | None] = mapped_column(Integer)
+    holder_hfid: Mapped[int | None] = mapped_column(Integer)
+    site_id: Mapped[int | None] = mapped_column(Integer)
+
+
+class WrittenContent(Base):
+    """written_content records (books, poems, etc.)."""
+
+    __tablename__ = "written_content"
+
+    content_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str | None] = mapped_column(Text)
+    content_type: Mapped[int | None] = mapped_column(Integer)
+    author_hfid: Mapped[int | None] = mapped_column(Integer)
+
+
+class HistoryEra(Base):
+    """history_era spans."""
+
+    __tablename__ = "history_era"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str | None] = mapped_column(Text)
+    start_year: Mapped[int | None] = mapped_column(Integer)
+
+
+class EventCollection(Base):
+    """historical_event_collection records (wars, battles, etc.)."""
+
+    __tablename__ = "event_collection"
+
+    collection_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    collection_type: Mapped[str | None] = mapped_column(String(64))
+    start_year: Mapped[int | None] = mapped_column(Integer)
+    end_year: Mapped[int | None] = mapped_column(Integer)
+    name_display: Mapped[str | None] = mapped_column(Text)

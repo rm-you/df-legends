@@ -25,6 +25,7 @@ from .models import (
     HistoricalFigureCatalogMeta,
     HistoryEventsMeta,
     HistoryStatsBlock,
+    LayerStatus,
     LayoutLandmark,
     LayoutRegion,
     SiteCatalogMeta,
@@ -94,6 +95,7 @@ def persist_snapshot(
     session.query(LayoutLandmark).delete()
     session.query(LayoutRegion).delete()
     session.query(VectorAnchor).delete()
+    session.query(LayerStatus).delete()
 
     session.add(
         World(
@@ -272,6 +274,33 @@ def persist_snapshot(
                 count=anchor.count,
                 present_count=anchor.present_count,
                 posnull_score=anchor.posnull_score,
+            )
+        )
+
+    def _hex_to_int(value) -> int | None:
+        if value is None:
+            return None
+        if isinstance(value, int):
+            return value
+        try:
+            return int(str(value), 0)
+        except ValueError:
+            return None
+
+    for walk in snapshot.engine_walks:
+        data = walk.to_dict()
+        session.add(
+            LayerStatus(
+                layer=data["layer"],
+                element_type=data.get("element_type"),
+                authoritative_count=data.get("authoritative_count"),
+                deterministic=bool(data.get("deterministic")),
+                declared_count=data.get("declared_count"),
+                parsed_count=data.get("parsed_count"),
+                vector_offset=_hex_to_int(data.get("vector_offset")),
+                end_offset=_hex_to_int(data.get("end_offset")),
+                error_offset=_hex_to_int(data.get("error_offset")),
+                note=data.get("note"),
             )
         )
 
