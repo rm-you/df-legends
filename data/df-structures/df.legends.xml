@@ -1,0 +1,156 @@
+<data-definition>
+    <struct-type type-name='invasion_info'
+                 instance-vector='$global.ui.invasions.list' key-field='id'>
+        <int32_t name='id'/>
+        <int32_t name='civ_id' ref-target='historical_entity'/>
+        <int32_t name='active_size1' comment='0 unless active'/>
+        <int32_t name='active_size2'/>
+        <int32_t name='size'/>
+        <int32_t name='duration_counter'/>
+        <bitfield base-type='uint16_t' name='flags'>
+            <flag-bit name='active'/>
+            <flag-bit name='siege'/>
+            <flag-bit/>
+            <flag-bit/>
+            <flag-bit/>
+            <flag-bit name='parley'/>
+        </bitfield>
+        <int16_t name='unk4b'/>
+        <int32_t name='unk_1' since='v0.44.01'/>
+        <int32_t name='unk_2' since='v0.44.01'/>
+        <int32_t name='unk_3' since='v0.44.01'/>
+        <int32_t name='unk_4' since='v0.44.01'/>
+        <int32_t name='unk_5' since='v0.44.01'/>
+    </struct-type>
+
+    <struct-type type-name='entity_population_unk4'>
+        <stl-vector name='unk_1' comment="all 3 vectors share a single index series, with the third being interleaved with at least the second one">
+            <pointer>
+                <int32_t name='idx'/>
+                <int32_t name='unk1'/>
+                <int32_t name='unk2'/>
+            </pointer>
+        </stl-vector>
+        <stl-vector name='unk_2'>
+            <pointer>
+                <int32_t name='idx'/>
+                <int32_t name='unk1'/>
+                <int32_t name='unk2'/>
+            </pointer>
+        </stl-vector>
+        <stl-vector name='unk_3'>
+            <pointer>
+                <int32_t name='idx'/>
+                <int32_t name='unk1'/>
+            </pointer>
+        </stl-vector>
+    </struct-type>
+
+    <struct-type type-name='entity_population' key-field='id' instance-vector='$global.world.entity_populations'>
+        <compound name='name' type-name='language_name'/>
+
+        <code-helper name='describe'>
+            (describe-obj $.name)
+        </code-helper>
+
+        <stl-vector name='races' comment="all the 3 vectors are always the same length, and thus coupled">
+            <int16_t ref-target='creature_raw'/>
+        </stl-vector>
+        <stl-vector name='counts' type-name='int32_t'/>
+        <stl-vector name='unk3' type-name='int32_t' init-value='-1' comment="Set only for cave civs. When set, >= counts. Pre first embark all those are equal"/>
+        <stl-vector name='unk4'>
+            <pointer type-name='entity_population_unk4'/>
+        </stl-vector>
+        <int32_t name='unk5'/>
+        <int32_t name='layer_id' ref-target='world_underground_region'/>
+        <int32_t name='id'/>
+        <int32_t name='flags' comment='?; layer_id == -1'/>
+        <int32_t name='civ_id' ref-target='historical_entity'/>
+    </struct-type>
+
+    <enum-type type-name='nemesis_flags'>
+        <enum-item name='ACTIVE_ADVENTURER' comment='used when loading save. Swapping the player character via tactical mode disables this flag on the old player character and sets it for the new one.'/>
+        <enum-item name='RETIRED_ADVENTURER' comment='allows resuming play'/>
+        <enum-item name='ADVENTURER' comment='blue color and guided by forces unknown description in legends mode'/>
+        <enum-item name='unk_3'/>
+        <enum-item name='unk_4'/>
+        <enum-item name='unk_5'/>
+        <enum-item name='unk_6'/>
+        <enum-item name='unk_7' comment='Causes the unit tile to flash between dark and light.'/>
+        <enum-item name='unk_8'/>
+        <enum-item name='HERO' comment='Set after assigning the Hero status during adventure mode character creation, produces the vanguard of destiny description in legends mode.'/>
+        <enum-item name='DEMIGOD' comment='Set after assigning the Demigod status during adventure mode character creation, produces the divine parentage description in legends mode.'/>
+    </enum-type>
+
+    <struct-type type-name='nemesis_record' key-field='id' instance-vector='$global.world.nemesis.all'>
+        <int32_t name='id' comment='sequential index in the array'/>
+
+        <int32_t name='unit_id' ref-target='unit'/>
+
+        <int32_t name='save_file_id' ref-target='unit_chunk' comment='unit-*.dat'/>
+        <int16_t name='member_idx' comment='index in the file'/>
+
+        <pointer name='figure' type-name='historical_figure'/>
+        <pointer name='unit' type-name='unit'/>
+
+        <code-helper name='describe'>
+            (describe-obj $.figure)
+        </code-helper>
+
+        <int32_t name='group_leader_id' ref-target='nemesis_record'/>
+        <stl-vector name='companions'>
+            <int32_t ref-target='nemesis_record'/>
+        </stl-vector>
+
+        <int16_t name='unk10' init-value='-1'/>
+        <int32_t name='unk11' init-value='-1'/>
+        <int32_t name='unk12' init-value='-1'/>
+        <int32_t name='unk_v47_1'/>
+        <int32_t name='unk_v47_2'/>
+        <df-flagarray name='flags' index-enum='nemesis_flags'/>
+    </struct-type>
+
+    <struct-type type-name='artifact_record' key-field='id'
+                 instance-vector='$global.world.artifacts.all'>
+        <int32_t name='id'/>
+
+        <code-helper name='describe'>
+            (describe-obj $.name)
+        </code-helper>
+
+        <compound name='name' type-name='language_name'/>
+
+        <df-flagarray name='flags'/>
+
+        <pointer name='item' type-name='item'/>
+
+        <int32_t name='abs_tile_x'/>
+        <int32_t name='abs_tile_y'/>
+        <int32_t name='abs_tile_z'/>
+        <int32_t name='unk_1' since='v0.44.01'/>
+        <int32_t name='site' ref-target='world_site'/>
+        <int32_t name='structure_local' ref-target='abstract_building'/>
+        <int32_t name='unk_2' init-value='-1' since='v0.47.01'/>
+        <int32_t name='subregion' ref-target='world_region'/>
+        <int32_t name='feature_layer' ref-target='world_underground_region'/>
+        <int32_t name='owner_hf' ref-target='historical_figure' comment="namer/creator does not seem to require a claim to be shown"/>
+        <stl-vector name='remote_claims' type-name='int32_t' ref-target='historical_figure' since='v0.44.01' comment="all afar, heirloom from afar seen"/>
+        <stl-vector name='entity_claims' type-name='int32_t' ref-target='historical_entity' since='v0.44.01'/>
+        <stl-vector name='direct_claims' type-name='int32_t' ref-target='historical_figure' since='v0.44.01'/>
+        <int32_t name='storage_site' ref-target='world_site' since='v0.44.01'/>
+        <int32_t name='storage_structure_local' ref-target='abstract_building' since='v0.44.01'/>
+        <int32_t name='loss_region' ref-target='world_region' since='v0.44.01'/>
+        <int32_t name='unk_3' since='v0.44.01' init-value='-1'/>
+        <int32_t name='holder_hf' since='v0.44.01' ref-target='historical_figure' comment="doesn't seem to require a claim"/>
+        <int32_t name='year' since='v0.44.01' init-value='-1' comment="seems to be current year or -1"/>
+        <int32_t name='unk_4' since='v0.44.01' init-value='-1'/>
+        <int32_t name='unk_5' init-value='0' comment="Small set of non zero fairly small numbers seen?"/>
+    </struct-type>
+</data-definition>
+
+<!--
+Local Variables:
+indent-tabs-mode: nil
+nxml-child-indent: 4
+End:
+-->

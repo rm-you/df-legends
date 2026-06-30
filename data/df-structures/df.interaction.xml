@@ -1,0 +1,414 @@
+<data-definition>
+
+    <enum-type type-name='interaction_flags'>
+        <enum-item name='GENERATED'/>
+        <enum-item name='EXPERIMENT_ONLY'/>
+    </enum-type>
+
+    <struct-type type-name='interaction'
+                 instance-vector='$global.world.raws.interactions' key-field='id'>
+        <stl-string name="name"/>
+        <int32_t name="id"/>
+
+        <code-helper name='describe'>$.name</code-helper>
+
+        <stl-vector name="str" pointer-type='stl-string' comment='interaction raws'/>
+
+        <df-flagarray name='flags' index-enum='interaction_flags'/>
+
+        <stl-vector name="sources" pointer-type='interaction_source' comment='I_SOURCE'/>
+        <stl-vector name="targets" pointer-type='interaction_target' comment='I_TARGET'/>
+        <stl-vector name="effects" pointer-type='interaction_effect' comment='I_EFFECT'/>
+
+        <int32_t name='source_hfid' ref-target='historical_figure'/>
+        <int32_t name='source_enid' ref-target='historical_entity' since='v0.42.01'/>
+    </struct-type>
+
+    <enum-type type-name='interaction_effect_type' base-type='int32_t'>
+        <enum-item name='ANIMATE'/>
+        <enum-item name='ADD_SYNDROME'/>
+        <enum-item name='RESURRECT'/>
+        <enum-item name='CLEAN'/>
+        <enum-item name='CONTACT'/>
+        <enum-item name='MATERIAL_EMISSION'/>
+        <enum-item name='HIDE'/>
+        <enum-item name='PROPEL_UNIT'/>
+        <enum-item name='SUMMON_UNIT'/>
+        <enum-item name='CHANGE_WEATHER'/>
+        <enum-item name='RAISE_GHOST'/>
+        <enum-item name='CREATE_ITEM'/>
+        <enum-item name='CHANGE_ITEM_QUALITY'/>
+    </enum-type>
+
+    <enum-type type-name='interaction_effect_location_hint' base-type='int32_t'>
+        <enum-item name='IN_WATER'/>
+        <enum-item name='IN_MAGMA'/>
+        <enum-item name='NO_WATER'/>
+        <enum-item name='NO_MAGMA'/>
+        <enum-item name='NO_THICK_FOG'/>
+        <enum-item name='OUTSIDE'/>
+    </enum-type>
+
+    <class-type type-name='interaction_effect' original-name='interaction_effectst'>
+        <int32_t name='index' comment='index of the effect within the parent interaction.effects'/>
+        <stl-vector name='targets' pointer-type='stl-string'/>
+        <stl-vector name='targets_index' type-name='int32_t' comment='for each target used in this effect, list the index of that target within the parent interaction.targets'/>
+        <int32_t name='intermittent' comment='IE_INTERMITTENT, 0 = weekly'/>
+        <stl-vector name='locations' type-name='interaction_effect_location_hint' comment='IE_LOCATION'/>
+        <bitfield name='flags' base-type='uint32_t'>
+            <flag-bit name='IMMEDIATE' comment='IE_IMMEDIATE'/>
+        </bitfield>
+        <int32_t name='interaction_id' ref-target='interaction'/>
+        <stl-string name='arena_name' comment='IE_ARENA_NAME'/>
+
+        <virtual-methods>
+            <vmethod ret-type='interaction_effect_type' name='getType'/>
+            <vmethod name='write_file'> <pointer name='file' type-name='file_compressorst'/> </vmethod>
+            <vmethod name='read_file'>
+                <pointer name='file' type-name='file_compressorst'/>
+                <enum name='loadversion' type-name='save_version'/>
+            </vmethod>
+            <vmethod is-destructor='true'/>
+            <vmethod name='activateOnUnit'>
+                <pointer name='target' type-name='unit'/>
+                <pointer comment='has pointer-vector at offset 0x10'/>
+                <bool comment='only used by animate'/>
+            </vmethod>
+            <vmethod name='activateOnItem'><pointer name='target' type-name='item'/></vmethod>
+            <vmethod name='parseRaws'><int32_t/><int32_t/><int32_t/><int32_t/><int32_t/></vmethod>
+            <vmethod name='finalize'><int32_t/></vmethod>
+            <vmethod name='applySyndromes'/>
+            <vmethod>
+                <pointer/>
+                <pointer/>
+                <bool/>
+            </vmethod>
+            <vmethod name='hasSyndrome' ret-type='bool'><pointer type-name='syndrome'/></vmethod>
+        </virtual-methods>
+    </class-type>
+
+    <class-type type-name='interaction_effect_animatest' inherits-from='interaction_effect'>
+        <int32_t name='unk_1'/>
+        <stl-vector name='syndrome' pointer-type='syndrome'/>
+    </class-type>
+
+    <class-type type-name='interaction_effect_add_syndromest' inherits-from='interaction_effect'>
+        <int32_t name='unk_1'/>
+        <stl-vector name='syndrome' pointer-type='syndrome'/>
+    </class-type>
+
+    <class-type type-name='interaction_effect_resurrectst' inherits-from='interaction_effect'>
+        <int32_t name='unk_1'/>
+        <stl-vector name='syndrome' pointer-type='syndrome'/>
+    </class-type>
+
+    <class-type type-name='interaction_effect_cleanst' inherits-from='interaction_effect'>
+        <int32_t name='grime_level' comment='IE_GRIME_LEVEL'/>
+        <bitfield name='syndrome_tag' type-name='syndrome_flags' comment='IE_SYNDROME_TAG'/>
+        <int32_t name='unk_1'/>
+    </class-type>
+
+    <class-type type-name='interaction_effect_contactst' inherits-from='interaction_effect'>
+        <int32_t name='unk_1'/>
+    </class-type>
+
+    <class-type type-name='interaction_effect_material_emissionst' inherits-from='interaction_effect'>
+        <int32_t name='unk_1'/>
+    </class-type>
+
+    <class-type type-name='interaction_effect_hidest' inherits-from='interaction_effect'>
+        <int32_t name='unk_1'/>
+    </class-type>
+
+    <class-type type-name='interaction_effect_change_item_qualityst' inherits-from='interaction_effect'>
+        <int32_t name='quality_added' comment='IE_CHANGE_QUALITY'/>
+        <int32_t name='quality_set' comment='IE_SET_QUALITY'/>
+    </class-type>
+
+    <class-type type-name='interaction_effect_change_weatherst' inherits-from='interaction_effect'>
+        <int32_t name='unk_1'/>
+        <int32_t name='unk_2'/>
+    </class-type>
+
+    <class-type type-name='interaction_effect_raise_ghostst' inherits-from='interaction_effect'>
+        <int32_t name='unk_1'/>
+        <stl-vector name='syndrome' pointer-type='syndrome' comment='assumed based on vmethod reference'/>
+    </class-type>
+
+    <class-type type-name='interaction_effect_create_itemst' inherits-from='interaction_effect'>
+        <enum name='item_type' type-name='item_type' comment='IE_ITEM'/>
+        <int16_t name='item_subtype' comment='IE_ITEM'/>
+        <int16_t name='mat_type' comment='IE_ITEM'/>
+        <int32_t name='mat_index' init-value='-1' comment='IE_ITEM'/>
+        <int16_t name='probability' comment='IE_ITEM'/>
+        <int16_t name='quantity' comment='IE_ITEM'/>
+        <int32_t name='quality_min' comment='IE_ITEM_QUALITY'/>
+        <int32_t name='quality_max' comment='IE_ITEM_QUALITY'/>
+        <int32_t name='create_artifact' comment='IE_ITEM_QUALITY:ARTIFACT'/>
+        <stl-string name='unk_1' comment='these five are probably item1:item2:mat1:mat2:mat3'/>
+        <stl-string name='unk_2'/>
+        <stl-string name='unk_3'/>
+        <stl-string name='unk_4'/>
+        <stl-string name='unk_5'/>
+    </class-type>
+
+    <class-type type-name='interaction_effect_propel_unitst' inherits-from='interaction_effect'>
+        <int32_t name='unk_1'/>
+        <int32_t name='propel_force' comment='IE_PROPEL_FORCE'/>
+    </class-type>
+
+    <class-type type-name='interaction_effect_summon_unitst' inherits-from='interaction_effect'>
+        <int32_t name='make_pet' comment='IE_MAKE_PET_IF_POSSIBLE'/>
+        <stl-string name='race_str' comment='CREATURE'/>
+        <stl-string name='caste_str' comment='CREATURE'/>
+        <stl-vector name='unk_1' type-name='int32_t' comment="seen 4 bytes allocated"/>
+        <stl-vector name='unk_2' type-name='int16_t' comment="seen 2 bytes allocate"/>
+        <stl-vector type-name='int32_t' name='required_creature_flags' comment='contains indexes of flags in creature_raw_flags, IE_CREATURE_FLAG'/>
+        <stl-vector type-name='int32_t' name='forbidden_creature_flags' comment='contains indexes of flags in creature_raw_flags, IE_FORBIDDEN_CREATURE_FLAG'/>
+        <stl-vector type-name='int32_t' name='required_caste_flags' comment='contains indexes of flags in caste_raw_flags, IE_CREATURE_CASTE_FLAG'/>
+        <stl-vector type-name='int32_t' name='forbidden_caste_flags' comment='contains indexes of flags in caste_raw_flags, IE_FORBIDDEN_CREATURE_CASTE_FLAG'/>
+        <int32_t name='unk_3' init-value='-1'/>
+        <int32_t name='unk_4' init-value='-1'/>
+        <int32_t name='time_range_min' comment='IE_TIME_RANGE'/>
+        <int32_t name='time_range_max' comment='IE_TIME_RANGE'/>
+    </class-type>
+
+    <enum-type type-name='interaction_source_type'>
+        <enum-item name='REGION'/>
+        <enum-item name='SECRET'/>
+        <enum-item name='DISTURBANCE'/>
+        <enum-item name='DEITY'/>
+        <enum-item name='ATTACK'/>
+        <enum-item name='INGESTION'/>
+        <enum-item name='CREATURE_ACTION'/>
+        <enum-item name='UNDERGROUND_SPECIAL'/>
+        <enum-item name='EXPERIMENT'/>
+    </enum-type>
+
+    <class-type type-name='interaction_source' original-name='interaction_sourcest' key-field='id'>
+        <code-helper name='find-instance'>
+            (find-by-id $(find-instance $interaction $$).sources $id $)
+        </code-helper>
+
+        <int32_t name='id'/>
+        <int32_t name='frequency' comment='IS_FREQUENCY'/>
+        <stl-string name='name' comment='IS_NAME'/>
+        <stl-string name='hist_string_1' comment='IS_HIST_STRING_1'/>
+        <stl-string name='hist_string_2' comment='IS_HIST_STRING_2'/>
+        <stl-string name='trigger_string_second' comment='IS_TRIGGER_STRING_SECOND'/>
+        <stl-string name='trigger_string_third' comment='IS_TRIGGER_STRING_THIRD'/>
+        <stl-string name='trigger_string' comment='IS_TRIGGER_STRING'/>
+
+        <virtual-methods>
+            <vmethod ret-type='interaction_source_type' name='getType'/>
+            <vmethod name='write_file'> <pointer name='file' type-name='file_compressorst'/> </vmethod>
+            <vmethod name='read_file'>
+                <pointer name='file' type-name='file_compressorst'/>
+                <enum name='loadversion' type-name='save_version'/>
+            </vmethod>
+            <vmethod is-destructor='true'/>
+            <vmethod name='parseRaws'><int32_t/><int32_t/><int32_t/><int32_t/><int32_t/></vmethod>
+            <vmethod><int32_t/><int32_t/></vmethod>
+            <vmethod ret-type='bool'><int32_t/></vmethod>
+            <vmethod ret-type='bool'><int32_t/></vmethod>
+        </virtual-methods>
+    </class-type>
+
+    <class-type type-name='interaction_source_regionst' inherits-from='interaction_source'>
+        <bitfield name='region_flags' base-type='uint32_t'>
+            <flag-bit name='NORMAL_ALLOWED'/>
+            <flag-bit name='EVIL_ALLOWED'/>
+            <flag-bit name='GOOD_ALLOWED'/>
+            <flag-bit name='SAVAGE_ALLOWED'/>
+            <flag-bit name='EVIL_ONLY'/>
+            <flag-bit name='GOOD_ONLY'/>
+            <flag-bit name='SAVAGE_ONLY'/>
+        </bitfield>
+        <static-array name='regions' type-name='int8_t' count='10' index-enum='worldgen_region_type'/>
+    </class-type>
+
+    <class-type type-name='interaction_source_secretst' inherits-from='interaction_source'>
+        <bitfield name='learn_flags' base-type='uint32_t'>
+            <flag-bit name='SUPERNATURAL_LEARNING_POSSIBLE'/>
+            <flag-bit name='MUNDANE_RESEARCH_POSSIBLE'/>
+            <flag-bit name='MUNDANE_RECORDING_POSSIBLE'/>
+            <flag-bit name='MUNDANE_TEACHING_POSSIBLE'/>
+        </bitfield>
+        <stl-vector name='spheres'>
+            <enum base-type='int16_t' type-name='sphere_type'/>
+        </stl-vector>
+        <stl-vector name='goals' type-name='goal_type'/>
+        <stl-string name='book_title_filename'/>
+        <stl-string name='book_name_filename'/>
+        <int32_t name='unk_1'/>
+        <int32_t name='unk_2'/>
+    </class-type>
+
+    <class-type type-name='interaction_source_disturbancest' inherits-from='interaction_source'>
+        <int32_t name='unk_1'/>
+    </class-type>
+
+    <enum-type type-name='interaction_source_usage_hint' base-type='int32_t'>
+        <enum-item name='MAJOR_CURSE'/>
+        <enum-item name='GREETING'/>
+        <enum-item name='CLEAN_SELF'/>
+        <enum-item name='CLEAN_FRIEND'/>
+        <enum-item name='ATTACK'/>
+        <enum-item name='FLEEING'/>
+        <enum-item name='NEGATIVE_SOCIAL_RESPONSE'/>
+        <enum-item name='TORMENT'/>
+        <enum-item name='DEFEND'/>
+        <enum-item name='MEDIUM_CURSE'/>
+        <enum-item name='MINOR_CURSE'/>
+        <enum-item name='MEDIUM_BLESSING'/>
+        <enum-item name='MINOR_BLESSING'/>
+    </enum-type>
+
+    <class-type type-name='interaction_source_deityst' inherits-from='interaction_source'>
+        <int32_t name='unk_1'/>
+        <stl-vector name='usage_hint' type-name='interaction_source_usage_hint' comment='IS_USAGE_HINT'/>
+    </class-type>
+
+    <class-type type-name='interaction_source_attackst' inherits-from='interaction_source'>
+        <int32_t name='unk_1'/>
+    </class-type>
+
+    <class-type type-name='interaction_source_ingestionst' inherits-from='interaction_source'>
+        <int32_t name='unk_1'/>
+    </class-type>
+
+    <class-type type-name='interaction_source_creature_actionst' inherits-from='interaction_source'>
+        <int32_t name='unk_1'/>
+    </class-type>
+
+    <class-type type-name='interaction_source_underground_specialst' inherits-from='interaction_source'/>
+
+    <class-type type-name='interaction_source_experimentst' inherits-from='interaction_source'>
+        <int32_t name='unk_1'/>
+    </class-type>
+
+    <enum-type type-name='interaction_target_type'>
+        <enum-item name='CORPSE'/>
+        <enum-item name='CREATURE'/>
+        <enum-item name='MATERIAL'/>
+        <enum-item name='LOCATION'/>
+    </enum-type>
+
+    <enum-type type-name='interaction_target_location_type'>
+        <enum-item name='CONTEXT_NONE' value='-1'/>
+        <enum-item name='CONTEXT_REGION'/>
+        <enum-item name='CONTEXT_CREATURE'/>
+        <enum-item name='CONTEXT_ITEM'/>
+        <enum-item name='CONTEXT_BP'/>
+        <enum-item name='CONTEXT_LOCATION'/>
+        <enum-item name='CONTEXT_CREATURE_OR_LOCATION'/>
+        <enum-item name='RANDOM_NEARBY_LOCATION'/>
+    </enum-type>
+
+    <class-type type-name='interaction_target' original-name='interaction_targetst'>
+        <int32_t name='index'/>
+        <stl-string name='name'/>
+        <stl-string name='manual_input' comment='IT_MANUAL_INPUT'/>
+        <enum name='location' type-name='interaction_target_location_type' comment='IT_LOCATION'/>
+        <stl-string name='reference_name' comment='IT_LOCATION:RANDOM_NEARBY_LOCATION'/>
+        <int32_t name='reference_distance' comment='IT_LOCATION:RANDOM_NEARBY_LOCATION'/>
+        <virtual-methods>
+            <vmethod ret-type='interaction_target_type' name='getType'/>
+            <vmethod name='write_file'> <pointer name='file' type-name='file_compressorst'/> </vmethod>
+            <vmethod name='read_file'>
+                <pointer name='file' type-name='file_compressorst'/>
+                <enum name='loadversion' type-name='save_version'/>
+            </vmethod>
+            <vmethod is-destructor='true'/>
+            <vmethod name='parseRaws'><int32_t/><int32_t/><int32_t/><int32_t/><int32_t/></vmethod>
+            <vmethod><int32_t/></vmethod>
+            <vmethod ret-type='bool'><int32_t/><int32_t/></vmethod>
+            <vmethod ret-type='bool'><int32_t/><int32_t/></vmethod>
+            <vmethod ret-type='bool'><int32_t/><int32_t/></vmethod>
+            <vmethod ret-type='bool'><int32_t/><int32_t/></vmethod>
+        </virtual-methods>
+    </class-type>
+
+    <struct-type type-name='interaction_target_info'>
+        <static-array name='affected_creature_str' count='2'><stl-vector pointer-type='stl-string'/></static-array>
+        <stl-vector name='affected_creature' type-name='int32_t' comment='IT_AFFECTED_CREATURE'/>
+        <stl-vector name='affected_class' pointer-type='stl-string' comment='IT_AFFECTED_CLASS'/>
+
+        <static-array name='immune_creature_str' count='2'><stl-vector pointer-type='stl-string'/></static-array>
+        <stl-vector name='immune_creature' type-name='int32_t' comment='IT_IMMUNE_CREATURE'/>
+        <stl-vector name='immune_class' pointer-type='stl-string' comment='IT_IMMUNE_CLASS'/>
+        <stl-vector name='forbidden_syndrome_class' pointer-type='stl-string'/>
+        <int32_t name='requires_1' comment='IT_REQUIRES'/>
+        <int32_t name='requires_2' comment='IT_REQUIRES'/>
+        <int32_t name='forbidden_1' comment='IT_FORBIDDEN'/>
+        <int32_t name='forbidden_2' comment='IT_FORBIDDEN'/>
+        <bitfield name='restrictions' base-type='uint32_t'>
+            <flag-bit name='CANNOT_TARGET_IF_ALREADY_AFFECTED'/>
+        </bitfield>
+    </struct-type>
+
+    <class-type type-name='interaction_target_corpsest' inherits-from='interaction_target'>
+        <compound name='target_info' type-name='interaction_target_info'/>
+    </class-type>
+
+    <class-type type-name='interaction_target_creaturest' inherits-from='interaction_target'>
+        <compound name='target_info' type-name='interaction_target_info'/>
+    </class-type>
+
+    <enum-type type-name='breath_attack_type' base-type='int16_t'>
+        <enum-item name='TRAILING_DUST_FLOW'/>
+        <enum-item name='TRAILING_VAPOR_FLOW'/>
+        <enum-item name='TRAILING_GAS_FLOW'/>
+        <enum-item name='SOLID_GLOB'/>
+        <enum-item name='LIQUID_GLOB'/>
+        <enum-item name='UNDIRECTED_GAS'/>
+        <enum-item name='UNDIRECTED_VAPOR'/>
+        <enum-item name='UNDIRECTED_DUST'/>
+        <enum-item name='WEB_SPRAY'/>
+        <enum-item name='DRAGONFIRE'/>
+        <enum-item name='FIREJET'/>
+        <enum-item name='FIREBALL'/>
+        <enum-item name='WEATHER_CREEPING_GAS'/>
+        <enum-item name='WEATHER_CREEPING_VAPOR'/>
+        <enum-item name='WEATHER_CREEPING_DUST'/>
+        <enum-item name='WEATHER_FALLING_MATERIAL'/>
+        <enum-item name='SPATTER_POWDER'/>
+        <enum-item name='SPATTER_LIQUID'/>
+        <enum-item name='UNDIRECTED_ITEM_CLOUD'/>
+        <enum-item name='TRAILING_ITEM_FLOW'/>
+        <enum-item name='SHARP_ROCK'/>
+        other: root around in, lick, head-bump, scratch, tusk, retract into shell, roll into a ball
+        often [CDI:CAN_BE_MUTUAL] but not always
+        <enum-item name='OTHER'/>
+    </enum-type>
+
+    <class-type type-name='interaction_target_materialst' inherits-from='interaction_target'>
+        <static-array name='material_str' type-name='stl-string' count='3'/>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int16_t name='parent_interaction_index'/>
+        <enum type-name='breath_attack_type' name='breath_attack_type'/>
+        <bitfield name='restrictions' base-type='uint32_t'>
+            <flag-bit name='CONTEXT_MATERIAL'/>
+        </bitfield>
+    </class-type>
+
+    <class-type type-name='interaction_target_locationst' inherits-from='interaction_target'>
+    </class-type>
+
+    <struct-type type-name='interaction_instance' instance-vector='$global.world.interaction_instances.all' key-field='id'>
+        <int32_t name='id'/>
+        <int32_t name='interaction_id' ref-target='interaction'/>
+        <int32_t name='unk_1'/>
+        <int32_t name='region_index'/>
+        <stl-vector name='affected_units' type-name='int32_t' ref-target='unit' comment='IDs of units affected by the regional interaction'/>
+    </struct-type>
+
+</data-definition>
+
+<!--
+Local Variables:
+indent-tabs-mode: nil
+nxml-child-indent: 4
+End:
+-->

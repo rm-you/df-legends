@@ -1,0 +1,358 @@
+<data-definition>
+    <enum-type type-name='resource_allotment_specifier_type'>
+        <enum-item name='CROP'/>
+        <enum-item name='STONE'/>
+        <enum-item name='METAL'/>
+        <enum-item name='WOOD'/>
+        <enum-item name='ARMOR_BODY'/>
+        <enum-item name='ARMOR_PANTS'/>
+        <enum-item name='ARMOR_GLOVES'/>
+        <enum-item name='ARMOR_BOOTS'/>
+
+        <enum-item name='ARMOR_HELM'/>
+        <enum-item name='CLOTHING_BODY'/>
+        <enum-item name='CLOTHING_PANTS'/>
+        <enum-item name='CLOTHING_GLOVES'/>
+        <enum-item name='CLOTHING_BOOTS'/>
+        <enum-item name='CLOTHING_HELM'/>
+        <enum-item name='WEAPON_MELEE'/>
+        <enum-item name='WEAPON_RANGED'/>
+
+        <enum-item name='ANVIL'/>
+        <enum-item name='GEMS'/>
+        <enum-item name='THREAD'/>
+        <enum-item name='CLOTH'/>
+        <enum-item name='LEATHER'/>
+        <enum-item name='QUIVER'/>
+        <enum-item name='BACKPACK'/>
+        <enum-item name='FLASK'/>
+
+        <enum-item name='BAG'/>
+        <enum-item name='TABLE'/>
+        <enum-item name='CABINET'/>
+        <enum-item name='CHAIR'/>
+        <enum-item name='BOX'/>
+        <enum-item name='BED'/>
+        <enum-item name='CRAFTS'/>
+        <enum-item name='MEAT'/>
+
+        <enum-item name='BONE'/>
+        <enum-item name='HORN'/>
+        <enum-item name='SHELL'/>
+        <enum-item name='TALLOW'/>
+        <enum-item name='TOOTH'/>
+        <enum-item name='PEARL'/>
+        <enum-item name='SOAP'/>
+        <enum-item name='EXTRACT'/>
+
+        <enum-item name='CHEESE'/>
+        <enum-item name='SKIN'/>
+        <enum-item name='POWDER'/>
+        <enum-item name='AMMO'/>
+    </enum-type>
+
+    <class-type type-name='resource_allotment_specifier' original-name='resource_allotment_specifierst'>
+        <int32_t name='unk_1'/>
+
+        <int32_t name='unk_2' since='v0.34.01-04'/>
+        <int32_t name='unk_3' since='v0.34.01-04'/>
+
+        <virtual-methods>
+            <vmethod ret-type='resource_allotment_specifier_type' name='getType'/>
+            <vmethod name='write_file'> <pointer name='file' type-name='file_compressorst'/> </vmethod>
+            <vmethod name='read_file'>
+                <pointer name='file' type-name='file_compressorst'/>
+                <enum name='loadversion' type-name='save_version'/>
+            </vmethod>
+            <vmethod is-destructor='true'/>
+        </virtual-methods>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_cropst' inherits-from='resource_allotment_specifier'>
+        <int32_t name='mat_type' ref-target='plant_raw' aux-value='$$.mat_index' comment='index to world.raws.plant.all' />
+        <int32_t name='unk_4'/>
+        <int32_t name='unk_v40_01' since='v0.40.01'/>
+        <static-array name='unk_5' count='5' type-name='int32_t'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_stonest' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int32_t name='unk_4'/>
+        <int32_t name='unk_5'/>
+        <static-array name='unk_6' count='5' type-name='int32_t'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_metalst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int32_t name='unk_4'/>
+        <static-array name='unk_5' count='12' type-name='int32_t'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_woodst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int32_t name='unk_4'/>
+        <int32_t name='unk_5'/>
+        <int32_t name='unk_6'/>
+        <int32_t name='unk_7'/>
+        <int32_t name='unk_8'/>
+        <int32_t name='unk_9'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_armor_bodyst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_armor_pantsst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_armor_glovesst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_armor_bootsst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_armor_helmst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_clothing_bodyst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_clothing_pantsst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+   </class-type>
+
+    <class-type type-name='resource_allotment_specifier_clothing_glovesst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_clothing_bootsst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_clothing_helmst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_weapon_meleest' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_weapon_rangedst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_ammost' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_anvilst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_gemsst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_threadst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int32_t name='unk_4'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_clothst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int32_t name='unk_4'/>
+        <int32_t name='unk_5'/>
+        <int32_t name='unk_6'/>
+        <int32_t name='unk_7'/>
+        <int32_t name='unk_8'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_leatherst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int32_t name='unk_4'/>
+        <int32_t name='unk_5'/>
+        <int32_t name='unk_6'/>
+        <int32_t name='unk_7'/>
+        <int32_t name='unk_8'/>
+        <int32_t name='unk_9'/>
+        <int32_t name='unk_10'/>
+        <int32_t name='unk_11'/>
+        <int32_t name='unk_12'/>
+        <int32_t name='unk_13'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_quiverst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_backpackst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_flaskst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_bagst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_tablest' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_cabinetst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_chairst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_boxst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_bedst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_craftsst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_meatst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_bonest' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int32_t name='unk_4'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_hornst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int32_t name='unk_4'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_shellst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int32_t name='unk_4'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_tallowst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_toothst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int32_t name='unk_4'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_pearlst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_soapst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_extractst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int32_t name='unk_4'/>
+        <int16_t name='mat_type2' ref-target='material' aux-value='$$.mat_index2'/>
+        <int32_t name='mat_index2'/>
+        <int32_t name='unk_5' comment='uninitialized'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_cheesest' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_skinst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int16_t name='mat_type2' ref-target='material' aux-value='$$.mat_index2'/>
+        <int32_t name='mat_index2'/>
+        <int32_t name='unk_4'/>
+    </class-type>
+
+    <class-type type-name='resource_allotment_specifier_powderst' inherits-from='resource_allotment_specifier'>
+        <int16_t name='mat_type' ref-target='material' aux-value='$$.mat_index'/>
+        <int32_t name='mat_index'/>
+        <int32_t name='unk_4'/>
+    </class-type>
+
+    <struct-type type-name='resource_allotment_data'
+                 instance-vector='$global.world.world_data.resource_allotments'>
+        <int32_t name='index'/>
+        <static-array name='resource_allotments' count='100'>
+            <stl-vector pointer-type='resource_allotment_specifier'/>
+        </static-array>
+        <int32_t name='unk1'/>
+        <int32_t name='unk2'/>
+        <int32_t name='unk3'/>
+        <int32_t name="unk_650"/>
+        <stl-vector name="unk_654">
+            <pointer>
+                <int32_t name="unk_0"/>
+                <stl-vector name="unk_4" type-name="int32_t"/>
+                <stl-vector name="unk_14" type-name="int32_t"/>
+                <stl-vector name="unk_24" type-name="int32_t"/>
+            </pointer>
+        </stl-vector>
+    </struct-type>
+</data-definition>
+
+<!--
+Local Variables:
+indent-tabs-mode: nil
+nxml-child-indent: 4
+End:
+-->
