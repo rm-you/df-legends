@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from io import BytesIO
 
 from .binary_reader import BinaryReader
-from .deserializers.entity_bodies import sample_entity_body_spans
+from .deserializers.entity_bodies import sample_entity_body_spans, summarize_entity_body_spans
 from .deserializers.entity_def import EntityScanResult, HistoricalEntityHeader, catalog_entity_block, scan_entities
 from .deserializers.entity_names import ResolvedEntityName, resolve_named_entities
 from .deserializers.primitives import WorldHeaderHypothesis
@@ -148,6 +148,13 @@ def extract_legends_snapshot(
                     f"entity body spans (header→next header): "
                     f"min={min(spans):,} max={max(spans):,} bytes ({len(spans)} samples)"
                 )
+        body_summary = summarize_entity_body_spans(payload, catalog)
+        if body_summary:
+            notes.append(
+                f"entity catalog span: {body_summary.catalog_span_bytes:,} bytes "
+                f"({body_summary.sample_count} gaps, median={body_summary.median_span:,}, "
+                f"max={body_summary.max_span:,})"
+            )
 
     layout = discover_layout_landmarks(payload, preamble)
     site_name_scan: SiteNameScanResult | None = None

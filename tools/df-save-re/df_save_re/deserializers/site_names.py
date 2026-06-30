@@ -92,7 +92,15 @@ def _piece_variants(piece: str) -> list[str]:
     return out
 
 
-_GLUE_SUFFIXES = ("ING", "ED", "ES", "D", "S")
+_GLUE_SUFFIXES = ("NESS", "ING", "ED", "ES", "D", "S")
+
+# Irregular legends spellings → word-table entries (Namushul RE).
+_IRREGULAR_PIECES: dict[str, str] = {
+    "WINDS": "WIND CLOCK",
+    "STANCES": "STAND",
+    "STOLE": "STEAL",
+    "JUSTICE": "JUST",
+}
 
 
 def _resolve_word_piece_exact(piece: str, word_idx: dict[str, int]) -> int | None:
@@ -101,6 +109,11 @@ def _resolve_word_piece_exact(piece: str, word_idx: dict[str, int]) -> int | Non
 
 
 def _resolve_word_piece(piece: str, word_idx: dict[str, int]) -> int | None:
+    mapped = _IRREGULAR_PIECES.get(piece.upper())
+    if mapped is not None:
+        exact = _exact_word_index(mapped, word_idx)
+        if exact is not None:
+            return exact
     for variant in _piece_variants(piece):
         exact = _exact_word_index(variant, word_idx)
         if exact is not None:
@@ -125,6 +138,8 @@ def _token_rewrite_variants(token: str) -> list[str]:
     variants = [token]
     if token.startswith("STOLEN"):
         variants.append("STEAL" + token[6:])
+    if token.startswith("ENTER") and len(token) > 5:
+        variants.append("ENTRY" + token[5:])
     return variants
 
 
@@ -185,6 +200,9 @@ def _decompose_tokens_backtracking(
         exact = _exact_word_index(token, word_idx)
         if exact is not None:
             rec(token_idx + 1, acc + [exact])
+        resolved = _resolve_word_piece(token, word_idx)
+        if resolved is not None:
+            rec(token_idx + 1, acc + [resolved])
         compound = _decompose_token(token, word_idx, phrase_idx)
         if compound:
             rec(token_idx + 1, acc + list(compound))
@@ -225,7 +243,11 @@ def decompose_display_name_to_word_indices(
             continue
         compound = _decompose_token(token, word_idx, phrase_idx)
         if compound is None:
-            return None
+            resolved = _resolve_word_piece(token, word_idx)
+            if resolved is None:
+                return None
+            indices.append(resolved)
+            continue
         indices.extend(compound)
 
     return tuple(indices[:7]) if len(indices) >= 2 else None
@@ -351,6 +373,55 @@ def find_word_sequence(
     return None if off < 0 else off
 
 
+def _indices_display(indices: tuple[int, ...], words: list[str]) -> str:
+    parts: list[str] = []
+    for idx in indices:
+        if 0 <= idx < len(words):
+            parts.append(re.sub(r"[^a-z0-9]", "", words[idx].lower()))
+    return "".join(parts)
+
+
+def find_fuzzy_language_name_window(
+    payload: bytes,
+    display_name: str,
+    *,
+    words: list[str],
+    start: int,
+    end: int,
+    min_score: float = 0.55,
+) -> tuple[tuple[int, ...], int] | None:
+    """
+    Last-resort scan: treat each aligned int32[7] run as language_name.words and
+    fuzzy-match its concatenated word-table text to the legends title.
+    """
+    target = _normalize_title(display_name)
+    if len(target) < 6:
+        return None
+    best: tuple[tuple[int, ...], int, float] | None = None
+    for off in range(start, end - 28, 4):
+        raw = struct.unpack_from("<7i", payload, off)
+        indices = tuple(w for w in raw if w >= 0)
+        if len(indices) < 2:
+            continue
+        if any(w >= len(words) for w in indices):
+            continue
+        disp = _indices_display(indices, words)
+        if len(disp) < 6:
+            continue
+        overlap = sum(1 for a, b in zip(target, disp) if a == b)
+        score = overlap / max(len(target), len(disp))
+        contained = disp in target or target in disp
+        if contained:
+            score = max(score, 0.9)
+        if score < min_score:
+            continue
+        if best is None or score > best[2]:
+            best = (indices, off, score)
+    if best is None:
+        return None
+    return best[0], best[1]
+
+
 def scan_site_name_markers(
     payload: bytes,
     *,
@@ -399,6 +470,22 @@ def scan_site_name_markers(
                     site_id=site_id,
                     display_name=display_name,
                     word_indices=pair,
+                    payload_offset=off,
+                )
+        if located is None:
+            fuzzy = find_fuzzy_language_name_window(
+                payload,
+                display_name,
+                words=words,
+                start=scan_start,
+                end=region_end,
+            )
+            if fuzzy is not None:
+                word_indices, off = fuzzy
+                located = SiteNameMarker(
+                    site_id=site_id,
+                    display_name=display_name,
+                    word_indices=word_indices,
                     payload_offset=off,
                 )
         if located is None:

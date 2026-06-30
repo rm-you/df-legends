@@ -33,6 +33,18 @@ This block is **metadata**, not the start of the `world_history` stl-vectors.
 - Site **title word indices** appear in the entity-gap + mid payload (`0x51FDA0`–`0x15BEB28`), typically as `language_name.words` runs.
 - Title markers are **not** adjacent to `site_id` / `type` int fields — words appear inside larger world_data / region blobs.
 - Text export titles use past-tense glue (`Bristledhollows` → BRISTLE + HOLLOW) and irregular forms (`Stolenveils` → STEAL + VEIL).
+- Namushul site **345** `"The Justice of Stances"` stores **`JUST` + `STAND`** @ `0x119460f` (not `JUST`+`ICE` nor `DISTANCE`).
+- Title cluster @ `0x1194000`–`0x1195000` shows ~**354-byte** stride between consecutive marker offsets (346–350).
+
+## Irregular word-table mappings (section 8)
+
+| Legends token | Stored words | Example site |
+|---------------|--------------|--------------|
+| `WINDS` | WIND CLOCK | Raywinds |
+| `STANCES` | STAND | The Justice of Stances |
+| `JUSTICE` | JUST | The Justice of Stances |
+| `STOLE` / `STOLEN` | STEAL | Stolenveils |
+| `ENTER` | ENTRY | Enterbad |
 
 ## Vectors still open
 

@@ -25,6 +25,14 @@ def test_decompose_stolenveils():
     assert decompose_display_name_to_word_indices("Stolenveils", words=words) == (822, 1564)
 
 
+def test_decompose_justice_of_stances():
+    words = parse_string_table_block(decompress_file(FIXTURE).payload).sections[8].names
+    assert decompose_display_name_to_word_indices("The Justice of Stances", words=words) == (
+        445,
+        818,
+    )
+
+
 def test_pair_match_scalystop():
     payload = decompress_file(FIXTURE).payload
     layout = discover_layout_landmarks(payload, parse_dat_preamble(payload))
