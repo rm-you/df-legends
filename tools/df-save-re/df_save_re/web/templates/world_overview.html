@@ -78,6 +78,51 @@
 </p>
 {% endif %}
 
+{% if layer_status %}
+<h2>Extraction status (serialization engine)</h2>
+<p class="subtitle">
+  Authoritative counts come from save header counters / confirmed vectors.
+  "Deterministic" means the engine walked full record bodies and landed exactly
+  on the next anchor; otherwise the precise desync offset is shown for follow-up RE.
+</p>
+<table class="data">
+  <thead>
+    <tr>
+      <th>Layer</th>
+      <th>Authoritative count</th>
+      <th>Body walk</th>
+      <th>Parsed</th>
+      <th>Desync offset</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ls in layer_status %}
+    <tr>
+      <td>{{ ls.layer }}</td>
+      <td class="mono">{{ "{:,}".format(ls.authoritative_count) if ls.authoritative_count is not none else "—" }}</td>
+      <td>
+        {% if ls.deterministic %}
+        <span class="badge" style="color:#7ec97e;border-color:#3d6b3d;">deterministic</span>
+        {% else %}
+        <span class="badge">desync</span>
+        {% endif %}
+      </td>
+      <td class="mono">{{ ls.parsed_count if ls.parsed_count is not none else "—" }}</td>
+      <td class="mono">{% if ls.error_offset is not none %}0x{{ "%x" | format(ls.error_offset) }}{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if record_counts %}
+<p class="meta">
+  Deterministic record rows stored:
+  history_event = {{ record_counts.get("history_event", 0) }},
+  site_population = {{ record_counts.get("site_population", 0) }}
+  (populate as body walks land).
+</p>
+{% endif %}
+{% endif %}
+
 {% if notes %}
 <h2>Extraction notes</h2>
 <ul class="notes">

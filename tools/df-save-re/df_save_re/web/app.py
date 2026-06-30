@@ -58,6 +58,8 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             history_stats = store.get_history_stats(session)
             notes = store.get_latest_extraction_notes(session)
             entity_classes = store.get_entity_classes(session)
+            layer_status = store.get_layer_status(session)
+            record_counts = store.get_record_counts(session)
         return render(
             request,
             "world_overview.html",
@@ -71,6 +73,8 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             history_stats=history_stats,
             notes=notes,
             entity_classes=entity_classes,
+            layer_status=layer_status,
+            record_counts=record_counts,
         )
 
     @app.get("/world/{slug}/entities", response_class=HTMLResponse)

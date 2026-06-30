@@ -44,6 +44,16 @@ def test_world_overview(explorer_client: TestClient) -> None:
     assert "Civilizations" in response.text
 
 
+def test_world_overview_extraction_status(explorer_client: TestClient) -> None:
+    response = explorer_client.get("/world/namushul")
+    assert response.status_code == 200
+    # Engine layer-status panel surfaces authoritative counts + walk status.
+    assert "Extraction status" in response.text
+    assert "events_death" in response.text
+    assert "figures" in response.text
+    assert ("deterministic" in response.text) or ("desync" in response.text)
+
+
 def test_entities_and_cross_links(explorer_client: TestClient) -> None:
     response = explorer_client.get("/world/namushul/entities?named_only=true")
     assert response.status_code == 200

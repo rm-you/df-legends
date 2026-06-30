@@ -15,10 +15,13 @@ from ..db.models import (
     HistoricalEntity,
     HistoricalFigure,
     HistoricalFigureCatalogMeta,
+    HistoryEvent,
     HistoryEventsMeta,
     HistoryStatsBlock,
+    LayerStatus,
     LayoutLandmark,
     SiteCatalogMeta,
+    SitePopulation,
     VectorAnchor,
     World,
     WorldHeaderCounter,
@@ -291,6 +294,24 @@ class LegendsStore:
                 select(LayoutLandmark).order_by(LayoutLandmark.region_key)
             ).all()
         )
+
+    def get_layer_status(self, session: Session) -> list[LayerStatus]:
+        return list(
+            session.scalars(select(LayerStatus).order_by(LayerStatus.layer)).all()
+        )
+
+    def get_record_counts(self, session: Session) -> dict[str, int]:
+        """Counts of deterministically extracted record tables (body-walk layers)."""
+        return {
+            "history_event": session.scalar(
+                select(func.count()).select_from(HistoryEvent)
+            )
+            or 0,
+            "site_population": session.scalar(
+                select(func.count()).select_from(SitePopulation)
+            )
+            or 0,
+        }
 
     def get_latest_extraction_notes(
         self, session: Session, *, limit: int = 20
