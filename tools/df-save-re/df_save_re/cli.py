@@ -300,6 +300,21 @@ def cmd_import_db(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_serve(args: argparse.Namespace) -> int:
+    """Run the legends explorer web UI."""
+    import uvicorn
+
+    from .web import create_app
+
+    data_dir = Path(args.data_dir)
+    app = create_app(data_dir=data_dir)
+    print(f"Legends explorer: http://{args.host}:{args.port}/")
+    print(f"Data directory:   {data_dir.resolve()}")
+    print(f"Registered worlds: {len(list_legends(data_dir))}")
+    uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level)
+    return 0
+
+
 def cmd_list_legends(args: argparse.Namespace) -> int:
     """List fortress databases registered for the legends explorer."""
     entries = list_legends(Path(args.data_dir))
@@ -928,6 +943,24 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_import.add_argument("--json", action="store_true")
     p_import.set_defaults(func=cmd_import_db)
+
+    p_serve = sub.add_parser(
+        "serve",
+        help="Run the legends explorer web UI (proof of concept)",
+    )
+    p_serve.add_argument(
+        "--data-dir",
+        default=str(DEFAULT_DATA_DIR),
+        help=f"Root data directory (default: {DEFAULT_DATA_DIR})",
+    )
+    p_serve.add_argument("--host", default="127.0.0.1")
+    p_serve.add_argument("--port", type=int, default=8765)
+    p_serve.add_argument(
+        "--log-level",
+        default="info",
+        choices=("critical", "error", "warning", "info", "debug"),
+    )
+    p_serve.set_defaults(func=cmd_serve)
 
     p_list = sub.add_parser(
         "list-legends",

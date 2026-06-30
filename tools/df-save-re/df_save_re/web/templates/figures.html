@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Figures — {{ slug }}{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / Figures</div>
+<h1>Historical figures</h1>
+
+<form class="filters" method="get">
+  <label>
+    Civilization
+    <select name="civ_id">
+      <option value="">All civs</option>
+      {% for civ in civ_options %}
+      <option value="{{ civ.entity_id }}" {% if civ_id == civ.entity_id %}selected{% endif %}>{{ civ.display_name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    Name search
+    <input type="search" name="q" value="{{ search }}" placeholder="Figure name…">
+  </label>
+  <button type="submit">Filter</button>
+  {% if civ_id or search %}
+  <a href="/world/{{ slug }}/figures" style="align-self:center;font-size:0.85rem;">Clear</a>
+  {% endif %}
+</form>
+
+{% if selected_civ %}
+<p class="subtitle">Filtered by <a href="/world/{{ slug }}/entities/{{ selected_civ.entity_id }}">{{ store.entity_display(selected_civ) }}</a></p>
+{% endif %}
+
+{% if figures %}
+<table class="data">
+  <thead>
+    <tr><th>ID</th><th>Name</th><th>Civilization</th><th>Appeared</th><th>Died</th></tr>
+  </thead>
+  <tbody>
+    {% for fig in figures %}
+    <tr>
+      <td class="mono"><a href="/world/{{ slug }}/figures/{{ fig.figure_id }}">{{ fig.figure_id }}</a></td>
+      <td><a href="/world/{{ slug }}/figures/{{ fig.figure_id }}">{{ fig.display_name }}</a></td>
+      <td>
+        {% if fig.civ_id %}
+        <a href="/world/{{ slug }}/entities/{{ fig.civ_id }}">{{ fig.civ_name or fig.civ_id }}</a>
+        {% else %}—{% endif %}
+      </td>
+      <td class="mono">{{ fig.appeared_year or '—' }}</td>
+      <td class="mono">{{ fig.died_year or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="meta">Showing up to {{ figures | length }} figures{% if figures | length >= 200 %} (limit reached){% endif %}</p>
+{% else %}
+<p class="empty">No figures match the current filters.</p>
+{% endif %}
+{% endblock %}

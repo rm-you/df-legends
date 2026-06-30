@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ site.display_name }} — {{ slug }}{% endblock %}
+{% block content %}
+<div class="breadcrumb">
+  <a href="/">Worlds</a> /
+  <a href="/world/{{ slug }}">{{ slug }}</a> /
+  <a href="/world/{{ slug }}/sites">Sites</a> /
+  {{ site.display_name }}
+</div>
+<h1>{{ site.display_name }}</h1>
+<p class="subtitle">Site #{{ site.site_id }}{% if site.site_type_name %} · {{ site.site_type_name }}{% endif %}</p>
+
+<h2>Details</h2>
+<dl class="detail">
+  <dt>Site ID</dt><dd class="mono">{{ site.site_id }}</dd>
+  <dt>Type</dt><dd>{{ site.site_type_name or site.site_type or '—' }}</dd>
+  <dt>Civilization</dt>
+  <dd>
+    {% if civ %}
+    <a href="/world/{{ slug }}/entities/{{ civ.entity_id }}">{{ civ_name }}</a>
+    {% else %}—{% endif %}
+  </dd>
+  <dt>Current owner</dt>
+  <dd>
+    {% if owner %}
+    <a href="/world/{{ slug }}/entities/{{ owner.entity_id }}">{{ owner_name }}</a>
+    {% else %}—{% endif %}
+  </dd>
+  <dt>Coordinates</dt>
+  <dd class="mono">
+    {% if site.pos_x is not none and site.pos_y is not none %}
+    ({{ site.pos_x }}, {{ site.pos_y }})
+    {% else %}—{% endif %}
+  </dd>
+  <dt>Header offset</dt>
+  <dd class="mono">{% if site.header_offset is not none %}0x{{ "%x" | format(site.header_offset) }}{% else %}—{% endif %}</dd>
+</dl>
+
+{% if civ and civ.entity_id != (site.cur_owner_id or -1) %}
+<p><a href="/world/{{ slug }}/sites?civ_id={{ civ.entity_id }}">More sites for {{ civ_name }} →</a></p>
+{% endif %}
+{% endblock %}
