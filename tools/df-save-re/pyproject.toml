@@ -4,6 +4,10 @@ version = "0.1.0"
 description = "Dwarf Fortress save reverse-engineering tools (Path C)"
 readme = "README.md"
 requires-python = ">=3.10"
+dependencies = [
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+]
 
 [project.scripts]
 df-save-re = "df_save_re.cli:main"

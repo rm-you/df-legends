@@ -19,6 +19,7 @@ from .legends_xml import compare_with_save_header, parse_legends_xml
 from .save_bundle import index_save_folder, legends_parse_target
 from .legends_verify import report_to_dict, verify_world_dat_against_text
 from .save_validate import LEGENDS_EXPORT_STEPS, fingerprint_path, fingerprint_to_dict
+from .db import DEFAULT_DATA_DIR, import_world_dat, list_legends
 from .scan import scan_save
 from .target import TARGET_DF_VERSION, TARGET_SAVE_VERSION
 
@@ -247,6 +248,73 @@ def cmd_extract(args: argparse.Namespace) -> int:
             f"\nhistory stats @ 0x{hs.payload_offset:x}: "
             f"events={hs.event_counter:,} figs={hs.histfig_counter:,} "
             f"(mid fields {hs.field_151}, {hs.field_4})"
+        )
+    return 0
+
+
+def cmd_import_db(args: argparse.Namespace) -> int:
+    """Parse world.dat and persist extract into a per-fortress SQLite database."""
+    path = Path(args.path)
+    data_dir = Path(args.data_dir)
+    try:
+        result = import_world_dat(
+            path,
+            data_dir=data_dir,
+            overwrite=args.overwrite,
+            expected_site_count=args.expected_sites,
+        )
+    except FileExistsError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "world_name": result.world_name,
+                    "slug": result.slug,
+                    "db_path": str(result.db_path),
+                    "run_id": result.run_id,
+                    "entity_count": result.entity_count,
+                    "site_count": result.site_count,
+                    "histfig_header_count": result.histfig_header_count,
+                    "event_count": result.event_count,
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    print(f"world_name: {result.world_name}")
+    print(f"slug:       {result.slug}")
+    print(f"database:   {result.db_path}")
+    print(f"run_id:     {result.run_id}")
+    print(
+        f"counts:     entities={result.entity_count:,} sites={result.site_count:,} "
+        f"histfig_headers={result.histfig_header_count:,} "
+        f"events={result.event_count:,}"
+        if result.event_count is not None
+        else f"counts:     entities={result.entity_count:,} sites={result.site_count:,} "
+        f"histfig_headers={result.histfig_header_count:,}"
+    )
+    return 0
+
+
+def cmd_list_legends(args: argparse.Namespace) -> int:
+    """List fortress databases registered for the legends explorer."""
+    entries = list_legends(Path(args.data_dir))
+    if args.json:
+        print(json.dumps([entry.__dict__ for entry in entries], indent=2))
+        return 0
+    if not entries:
+        print(f"No legends databases under {args.data_dir}")
+        return 0
+    print(f"legends databases ({len(entries)}):")
+    for entry in entries:
+        print(
+            f"  {entry.world_name!r}  slug={entry.slug}  "
+            f"entities={entry.entity_count} sites={entry.site_count}  "
+            f"path={entry.db_path}"
         )
     return 0
 
@@ -796,6 +864,42 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_extract.add_argument("--json", action="store_true")
     p_extract.set_defaults(func=cmd_extract)
+
+    p_import = sub.add_parser(
+        "import-db",
+        help="Parse world.dat and store extract in a per-fortress SQLite database",
+    )
+    p_import.add_argument("path", help="Path to world.dat")
+    p_import.add_argument(
+        "--data-dir",
+        default=str(DEFAULT_DATA_DIR),
+        help=f"Root data directory (default: {DEFAULT_DATA_DIR})",
+    )
+    p_import.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace existing database for this fortress slug",
+    )
+    p_import.add_argument(
+        "--expected-sites",
+        type=int,
+        default=350,
+        help="Expected site id ceiling for binary discovery (default 350)",
+    )
+    p_import.add_argument("--json", action="store_true")
+    p_import.set_defaults(func=cmd_import_db)
+
+    p_list = sub.add_parser(
+        "list-legends",
+        help="List imported fortress databases from the legends registry",
+    )
+    p_list.add_argument(
+        "--data-dir",
+        default=str(DEFAULT_DATA_DIR),
+        help=f"Root data directory (default: {DEFAULT_DATA_DIR})",
+    )
+    p_list.add_argument("--json", action="store_true")
+    p_list.set_defaults(func=cmd_list_legends)
 
     p_verify = sub.add_parser(
         "verify",
