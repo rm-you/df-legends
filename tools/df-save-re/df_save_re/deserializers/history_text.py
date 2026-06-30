@@ -18,6 +18,9 @@ class HistoryRulerEntry:
     name: str
     position: str
     entity: str
+    birth: str = ""
+    death: str = ""
+    reign_began: int = -1
 
 
 @dataclass(frozen=True)
@@ -49,6 +52,8 @@ class HistoryTextCatalog:
 
 def parse_history_text_catalog(text: str) -> HistoryTextCatalog:
     """Parse world_history.txt into civ lists and ruler entries."""
+    from .history_rulers import parse_ruler_catalog
+
     lines = [ln.rstrip("\r") for ln in text.splitlines()]
     catalog = HistoryTextCatalog()
 
@@ -68,13 +73,6 @@ def parse_history_text_catalog(text: str) -> HistoryTextCatalog:
         if not stripped:
             continue
         if stripped.startswith("[*]"):
-            catalog.rulers.append(
-                HistoryRulerEntry(
-                    name=stripped[3:].strip(),
-                    position="",
-                    entity="",
-                )
-            )
             continue
         if in_preamble and stripped.endswith("men"):
             catalog.subterranean_peoples.append(stripped)
@@ -87,5 +85,18 @@ def parse_history_text_catalog(text: str) -> HistoryTextCatalog:
                     )
                     in_preamble = False
                     break
+
+    ruler_catalog = parse_ruler_catalog(text)
+    catalog.rulers = [
+        HistoryRulerEntry(
+            name=r.name,
+            position=r.position,
+            entity=r.entity,
+            birth=r.birth,
+            death=r.death,
+            reign_began=r.reign_began,
+        )
+        for r in ruler_catalog.rulers
+    ]
 
     return catalog

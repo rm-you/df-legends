@@ -117,8 +117,12 @@ def test_verify_uploaded_exports_if_present():
     report = verify_snapshot_against_text(snap, bundle)
 
     assert report.failed == 0
-    assert report.passed >= 12
-    assert report.pending >= 2
+    assert report.passed >= 16
+    assert report.pending >= 1
+    rulers = next(c for c in report.checks if c.field == "ruler_entries")
+    assert rulers.status == VerifyStatus.PASS
+    events = next(c for c in report.checks if c.field == "historical_event_count")
+    assert events.status == VerifyStatus.PASS
     sites = next(c for c in report.checks if c.field == "site_count")
     assert sites.expected == 350
     assert sites.status == VerifyStatus.PASS

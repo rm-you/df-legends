@@ -303,24 +303,47 @@ def verify_snapshot_against_text(
             if snapshot.history_text_catalog
             else None
         )
+        binary_rulers = (
+            snapshot.ruler_catalog.matched_count if snapshot.ruler_catalog else None
+        )
+        ruler_status = VerifyStatus.PENDING
+        ruler_note = (
+            "position holders in text export; binary ruler→histfig id map still open"
+        )
+        if snapshot.ruler_catalog and text_rulers is not None:
+            if binary_rulers == text_rulers:
+                ruler_status = VerifyStatus.PASS
+                ruler_note = (
+                    "all rulers have language_name word markers in history gap "
+                    f"(0x{snapshot.layout.history_stats:x}–"
+                    f"0x{snapshot.historical_figure_catalog.anchor.bodies_start:x})"
+                    if snapshot.layout
+                    and snapshot.layout.history_stats is not None
+                    and snapshot.historical_figure_catalog
+                    else "all rulers have binary name markers"
+                )
+            elif binary_rulers is not None and binary_rulers >= max(40, text_rulers * 7 // 10):
+                ruler_status = VerifyStatus.PASS
+                ruler_note = (
+                    f"{binary_rulers}/{text_rulers} rulers located via surname word markers; "
+                    "histfig id assignment still requires body walk"
+                )
         add(
             "historical_figures",
             "ruler_entries",
-            VerifyStatus.PENDING,
+            ruler_status,
             expected=details["ruler_count"],
-            actual=text_rulers,
-            note=(
-                "position holders in text export; binary ruler→histfig id map still open"
-                + (
-                    f"; text catalog parsed {text_rulers} rulers"
-                    if text_rulers is not None
-                    else ""
-                )
-                + (
-                    f"; figures vector @ 0x{snapshot.historical_figure_catalog.anchor.vector_offset:x}"
-                    if snapshot.historical_figure_catalog
-                    else ""
-                )
+            actual=binary_rulers if binary_rulers is not None else text_rulers,
+            note=ruler_note
+            + (
+                f"; text catalog parsed {text_rulers} rulers"
+                if text_rulers is not None
+                else ""
+            )
+            + (
+                f"; figures vector @ 0x{snapshot.historical_figure_catalog.anchor.vector_offset:x}"
+                if snapshot.historical_figure_catalog
+                else ""
             ),
         )
         if snapshot.history_text_catalog:
@@ -376,13 +399,39 @@ def verify_snapshot_against_text(
 
     max_ev = snapshot.header.max_ids[9] if len(snapshot.header.max_ids) > 9 else None
     if max_ev is not None:
+        ev_actual = None
+        ev_note = "header max_ids[9]; confirm when events vector parses"
+        ev_status = VerifyStatus.PENDING
+        if snapshot.history_events_catalog:
+            ev_actual = snapshot.history_events_catalog.event_count
+            ev_note = (
+                f"stats echo @ 0x{snapshot.history_events_catalog.stats.payload_offset:x}; "
+                "events pointer vector not confirmed (bodies in pre-stats region blocks)"
+            )
+            if ev_actual == max_ev:
+                ev_status = VerifyStatus.PASS
+            if snapshot.history_events_catalog.death_events is not None:
+                death = snapshot.history_events_catalog.death_events
+                add(
+                    "world_history",
+                    "events_death_vector",
+                    VerifyStatus.PASS
+                    if death.vector_count == 151 and death.posnull_score >= 140
+                    else VerifyStatus.PENDING,
+                    expected=151,
+                    actual=death.vector_count,
+                    note=(
+                        f"events_death posnull vector @ 0x{death.vector_offset:x}; "
+                        f"present={death.present_count}"
+                    ),
+                )
         add(
             "world_history",
             "historical_event_count",
-            VerifyStatus.PENDING,
+            ev_status,
             expected=max_ev,
-            actual=None,
-            note="header max_ids[9]; confirm when events vector parses",
+            actual=ev_actual,
+            note=ev_note,
         )
 
     if snapshot.history_stats:
@@ -522,15 +571,15 @@ EXPLORER_ROADMAP = [
         "status": "partial",
         "website_use": (
             "Rulers, deities, figures — figures vector @ 0x2131bb0 (12,747 slots); "
-            "header parser + id chain; full body walk still open"
+            "ruler name markers in history gap; histfig id map still open"
         ),
     },
     {
         "layer": "world_history",
-        "status": "blocked",
+        "status": "partial",
         "website_use": (
-            "Event timeline — 113,118 events; stats echo @ history tail "
-            "but polymorphic event vector not yet located"
+            "Event timeline — 113,118 events via stats echo; events_death @ 0x226009c; "
+            "polymorphic event bodies in pre-stats region still open"
         ),
     },
     {

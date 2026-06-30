@@ -38,6 +38,23 @@ This block is **metadata**, not the start of the `world_history` stl-vectors. Th
 
 Header layout matches `df.history_figure.xml` through `art_count`. Bodies are variable-size (polymorphic link vectors + profile pointers); id chain 0..14+ validated via forward scan.
 
+## Rulers (Namushul)
+
+- Text export: 71 `[*]` ruler lines with civ + position context (`king List`, etc.).
+- Binary: surname `language_name.words` markers in history gap (`0x15BEB28`–`0x2134DD0`); **51/71** matched on fixture (e.g. Likot Goldirons → `(341,433)` @ `0x15D0184`).
+- Full ruler→`historical_figure.id` map still requires histfig body walk.
+
+## Events (Namushul)
+
+| Field | Value | Notes |
+|-------|-------|-------|
+| Event count echo | 113118 | stats block + header `max_ids[9]` |
+| `events_death` | `0x226009C` | count=151 posnull vector after figure bodies |
+| `events` vector | not confirmed | count echo @ stats is metadata only; no 95%+ posnull prefix |
+| Relationship blocks | 4 | stats `field_4` echo |
+
+Event bodies likely live in pre-stats region blocks (~14 MB entity-gap/mid payload); polymorphic `history_event` body skipper still open.
+
 ## Sites
 
 - `world_site` vector is **not** a clean `count=350` posnull block in the entity→region gap.
@@ -61,8 +78,9 @@ Header layout matches `df.history_figure.xml` through `art_count`. Bodies are va
 
 | Vector | Header count | posnull scan in history tail |
 |--------|--------------|------------------------------|
-| `history_event` | 113118 | No high-confidence hit |
-| `historical_figure` | 12747 | **Vector @ `0x2131bb0`** (posnull score ~8.8k/20k sample); bodies @ `0x2134dd0`; death @ `0x226009c` |
+| `history_event` | 113118 | Count echo @ stats; vector not confirmed (bodies pre-stats) |
+| `events_death` | 151 | **Vector @ `0x226009c`** after figure bodies |
+| `historical_figure` | 12747 | **Vector @ `0x2131bb0`** (posnull score ~8.8k/20k sample); bodies @ `0x2134dd0` |
 | `world_site` | 350 | Marker-anchored catalog @ name table ~0x1193ae5 stride 354; posnull vector still unconfirmed |
 
 ## Site name table (Namushul cluster)

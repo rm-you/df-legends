@@ -29,6 +29,8 @@ from .deserializers.historical_figures import (
     HistoricalFigureCatalog,
     build_historical_figure_catalog,
 )
+from .deserializers.history_events import HistoryEventsCatalog, build_history_events_catalog
+from .deserializers.history_rulers import RulerCatalog, build_ruler_catalog
 from .deserializers.world_layout import WorldLayoutLandmarks, discover_layout_landmarks
 
 
@@ -69,6 +71,8 @@ class LegendsSnapshot:
     history_text_catalog: HistoryTextCatalog | None = None
     entity_catalog_region: EntityCatalogRegion | None = None
     historical_figure_catalog: HistoricalFigureCatalog | None = None
+    history_events_catalog: HistoryEventsCatalog | None = None
+    ruler_catalog: RulerCatalog | None = None
     vector_probe: VectorProbeSummary | None = None
     notes: list[str] = field(default_factory=list)
 
@@ -257,6 +261,8 @@ def extract_legends_snapshot(
         )
 
     historical_figure_catalog: HistoricalFigureCatalog | None = None
+    history_events_catalog: HistoryEventsCatalog | None = None
+    ruler_catalog: RulerCatalog | None = None
     if layout.history_stats is not None:
         historical_figure_catalog = build_historical_figure_catalog(
             payload,
@@ -273,6 +279,45 @@ def extract_legends_snapshot(
             )
             for line in historical_figure_catalog.notes:
                 notes.append(f"  histfig: {line}")
+
+        history_events_catalog = build_history_events_catalog(
+            payload,
+            preamble.header,
+            search_start=layout.history_stats,
+            figures_anchor=(
+                historical_figure_catalog.anchor if historical_figure_catalog else None
+            ),
+        )
+        if history_events_catalog:
+            notes.append(
+                f"history events: count={history_events_catalog.event_count:,} "
+                f"(stats @ 0x{history_events_catalog.stats.payload_offset:x})"
+            )
+            if history_events_catalog.death_events is not None:
+                death = history_events_catalog.death_events
+                notes.append(
+                    f"  events_death vector @ 0x{death.vector_offset:x} "
+                    f"(present={death.present_count})"
+                )
+            for line in history_events_catalog.notes:
+                notes.append(f"  events: {line}")
+
+        if history_text and historical_figure_catalog:
+            words = block.sections[8].names if len(block.sections) > 8 else []
+            ruler_catalog = build_ruler_catalog(
+                history_text,
+                payload,
+                words=words,
+                search_start=layout.history_stats,
+                search_end=historical_figure_catalog.anchor.bodies_start,
+            )
+            if ruler_catalog.ruler_count:
+                notes.append(
+                    f"ruler catalog: {ruler_catalog.ruler_count} text entries, "
+                    f"{ruler_catalog.matched_count} with binary name markers"
+                )
+                for line in ruler_catalog.notes:
+                    notes.append(f"  rulers: {line}")
 
     vector_probe: VectorProbeSummary | None = None
     stats_probe = probe_history_stats(payload, preamble.header)
@@ -352,6 +397,8 @@ def extract_legends_snapshot(
         history_text_catalog=history_text_catalog,
         entity_catalog_region=entity_catalog_region,
         historical_figure_catalog=historical_figure_catalog,
+        history_events_catalog=history_events_catalog,
+        ruler_catalog=ruler_catalog,
         vector_probe=vector_probe,
         notes=notes,
     )
@@ -532,6 +579,37 @@ def snapshot_to_dict(snapshot: LegendsSnapshot) -> dict:
                 "ruler_count": snapshot.history_text_catalog.ruler_count,
             }
             if snapshot.history_text_catalog
+            else None
+        ),
+        "history_events_catalog": (
+            {
+                "event_count": snapshot.history_events_catalog.event_count,
+                "stats_offset": snapshot.history_events_catalog.stats.payload_offset,
+                "death_events_offset": (
+                    snapshot.history_events_catalog.death_events.vector_offset
+                    if snapshot.history_events_catalog.death_events
+                    else None
+                ),
+                "events_vector_offset": snapshot.history_events_catalog.events_vector_offset,
+            }
+            if snapshot.history_events_catalog
+            else None
+        ),
+        "ruler_catalog": (
+            {
+                "ruler_count": snapshot.ruler_catalog.ruler_count,
+                "marker_count": snapshot.ruler_catalog.marker_count,
+                "matched_count": snapshot.ruler_catalog.matched_count,
+                "sample": [
+                    {
+                        "name": m.ruler_name,
+                        "offset": m.payload_offset,
+                        "words": m.word_indices,
+                    }
+                    for m in snapshot.ruler_catalog.markers[:10]
+                ],
+            }
+            if snapshot.ruler_catalog
             else None
         ),
         "vector_probe": (
