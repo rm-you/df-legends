@@ -314,3 +314,19 @@ the RE artifacts to git so other agents can continue.
   vector from world_history start to land exactly on the figures count, then
   walk the dense figures vector to 12,747 and confirm the `0x36af86` /
   `0x5eb921` candidates.
+
+## 2026-07-01 — Workspace cleanup of exploratory diag scripts
+
+Committed the full RE work (commit `f005afa`, pushed to `origin/main`):
+`AGENTS.md`, updated `FUNCTIONS.md`/`ATTEMPTS.md`, `ghidra_scripts/`, and the
+`ghidra_decompiles/` function map (.c + index.json). Then removed 189 stale
+exploratory `diag_*.py`/`dump_*.py` one-offs from the working tree to
+unclutter `tools/df-save-re/scripts/`. They are preserved in git history at
+`f005afa` (recoverable with `git checkout f005afa -- tools/df-save-re/scripts/`).
+Kept the 18 scripts still useful for the next step: `diag_walk_until_fail.py`,
+`diag_find_worldhistory_start.py`, `diag_fig0_debug.py`, `diag_fixture_maxids.py`,
+`diag_dense_figures_vector.py`, `diag_find_figures_count.py`,
+`diag_events_count.py`, `diag_save_version.py`, `check_fig_walk.py`,
+`walk_figures_read.py`, `show_fig_walk.py`, `test_fig_walk.py`,
+`test_build_starts.py`, `analyze_binary.py`, `analyze_post_tail_boundaries.py`,
+`extract_rtti_types.py`, `fetch_fixtures.py`, `show_fig_walk_region1.py`.
