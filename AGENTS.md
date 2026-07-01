@@ -68,6 +68,10 @@ The save fixtures are gitignored; fetch with
   `index.json` (`[{addr,name,entry,callees,decompile_file}]`). This is what
   we committed to git so other agents can read the decompiles without
   re-running Ghidra. **Regenerate** with `ghidra_scripts\DecompileWithCallees.java`.
+  NOTE: there are currently 51 committed `.c` files but `index.json` only
+  lists 12 (it was not regenerated after later batches). Treat the `.c` files
+  as the source of truth; regenerating `index.json` over all of them is
+  Phase 0 of the mapping plan.
 - **`tools\df-save-re\ghidra_scripts\`** — the Ghidra postScripts that produce
   the above (`DecompileWithCallees.java`, `FindCallers.java`,
   `EnumerateEventVtables.java`). Keep these; they are the repeatable RE

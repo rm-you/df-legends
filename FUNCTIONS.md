@@ -38,7 +38,19 @@ FUN_1405f3a60  world writer            FUN_140330310  world reader
 
 - `FUN_1405f3a60`: main `world.dat` writer/export orchestrator. Calls world/history component writers.
 - `FUN_140709410`: `world_history` writer section containing `figures`. It writes the events vector, then the **figures vector as DENSE** (`int32 count` then `count` bodies via `FUN_14070a090`), then collections/eras/etc. NOT posnull — no presence-flag array.
-- `FUN_1407099a0`: `world_history` reader counterpart. Reads events count, loops the events factory (`FUN_14070b7a0`) + each event's `read_file` (vtable +0x120), then reads figures count and loops `FUN_14070a9d0` per figure. Confirms the figures vector is DENSE.
+- `FUN_1407099a0`: `world_history` reader counterpart. Full section order confirmed from the decompile:
+  1. `events` — `int32 count`, then per element: `FUN_14070b7a0` (factory) → `event->read_file` (vtable +0x120) → `FUN_1407c8470` (push into vector) → `event->?` (vtable +0x100).
+  2. `figures` — `int32 count`, then per element: `operator_new(0x178)` → `FUN_140708460` (init) → `FUN_14070a9d0` (histfig reader) → `FUN_1400715b0` (push). DENSE, no presence flags.
+  3. `event_collections` — `int32 count`, then per element: `FUN_140763aa0` (collection factory) → `collection->read_file` (vtable +0x18) → `collection->?` (vtable +0x20). Polymorphic.
+  4. `eras` — `int32 count`, then per element: `operator_new(0x78)` + `FUN_1406ff0e0` init → `FUN_14075cd70` (era reader).
+  5. Two `int32`-counted primitive vectors (elements 4 bytes then 2 bytes) + four scalar `int32` fields (in-memory +0x51/+0x52 and byte offsets +0x28c/+0x294) + another `int32`-counted 4-byte vector.
+  6. Version-gated block (`save_version >= 0x5d8`): seven more `int32`/vector fields (in-memory +0x56..+0x5c); zeroed when older.
+  7. Version-gated (`> 0x65c`): two vectors — `int32 id`-quad records (`operator_new(0x14)`) and large `operator_new(0x4808)` records via `FUN_1406fedd0`.
+  8. Version-gated (`> 0x68f`): vector of `operator_new(0x20)` records via `FUN_1406fefc0`.
+  Confirms the figures vector is DENSE.
+- `FUN_140763aa0`: `history_event_collection` reader factory (polymorphic). Reads a tag, allocates the matching `history_event_collection_*` subclass, returns it; caller invokes `read_file` at vtable +0x18. Subclass layouts not yet mapped (Phase 2 of the plan).
+- `FUN_14075cd70`: `history_era` reader. `FUN_1406ff0e0` is the paired in-memory era initializer.
+- `FUN_1406fedd0`, `FUN_1406fefc0`: version-gated `world_history` tail-vector element readers (`> 0x65c` and `> 0x68f` respectively); exact structs not yet mapped.
 - `FUN_14070a090`: `historical_figure` writer. **Definitive save order (matches reader exactly, NO sex pad, NO figure_id, NO art_count):**
   - `int16 profession`, `int16 race`, `int16 caste`, `uint8 sex`
   - `int32 orientation_flags` (immediately after sex — **no pad byte**)
