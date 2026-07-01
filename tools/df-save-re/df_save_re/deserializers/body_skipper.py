@@ -328,6 +328,8 @@ def skip_historical_figure_body(
     scan_stop: int | None = None,
     scan_limit: int = 2_000_000,
     expected_next_id: int | None = None,
+    figure_id: int | None = None,
+    save_version: int = 1716,
 ) -> tuple[int, int]:
     """Skip one historical_figure by fully reading it (values discarded)."""
     from .record_reader import read_historical_figure_record
@@ -342,6 +344,8 @@ def skip_historical_figure_body(
         scan_stop=scan_stop,
         scan_limit=scan_limit,
         expected_next_id=expected_next_id,
+        figure_id=figure_id,
+        save_version=save_version,
     )
     return consumed, int(record["id"])
 

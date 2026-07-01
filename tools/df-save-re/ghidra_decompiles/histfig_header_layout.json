@@ -1,0 +1,182 @@
+{
+  "struct": "historical_figure",
+  "source": "FUN_14070a9d0",
+  "fields": [
+    {
+      "name": "profession",
+      "type": "int16",
+      "mem_offset": 0
+    },
+    {
+      "name": "race",
+      "type": "int16",
+      "mem_offset": 2
+    },
+    {
+      "name": "caste",
+      "type": "int16",
+      "mem_offset": 4
+    },
+    {
+      "name": "sex",
+      "type": "uint8",
+      "mem_offset": 6
+    },
+    {
+      "name": "orientation_flags",
+      "type": "int32",
+      "mem_offset": 8
+    },
+    {
+      "name": "appeared_year",
+      "type": "int32",
+      "mem_offset": 12
+    },
+    {
+      "name": "born_year",
+      "type": "int32",
+      "mem_offset": 16
+    },
+    {
+      "name": "born_seconds",
+      "type": "int32",
+      "mem_offset": 20
+    },
+    {
+      "name": "curse_year",
+      "type": "int32",
+      "mem_offset": 24
+    },
+    {
+      "name": "curse_seconds",
+      "type": "int32",
+      "mem_offset": 28
+    },
+    {
+      "name": "birth_year_bias",
+      "type": "int32",
+      "mem_offset": 32
+    },
+    {
+      "name": "birth_time_bias",
+      "type": "int32",
+      "mem_offset": 36
+    },
+    {
+      "name": "old_year",
+      "type": "int32",
+      "mem_offset": 40
+    },
+    {
+      "name": "old_seconds",
+      "type": "int32",
+      "mem_offset": 44
+    },
+    {
+      "name": "died_year",
+      "type": "int32",
+      "mem_offset": 48
+    },
+    {
+      "name": "died_seconds",
+      "type": "int32",
+      "mem_offset": 52
+    },
+    {
+      "name": "name",
+      "type": "language_name",
+      "mem_offset": 56
+    },
+    {
+      "name": "civ_id",
+      "type": "int32",
+      "mem_offset": 176
+    },
+    {
+      "name": "population_id",
+      "type": "int32",
+      "mem_offset": 180
+    },
+    {
+      "name": "breed_id",
+      "type": "int32",
+      "mem_offset": 184
+    },
+    {
+      "name": "cultural_identity",
+      "type": "int32",
+      "mem_offset": 188
+    },
+    {
+      "name": "family_head_id",
+      "type": "int32",
+      "mem_offset": 192,
+      "version_gt": "0x618"
+    },
+    {
+      "name": "field_e4",
+      "type": "int32",
+      "mem_offset": 228,
+      "xml_alias": "unit_id"
+    },
+    {
+      "name": "field_d8",
+      "type": "int32",
+      "mem_offset": 216,
+      "xml_alias": "nemesis_id"
+    },
+    {
+      "name": "field_dc",
+      "type": "int32",
+      "mem_offset": 220
+    },
+    {
+      "name": "flags",
+      "type": "byte_vector",
+      "mem_offset": 200,
+      "helper": "FUN_140002380"
+    },
+    {
+      "name": "field_e0",
+      "type": "int32",
+      "mem_offset": 224
+    }
+  ],
+  "omitted_on_disk": [
+    "pool_id",
+    "figure_id",
+    "art_count"
+  ],
+  "tail": [
+    {
+      "name": "entity_links",
+      "type": "dense_polymorphic_vector",
+      "factory": "FUN_140707820"
+    },
+    {
+      "name": "site_links",
+      "type": "dense_polymorphic_vector",
+      "factory": "FUN_140707c90"
+    },
+    {
+      "name": "histfig_links",
+      "type": "dense_polymorphic_vector",
+      "factory": "FUN_140708160"
+    },
+    {
+      "name": "info",
+      "type": "owned_optional",
+      "reader": "FUN_14070b110"
+    },
+    {
+      "name": "vague_relationships",
+      "type": "owned_optional",
+      "reader": "FUN_1406fb120",
+      "version_gt": "0x6a0"
+    }
+  ],
+  "figures_vector": {
+    "encoding": "dense",
+    "pattern": "int32 count + count bodies"
+  }
+}

@@ -12,6 +12,8 @@ project itself is gitignored at `tools/df-save-re/ghidra/`.
 Java postScripts run via `analyzeHeadless.bat` with `-noanalysis` on the
 existing `DFProject` (delete stale `*.lock`/`*.lock~` first):
 
+- `DecompileCallTree.java` — BFS-decompile from a root address (`<outdir> <rootAddr> <maxDepth>`).
+  Writes one `<addr>.c` per function and merges into `index.json`.
 - `DecompileWithCallees.java` — decompiles given addresses, writes one
   `<addr>.c` per function (header = name + direct callees) into
   `../ghidra_decompiles/`, and emits `index.json`
@@ -41,7 +43,8 @@ in PowerShell with `@ADDRS` so they aren't collapsed into one quoted arg):
 
 ```powershell
 $GHIDRA = "C:\Users\rm_yo\Downloads\ghidra_12.1.2_PUBLIC\support\analyzeHeadless.bat"
-& $GHIDRA tools\df-save-re\ghidra DFProject -noanalysis -process "Dwarf Fortress.exe" `
+& $GHIRA tools\df-save-re\ghidra DFProject -noanalysis -process "Dwarf Fortress.exe" `
+  -scriptPath tools\df-save-re\ghidra_scripts `
   -postScript DecompileWithCallees.java tools\df-save-re\ghidra_decompiles @ADDRS
 ```
 

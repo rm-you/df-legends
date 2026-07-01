@@ -1,0 +1,642 @@
+[
+  {
+    "tag": 0,
+    "symbol": "history_event_war_attacked_sitest",
+    "inst_size": 80
+  },
+  {
+    "tag": 1,
+    "symbol": "history_event_war_destroyed_sitest",
+    "inst_size": 64
+  },
+  {
+    "tag": 2,
+    "symbol": "history_event_created_sitest",
+    "inst_size": 64
+  },
+  {
+    "tag": 4,
+    "symbol": "history_event_add_hf_entity_linkst",
+    "inst_size": 64
+  },
+  {
+    "tag": 5,
+    "symbol": "history_event_remove_hf_entity_linkst",
+    "inst_size": 56
+  },
+  {
+    "tag": 6,
+    "symbol": "history_event_first_contactst",
+    "inst_size": 56
+  },
+  {
+    "tag": 7,
+    "symbol": "history_event_first_contact_failedst",
+    "inst_size": 56
+  },
+  {
+    "tag": 8,
+    "symbol": "history_event_topicagreement_concludedst",
+    "inst_size": 64
+  },
+  {
+    "tag": 9,
+    "symbol": "history_event_topicagreement_rejectedst",
+    "inst_size": 56
+  },
+  {
+    "tag": 10,
+    "symbol": "history_event_topicagreement_madest",
+    "inst_size": 56
+  },
+  {
+    "tag": 11,
+    "symbol": "history_event_war_peace_acceptedst",
+    "inst_size": 56
+  },
+  {
+    "tag": 12,
+    "symbol": "history_event_war_peace_rejectedst",
+    "inst_size": 56
+  },
+  {
+    "tag": 13,
+    "symbol": "history_event_diplomat_lostst",
+    "inst_size": 56
+  },
+  {
+    "tag": 14,
+    "symbol": "history_event_agreements_voidedst",
+    "inst_size": 48
+  },
+  {
+    "tag": 15,
+    "symbol": "history_event_merchantst",
+    "inst_size": 72
+  },
+  {
+    "tag": 16,
+    "symbol": "history_event_artifact_hiddenst",
+    "inst_size": 56
+  },
+  {
+    "tag": 17,
+    "symbol": "history_event_artifact_possessedst",
+    "inst_size": 80
+  },
+  {
+    "tag": 18,
+    "symbol": "history_event_artifact_createdst",
+    "inst_size": 80
+  },
+  {
+    "tag": 19,
+    "symbol": "history_event_artifact_lostst",
+    "inst_size": 64
+  },
+  {
+    "tag": 20,
+    "symbol": "history_event_artifact_foundst",
+    "inst_size": 72
+  },
+  {
+    "tag": 21,
+    "symbol": "history_event_artifact_recoveredst",
+    "inst_size": 72
+  },
+  {
+    "tag": 22,
+    "symbol": "history_event_artifact_droppedst",
+    "inst_size": 72
+  },
+  {
+    "tag": 23,
+    "symbol": "history_event_reclaim_sitest",
+    "inst_size": 56
+  },
+  {
+    "tag": 24,
+    "symbol": "history_event_hf_destroyed_sitest",
+    "inst_size": 56
+  },
+  {
+    "tag": 25,
+    "symbol": "history_event_site_diedst",
+    "inst_size": 56
+  },
+  {
+    "tag": 26,
+    "symbol": "history_event_site_retiredst",
+    "inst_size": 56
+  },
+  {
+    "tag": 27,
+    "symbol": "history_event_entity_createdst",
+    "inst_size": 56
+  },
+  {
+    "tag": 28,
+    "symbol": "history_event_entity_actionst",
+    "inst_size": 56
+  },
+  {
+    "tag": 29,
+    "symbol": "history_event_entity_incorporatedst",
+    "inst_size": 64
+  },
+  {
+    "tag": 30,
+    "symbol": "history_event_created_buildingst",
+    "inst_size": 64
+  },
+  {
+    "tag": 31,
+    "symbol": "history_event_replaced_buildingst",
+    "inst_size": 64
+  },
+  {
+    "tag": 32,
+    "symbol": "history_event_add_hf_site_linkst",
+    "inst_size": 64
+  },
+  {
+    "tag": 33,
+    "symbol": "history_event_remove_hf_site_linkst",
+    "inst_size": 64
+  },
+  {
+    "tag": 34,
+    "symbol": "history_event_add_hf_hf_linkst",
+    "inst_size": 56
+  },
+  {
+    "tag": 35,
+    "symbol": "history_event_remove_hf_hf_linkst",
+    "inst_size": 56
+  },
+  {
+    "tag": 36,
+    "symbol": "history_event_entity_razed_buildingst",
+    "inst_size": 56
+  },
+  {
+    "tag": 37,
+    "symbol": "history_event_masterpiece_created_arch_designst",
+    "inst_size": 72
+  },
+  {
+    "tag": 38,
+    "symbol": "history_event_masterpiece_created_arch_constructst",
+    "inst_size": 72
+  },
+  {
+    "tag": 39,
+    "symbol": "history_event_masterpiece_created_itemst",
+    "inst_size": 72
+  },
+  {
+    "tag": 40,
+    "symbol": "history_event_masterpiece_created_dye_itemst",
+    "inst_size": 80
+  },
+  {
+    "tag": 41,
+    "symbol": "history_event_masterpiece_created_item_improvementst",
+    "inst_size": 96
+  },
+  {
+    "tag": 42,
+    "symbol": "history_event_masterpiece_created_foodst",
+    "inst_size": 64
+  },
+  {
+    "tag": 43,
+    "symbol": "history_event_masterpiece_created_engravingst",
+    "inst_size": 64
+  },
+  {
+    "tag": 44,
+    "symbol": "history_event_masterpiece_lostst",
+    "inst_size": 56
+  },
+  {
+    "tag": 45,
+    "symbol": "history_event_change_hf_statest",
+    "inst_size": 72
+  },
+  {
+    "tag": 46,
+    "symbol": "history_event_change_hf_jobst",
+    "inst_size": 64
+  },
+  {
+    "tag": 47,
+    "symbol": "history_event_war_field_battlest",
+    "inst_size": 80
+  },
+  {
+    "tag": 48,
+    "symbol": "history_event_war_plundered_sitest",
+    "inst_size": 64
+  },
+  {
+    "tag": 49,
+    "symbol": "history_event_war_site_new_leaderst",
+    "inst_size": 88
+  },
+  {
+    "tag": 50,
+    "symbol": "history_event_war_site_tribute_forcedst",
+    "inst_size": 64
+  },
+  {
+    "tag": 51,
+    "symbol": "history_event_war_site_taken_overst",
+    "inst_size": 64
+  },
+  {
+    "tag": 53,
+    "symbol": "history_event_hist_figure_abductedst",
+    "inst_size": 64
+  },
+  {
+    "tag": 55,
+    "symbol": "history_event_hf_razed_buildingst",
+    "inst_size": 56
+  },
+  {
+    "tag": 56,
+    "symbol": "history_event_creature_devouredst",
+    "inst_size": 72
+  },
+  {
+    "tag": 57,
+    "symbol": "history_event_hist_figure_woundedst",
+    "inst_size": 80
+  },
+  {
+    "tag": 58,
+    "symbol": "history_event_hist_figure_simple_battle_eventst",
+    "inst_size": 104
+  },
+  {
+    "tag": 59,
+    "symbol": "history_event_created_world_constructionst",
+    "inst_size": 64
+  },
+  {
+    "tag": 60,
+    "symbol": "history_event_hist_figure_reunionst",
+    "inst_size": 104
+  },
+  {
+    "tag": 61,
+    "symbol": "history_event_hist_figure_reach_summitst",
+    "inst_size": 80
+  },
+  {
+    "tag": 62,
+    "symbol": "history_event_hist_figure_travelst",
+    "inst_size": 88
+  },
+  {
+    "tag": 63,
+    "symbol": "history_event_hist_figure_new_petst",
+    "inst_size": 104
+  },
+  {
+    "tag": 64,
+    "symbol": "history_event_assume_identityst",
+    "inst_size": 56
+  },
+  {
+    "tag": 65,
+    "symbol": "history_event_create_entity_positionst",
+    "inst_size": 64
+  },
+  {
+    "tag": 66,
+    "symbol": "history_event_change_creature_typest",
+    "inst_size": 64
+  },
+  {
+    "tag": 67,
+    "symbol": "history_event_hist_figure_revivedst",
+    "inst_size": 80
+  },
+  {
+    "tag": 68,
+    "symbol": "history_event_hf_learns_secretst",
+    "inst_size": 64
+  },
+  {
+    "tag": 69,
+    "symbol": "history_event_change_hf_body_statest",
+    "inst_size": 72
+  },
+  {
+    "tag": 70,
+    "symbol": "history_event_hf_act_on_buildingst",
+    "inst_size": 56
+  },
+  {
+    "tag": 71,
+    "symbol": "history_event_hf_does_interactionst",
+    "inst_size": 72
+  },
+  {
+    "tag": 72,
+    "symbol": "history_event_hf_confrontedst",
+    "inst_size": 88
+  },
+  {
+    "tag": 73,
+    "symbol": "history_event_entity_lawst",
+    "inst_size": 56
+  },
+  {
+    "tag": 74,
+    "symbol": "history_event_hf_gains_secret_goalst",
+    "inst_size": 64
+  },
+  {
+    "tag": 75,
+    "symbol": "history_event_artifact_storedst",
+    "inst_size": 64
+  },
+  {
+    "tag": 76,
+    "symbol": "history_event_agreement_formedst",
+    "inst_size": 48
+  },
+  {
+    "tag": 77,
+    "symbol": "history_event_site_disputest",
+    "inst_size": 64
+  },
+  {
+    "tag": 78,
+    "symbol": "history_event_agreement_concludedst",
+    "inst_size": 56
+  },
+  {
+    "tag": 79,
+    "symbol": "history_event_insurrection_startedst",
+    "inst_size": 48
+  },
+  {
+    "tag": 80,
+    "symbol": "history_event_insurrection_endedst",
+    "inst_size": 56
+  },
+  {
+    "tag": 81,
+    "symbol": "history_event_hf_attacked_sitest",
+    "inst_size": 56
+  },
+  {
+    "tag": 82,
+    "symbol": "history_event_performancest",
+    "inst_size": 64
+  },
+  {
+    "tag": 83,
+    "symbol": "history_event_competitionst",
+    "inst_size": 112
+  },
+  {
+    "tag": 84,
+    "symbol": "history_event_processionst",
+    "inst_size": 64
+  },
+  {
+    "tag": 85,
+    "symbol": "history_event_ceremonyst",
+    "inst_size": 64
+  },
+  {
+    "tag": 86,
+    "symbol": "history_event_knowledge_discoveredst",
+    "inst_size": 56
+  },
+  {
+    "tag": 87,
+    "symbol": "history_event_artifact_transformedst",
+    "inst_size": 88
+  },
+  {
+    "tag": 88,
+    "symbol": "history_event_artifact_destroyedst",
+    "inst_size": 56
+  },
+  {
+    "tag": 89,
+    "symbol": "history_event_hf_relationship_deniedst",
+    "inst_size": 72
+  },
+  {
+    "tag": 90,
+    "symbol": "history_event_regionpop_incorporated_into_entityst",
+    "inst_size": 64
+  },
+  {
+    "tag": 91,
+    "symbol": "history_event_poetic_form_createdst",
+    "inst_size": 80
+  },
+  {
+    "tag": 92,
+    "symbol": "history_event_musical_form_createdst",
+    "inst_size": 80
+  },
+  {
+    "tag": 93,
+    "symbol": "history_event_dance_form_createdst",
+    "inst_size": 80
+  },
+  {
+    "tag": 94,
+    "symbol": "history_event_written_content_composedst",
+    "inst_size": 80
+  },
+  {
+    "tag": 95,
+    "symbol": "history_event_change_hf_moodst",
+    "inst_size": 72
+  },
+  {
+    "tag": 96,
+    "symbol": "history_event_artifact_claim_formedst",
+    "inst_size": 80
+  },
+  {
+    "tag": 97,
+    "symbol": "history_event_artifact_givenst",
+    "inst_size": 80
+  },
+  {
+    "tag": 98,
+    "symbol": "history_event_hf_act_on_artifactst",
+    "inst_size": 64
+  },
+  {
+    "tag": 99,
+    "symbol": "history_event_hf_recruited_unit_type_for_entityst",
+    "inst_size": 64
+  },
+  {
+    "tag": 100,
+    "symbol": "history_event_hfs_formed_reputation_relationshipst",
+    "inst_size": 80
+  },
+  {
+    "tag": 101,
+    "symbol": "history_event_artifact_copiedst",
+    "inst_size": 72
+  },
+  {
+    "tag": 102,
+    "symbol": "history_event_sneak_into_sitest",
+    "inst_size": 56
+  },
+  {
+    "tag": 103,
+    "symbol": "history_event_spotted_leaving_sitest",
+    "inst_size": 56
+  },
+  {
+    "tag": 104,
+    "symbol": "history_event_entity_searched_sitest",
+    "inst_size": 56
+  },
+  {
+    "tag": 105,
+    "symbol": "history_event_hf_freedst",
+    "inst_size": 88
+  },
+  {
+    "tag": 106,
+    "symbol": "history_event_hist_figure_simple_actionst",
+    "inst_size": 88
+  },
+  {
+    "tag": 107,
+    "symbol": "history_event_entity_rampaged_in_sitest",
+    "inst_size": 48
+  },
+  {
+    "tag": 108,
+    "symbol": "history_event_entity_fled_sitest",
+    "inst_size": 48
+  },
+  {
+    "tag": 109,
+    "symbol": "history_event_tactical_situationst",
+    "inst_size": 80
+  },
+  {
+    "tag": 111,
+    "symbol": "history_event_site_surrenderedst",
+    "inst_size": 56
+  },
+  {
+    "tag": 112,
+    "symbol": "history_event_entity_expels_hfst",
+    "inst_size": 56
+  },
+  {
+    "tag": 113,
+    "symbol": "history_event_tradest",
+    "inst_size": 72
+  },
+  {
+    "tag": 114,
+    "symbol": "history_event_add_entity_site_profile_flagst",
+    "inst_size": 56
+  },
+  {
+    "tag": 115,
+    "symbol": "history_event_gamblest",
+    "inst_size": 64
+  },
+  {
+    "tag": 116,
+    "symbol": "history_event_add_hf_entity_honorst",
+    "inst_size": 56
+  },
+  {
+    "tag": 117,
+    "symbol": "history_event_entity_dissolvedst",
+    "inst_size": 64
+  },
+  {
+    "tag": 118,
+    "symbol": "history_event_entity_equipment_purchasest",
+    "inst_size": 72
+  },
+  {
+    "tag": 119,
+    "symbol": "history_event_modified_buildingst",
+    "inst_size": 64
+  },
+  {
+    "tag": 120,
+    "symbol": "history_event_building_profile_acquiredst",
+    "inst_size": 72
+  },
+  {
+    "tag": 121,
+    "symbol": "history_event_hf_preachst",
+    "inst_size": 64
+  },
+  {
+    "tag": 123,
+    "symbol": "history_event_entity_breach_feature_layerst",
+    "inst_size": 56
+  },
+  {
+    "tag": 124,
+    "symbol": "history_event_entity_alliance_formedst",
+    "inst_size": 72
+  },
+  {
+    "tag": 125,
+    "symbol": "history_event_hf_ransomedst",
+    "inst_size": 64
+  },
+  {
+    "tag": 126,
+    "symbol": "history_event_hf_enslavedst",
+    "inst_size": 56
+  },
+  {
+    "tag": 127,
+    "symbol": "history_event_sabotagest",
+    "inst_size": 56
+  },
+  {
+    "tag": 128,
+    "symbol": "history_event_entity_overthrownst",
+    "inst_size": 96
+  },
+  {
+    "tag": 129,
+    "symbol": "history_event_hfs_formed_intrigue_relationshipst",
+    "inst_size": 80
+  },
+  {
+    "tag": 130,
+    "symbol": "history_event_failed_intrigue_corruptionst",
+    "inst_size": 72
+  },
+  {
+    "tag": 132,
+    "symbol": "history_event_failed_frame_attemptst",
+    "inst_size": 64
+  },
+  {
+    "tag": 133,
+    "symbol": "history_event_hf_interrogatedst",
+    "inst_size": 88
+  }
+]

@@ -34,7 +34,7 @@ GHIDRA_READ_FILE_TARGETS = (
 )
 # Fields present in df-structures memory layout but not written to compressed saves.
 SAVE_OMIT_FIELDS: dict[str, set[str]] = {
-    "historical_figure": {"pool_id"},
+    "historical_figure": {"pool_id", "art_count"},
     "histfig_entity_link": {"entity_vector_idx"},
     "histfig_entity_link_positionst": {"assignment_vector_idx"},
     "histfig_hf_link": {"hf_vector_idx"},

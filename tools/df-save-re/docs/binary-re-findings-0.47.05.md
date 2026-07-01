@@ -46,6 +46,24 @@ vectors. The real `world_history` start is the events count (from `max_ids`)
 followed by a valid 4-byte event tag — locate it with
 `scripts/diag_find_worldhistory_start.py`.
 
+## Top-level `world.dat` stream order
+
+From `FUN_140330310` (reader) / `FUN_1405f3a60` (writer) — see
+`ghidra_decompiles/world_reader_sections.json` for the full address list.
+
+| Seq | Reader | Writer | Role |
+|-----|--------|--------|------|
+| 1 | `1403158a0` | `140315930` | preamble / header |
+| 2–4 | `14031aa30`…`14031db90` | `14031a9b0`…`14031db20` | early world blocks |
+| 5 | `140a62e80` | `140a61f90` | `historical_entity` vector |
+| 6 | — | — | scalar tail + entity loop |
+| **7** | **`1407099a0`** | **`140709410`** | **`world_history`** |
+| 8–11 | `14030b9e0`…`140305a20` | `1405d7850`…`1405d3150` | post-`world_history` blocks |
+| 12–33 | `140323f70`…`140302590` | `140323f00`…`140302520` | `world_data` sub-vectors (regions, sites, geo, …) |
+| 34 | — | — | final scalar tail + flush |
+
+124 section reader/writer addresses remain to decompile (`world_section_addrs.json`).
+
 ## `world_history` section order
 
 From `FUN_140709410` (writer) / `FUN_1407099a0` (reader):
@@ -74,10 +92,10 @@ figure's **id is its vector index** — it is NOT stored in the stream. There is
 7. `language_name` (`has_name` byte + body)
 8. `int32 civ_id`, `int32 population_id`, `int32 breed_id`, `int32 cultural_identity`
 9. `int32 family_head_id` — **version-gated: only if save_version > 0x618**
-10. 4× `int32` (in-memory `+0xe4`, `+0xd8`, `+0xdc`, `+0xe0`; includes
-    nemesis_id/unit_id, exact names TBD)
+10. `int32` @ mem `+0xe4`, `+0xd8`, `+0xdc` (writer order; includes unit/nemesis area)
 11. flags byte-vector via `FUN_140002380` (in-memory `+0xc8`)
-12. `int32 count` + `count` entity_links — factory `FUN_140707820`, dense
+12. `int32` @ mem `+0xe0`
+13. `int32 count` + `count` entity_links — factory `FUN_140707820`, dense
     polymorphic (`int16 type_tag` + body)
 13. `int32 count` + `count` site_links — factory `FUN_140707c90`
 14. `int32 count` + `count` histfig_links — factory `FUN_140708160`

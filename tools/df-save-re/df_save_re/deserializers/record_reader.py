@@ -410,15 +410,22 @@ def read_historical_figure_record(
     scan_stop: int | None = None,
     scan_limit: int = 2_000_000,
     expected_next_id: int | None = None,
+    figure_id: int | None = None,
+    save_version: int = 1716,
 ) -> tuple[dict[str, Any], int]:
-    """Read one complete historical_figure body including save-path tail + art gap."""
-    from .historical_figures import _find_next_figure_start, read_historical_figure_header
+    """Read one complete historical_figure body including save-path tail."""
+    from .historical_figures import read_historical_figure_header
 
     xml_dir = default_xml_dir() if xml_dir is None else xml_dir
     start = reader.tell()
-    header = read_historical_figure_header(reader)
+    fid = figure_id if figure_id is not None else (expected_next_id if expected_next_id is not None else 0)
+    header = read_historical_figure_header(
+        reader,
+        save_version=save_version,
+        figure_id=fid,
+    )
     record: dict[str, Any] = {
-        "id": header.figure_id,
+        "id": fid,
         "profession": header.profession,
         "race": header.race,
         "caste": header.caste,
@@ -444,6 +451,8 @@ def read_historical_figure_record(
         "flag_indices": list(header.flag_indices),
         "unit_id": header.unit_id,
         "nemesis_id": header.nemesis_id,
+        "field_dc": header.field_dc,
+        "field_e0": header.field_e0,
         "art_count": header.art_count,
         "payload_offset": header.payload_offset,
     }
@@ -479,15 +488,16 @@ def read_historical_figure_record(
                 break
     if tail_error is not None:
         stop = scan_stop if scan_stop is not None else len(payload)
+        from .historical_figures import _find_next_figure_start
+
         found = _find_next_figure_start(
             payload,
             scan_start=tail_error_offset,
-            previous_id=header.figure_id,
+            previous_id=fid,
             stop_before=stop,
             max_scan=scan_limit,
-            art_count=header.art_count,
-            xml_dir=xml_dir,
             expected_id=expected_next_id,
+            save_version=save_version,
         )
         if found is None:
             raise SkipError(
@@ -506,24 +516,6 @@ def read_historical_figure_record(
             if gap > 0:
                 record["post_tail_blob"] = _pack_opaque_blob(payload[tail_end:next_anchor])
             reader.seek(next_anchor)
-    else:
-        stop = scan_stop if scan_stop is not None else len(payload)
-        found = _find_next_figure_start(
-            payload,
-            scan_start=tail_end,
-            previous_id=header.figure_id,
-            stop_before=stop,
-            max_scan=scan_limit,
-            art_count=header.art_count,
-            xml_dir=xml_dir,
-            expected_id=expected_next_id,
-        )
-        if found is None:
-            raise SkipError(
-                f"no historical_figure header after id={header.figure_id} from 0x{tail_end:x}"
-            )
-        if found > tail_end:
-            record["post_tail_blob"] = _pack_opaque_blob(payload[tail_end:found])
-        reader.seek(found)
+    # Dense figure bodies are back-to-back; cursor is already at the next body.
 
     return record, reader.tell() - start
