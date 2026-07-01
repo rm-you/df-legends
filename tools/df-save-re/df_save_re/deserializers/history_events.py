@@ -48,28 +48,33 @@ def locate_death_events_vector(
     expected_count: int = 151,
 ) -> DeathEventsVectorAnchor | None:
     """Find ``events_death`` by count echo + posnull prefix."""
-    best: tuple[int, int, int] | None = None  # score, offset, present
+    best_score = -1
+    best_offset: int | None = None
+    best_present = 0
     for offset in range(search_start, search_end - 4, 4):
         if struct.unpack_from("<i", payload, offset)[0] != expected_count:
             continue
         sample = payload[offset + 4 : offset + 4 + expected_count]
         if len(sample) < expected_count:
             continue
-        score = sum(1 for byte in sample if byte in (0, 1))
+        if any(byte not in (0, 1) for byte in sample):
+            continue
+        score = expected_count
         present = sum(1 for byte in sample if byte == 1)
         quality = score / expected_count
         if quality < 0.95:
             continue
-        if best is None or score > best[0]:
-            best = (score, offset, present)
-    if best is None:
+        if score > best_score:
+            best_score = score
+            best_offset = offset
+            best_present = present
+    if best_offset is None:
         return None
-    score, offset, present = best
     return DeathEventsVectorAnchor(
-        vector_offset=offset,
+        vector_offset=best_offset,
         vector_count=expected_count,
-        posnull_score=score,
-        present_count=present,
+        posnull_score=best_score,
+        present_count=best_present,
     )
 
 
@@ -81,16 +86,18 @@ def _probe_events_vector(
     event_count: int,
 ) -> tuple[int | None, int | None]:
     """Best-effort scan for ``events`` stl-vector (often absent as clean posnull)."""
-    best: tuple[int, int] | None = None  # score, offset
+    best_score = -1
+    best_offset: int | None = None
     for offset in range(search_start, search_end - 4, 4):
         if struct.unpack_from("<i", payload, offset)[0] != event_count:
             continue
         score = score_posnull_prefix(payload, offset, sample=min(event_count, 5000))
-        if best is None or score > best[0]:
-            best = (score, offset)
-    if best is None:
+        if score > best_score:
+            best_score = score
+            best_offset = offset
+    if best_offset is None:
         return None, None
-    return best[1], best[0]
+    return best_offset, best_score
 
 
 def build_history_events_catalog(

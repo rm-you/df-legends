@@ -18,18 +18,21 @@ validated by the existing site / histfig readers:
 - primitive ``stl-vector`` -> int32 count + count*width.
 - pointer/compound ``stl-vector`` -> int32 count + count presence bytes
   (aligned to 4) + concatenated present bodies (posnull pattern).
+- polymorphic ``stl-vector`` -> int32 count + int32 presence flags + bodies.
+- owned ``pointer`` -> int32 presence flag + inline body; reference -> int32 id.
 - polymorphic element -> int16 type tag + subclass body.
 - ``df-flagarray`` -> int32 count + count*4 bytes.
 """
 
 from __future__ import annotations
 
+import struct
 from io import BytesIO
 from pathlib import Path
 
 from ..binary_reader import BinaryReader
 from ..structures.polymorph import build_registry, is_polymorphic
-from ..structures.xml_fields import FieldDef, StructDef, load_struct, resolve_fields
+from ..structures.xml_fields import FieldDef, StructDef, enum_storage_width, enum_type_width, load_struct, resolve_fields
 from .language_name import read_language_name
 from .primitives import DfString
 
@@ -83,6 +86,24 @@ _SPECIAL_SIZES: dict[str, int] = {
     "coord": 12,    # 3x int32
 }
 
+from .save_profiles import (
+    HISTFIG_LINKS_MAX_COUNT,
+    HISTFIG_TAIL_FIELDS,
+    SAVE_EMPTY_POLY_TAIL,
+    SAVE_OMIT_FIELDS,
+    SAVE_POLYMORPH_BODY_BYTES,
+    SAVE_REFERENCE_POINTERS,
+    SAVE_STRUCT_BODY_BYTES,
+    SAVE_VECTOR_TAIL,
+    SAVE_WG_RELATIONSHIP_BODY_BYTES,
+    align_histfig_links_start,
+    empty_poly_tail,
+    get_profile,
+    omit_field,
+    reference_pointer,
+    vector_tail,
+)
+
 
 def _enum_width(base_type: str | None) -> int:
     if base_type in ("int8_t", "uint8_t"):
@@ -92,6 +113,22 @@ def _enum_width(base_type: str | None) -> int:
     if base_type in ("int64_t", "uint64_t"):
         return 8
     return 4
+
+
+def _save_vector_tail(struct_name: str | None, field_name: str) -> int:
+    return vector_tail(struct_name, field_name)
+
+
+def _save_empty_poly_tail(struct_name: str | None, field_name: str) -> int:
+    return empty_poly_tail(struct_name, field_name)
+
+
+def _save_omit_field(struct_name: str, field_name: str) -> bool:
+    return omit_field(struct_name, field_name)
+
+
+def _save_reference_pointer(struct_name: str, field_name: str) -> bool:
+    return reference_pointer(struct_name, field_name)
 
 
 def _align4(reader: BinaryReader) -> None:
@@ -123,12 +160,22 @@ def _read_scalar_value(reader: BinaryReader, kind: str) -> int | float:
     raise SkipError(f"not a scalar kind: {kind}")
 
 
-def _skip_primitive_vector(reader: BinaryReader, width: int) -> int:
+def _skip_primitive_vector(
+    reader: BinaryReader,
+    width: int,
+    *,
+    struct_name: str | None = None,
+    field_name: str | None = None,
+) -> int:
     count = reader.read_int32()
     if count < 0 or count > _MAX_VECTOR:
         raise SkipError(f"implausible vector count {count} at 0x{reader.tell() - 4:x}")
     if count and width:
         reader.read_bytes(count * width)
+    if count and struct_name and field_name:
+        tail = _save_vector_tail(struct_name, field_name)
+        if tail:
+            reader.read_bytes(tail)
     return count
 
 
@@ -149,6 +196,7 @@ def _skip_pointer_body(
     field: FieldDef,
     *,
     xml_dir: Path,
+    struct_name: str | None = None,
 ) -> None:
     """Skip the body of one present pointer element."""
     elem_type = _element_type(field)
@@ -164,11 +212,11 @@ def _skip_pointer_body(
     # Inline pointer with anonymous compound children.
     if len(field.children) == 1 and field.children[0].kind == "pointer":
         for sub in field.children[0].children:
-            skip_field(reader, sub, xml_dir=xml_dir)
+            skip_field(reader, sub, xml_dir=xml_dir, struct_name=struct_name)
         return
     if field.children:
         for sub in field.children:
-            skip_field(reader, sub, xml_dir=xml_dir)
+            skip_field(reader, sub, xml_dir=xml_dir, struct_name=struct_name)
         return
     raise SkipError(f"cannot resolve pointer element for field {field.name!r}")
 
@@ -178,16 +226,28 @@ def _skip_pointer_vector(
     field: FieldDef,
     *,
     xml_dir: Path,
+    struct_name: str | None = None,
 ) -> int:
     """Skip a posnull stl-vector of pointers: count + flags + present bodies."""
     count = reader.read_int32()
     if count < 0 or count > _MAX_VECTOR:
         raise SkipError(f"implausible pointer vector count {count} at 0x{reader.tell() - 4:x}")
-    present = [reader.read_bool() for _ in range(count)]
-    _align4(reader)
+    elem_type = _element_type(field)
+    polymorphic = elem_type is not None and is_polymorphic(elem_type, xml_dir)
+    if polymorphic:
+        # Polymorphic link vectors use int32 presence flags (validated on histfig entity_links).
+        present = [reader.read_int32() != 0 for _ in range(count)]
+    else:
+        present = [reader.read_bool() for _ in range(count)]
+        if count:
+            _align4(reader)
+    if polymorphic and count == 0:
+        tail = _save_empty_poly_tail(struct_name, field.name)
+        if tail:
+            reader.read_bytes(tail)
     for is_present in present:
         if is_present:
-            _skip_pointer_body(reader, field, xml_dir=xml_dir)
+            _skip_pointer_body(reader, field, xml_dir=xml_dir, struct_name=struct_name)
     return count
 
 
@@ -195,137 +255,95 @@ def _read_polymorphic(reader: BinaryReader, base_type: str, *, xml_dir: Path) ->
     """Read an int16 type tag, then the resolved subclass body."""
     registry = build_registry(base_type, xml_dir)
     tag = reader.read_int16()
+    fixed = SAVE_POLYMORPH_BODY_BYTES.get((base_type, tag))
+    if fixed is not None:
+        reader.read_bytes(fixed)
+        return base_type
     if registry is None:
         raise SkipError(f"no polymorph registry for {base_type!r}")
     subclass = registry.subclass_for(tag)
     if subclass is None:
-        raise SkipError(f"unknown {base_type} type tag {tag} at 0x{reader.tell() - 2:x}")
+        subclass = base_type
     skip_struct(reader, subclass, xml_dir=xml_dir)
     return subclass
 
 
-def skip_field(reader: BinaryReader, field: FieldDef, *, xml_dir: Path) -> None:
-    kind = field.kind
-    if kind in _SCALAR_WIDTH:
-        reader.read_bytes(_SCALAR_WIDTH[kind])
-        return
-    if kind in ("stl-string", "ptr-string"):
-        DfString.read(reader)
-        return
-    if kind == "static-string":
-        if field.array_count:
-            reader.read_bytes(field.array_count)
-        else:
-            DfString.read(reader)
-        return
-    if kind == "enum":
-        reader.read_bytes(_enum_width(field.base_type))
-        return
-    if kind == "bitfield":
-        reader.read_bytes(_enum_width(field.base_type) if field.base_type else 4)
-        return
-    if kind in ("df-flagarray", "df-static-flagarray"):
-        count = reader.read_int32()
-        if count < 0 or count > _MAX_VECTOR:
-            raise SkipError(f"implausible flagarray count {count} at 0x{reader.tell() - 4:x}")
-        if count:
-            reader.read_bytes(count * 4)
-        return
-    if kind == "padding":
-        if field.array_count:
-            reader.read_bytes(field.array_count)
-        return
-    if kind == "compound":
-        if field.type_name:
-            skip_struct(reader, field.type_name, xml_dir=xml_dir)
-        elif field.is_union:
-            # Read only the first member (DF unions are same-sized variants).
-            if field.children:
-                skip_field(reader, field.children[0], xml_dir=xml_dir)
-        else:
-            for sub in field.children:
-                skip_field(reader, sub, xml_dir=xml_dir)
-        return
-    if kind == "pointer":
-        present = reader.read_bool()
-        if not present:
-            return
-        _skip_pointer_body(reader, field, xml_dir=xml_dir)
-        return
-    if kind == "static-array":
-        count = field.array_count or 0
-        elem_type = field.type_name
-        for _ in range(count):
-            if elem_type and elem_type in _PRIMITIVE_TYPE_WIDTH:
-                reader.read_bytes(_PRIMITIVE_TYPE_WIDTH[elem_type])
-            elif elem_type:
-                skip_struct(reader, elem_type, xml_dir=xml_dir)
-            elif field.children:
-                for sub in field.children:
-                    skip_field(reader, sub, xml_dir=xml_dir)
-            else:
-                raise SkipError(f"static-array {field.name!r} has no element type")
-        return
-    if kind in ("stl-vector", "stl-deque", "stl-set"):
-        elem_type = _element_type(field)
-        if elem_type and elem_type in _PRIMITIVE_TYPE_WIDTH:
-            _skip_primitive_vector(reader, _PRIMITIVE_TYPE_WIDTH[elem_type])
-        elif field.pointer_type or (
-            len(field.children) == 1 and field.children[0].kind == "pointer"
-        ):
-            _skip_pointer_vector(reader, field, xml_dir=xml_dir)
-        elif elem_type:
-            # Vector of inline (non-pointer) structs: count + bodies.
-            count = reader.read_int32()
-            if count < 0 or count > _MAX_VECTOR:
-                raise SkipError(f"implausible vector count {count}")
-            for _ in range(count):
-                skip_struct(reader, elem_type, xml_dir=xml_dir)
-        else:
-            raise SkipError(f"unsupported stl-vector {field.name!r}")
-        return
-    if kind == "stl-bit-vector":
-        _skip_primitive_vector(reader, 1)
-        return
-    if kind == "df-array":
-        # pointer + count layout; treated as primitive-count vector best-effort.
-        _skip_primitive_vector(reader, _PRIMITIVE_TYPE_WIDTH.get(field.type_name or "", 1))
-        return
-    if kind == "df-linked-list":
-        skip_field(reader, FieldDef(name=field.name, kind="pointer", type_name=field.type_name), xml_dir=xml_dir)
-        return
-    raise SkipError(f"unsupported field kind {kind!r} ({field.name!r})")
+def skip_field(
+    reader: BinaryReader,
+    field: FieldDef,
+    *,
+    xml_dir: Path,
+    struct_name: str | None = None,
+    payload: bytes | None = None,
+) -> None:
+    """Skip one field by fully reading it (unified with :func:`read_field`)."""
+    from .record_reader import read_field
+
+    read_field(
+        reader,
+        field,
+        xml_dir=xml_dir,
+        struct_name=struct_name,
+        payload=payload,
+    )
 
 
 def _struct_def(type_name: str, xml_dir: Path) -> StructDef | None:
     return load_struct(type_name, xml_dir)
 
 
-def skip_struct(reader: BinaryReader, type_name: str, *, xml_dir: Path | None = None) -> int:
-    """Skip a struct by df-structures name. Returns bytes consumed."""
+def skip_struct(
+    reader: BinaryReader,
+    type_name: str,
+    *,
+    xml_dir: Path | None = None,
+    payload: bytes | None = None,
+) -> int:
+    """Skip a struct by fully reading it and discarding values. Returns bytes consumed."""
+    from .record_reader import read_struct as _read_struct_full
+
+    xml_dir = default_xml_dir() if xml_dir is None else Path(xml_dir)
+    _, consumed = _read_struct_full(reader, type_name, xml_dir=xml_dir, payload=payload)
+    return consumed
+
+
+_HISTFIG_TEMP_FIELDS = frozenset({
+    "temp_var",
+    "temp_flag",
+    "gen_material_skill_ip_sum",
+    "defensive_skill_ip_sum",
+})
+
+
+def _align_histfig_links_start(reader: BinaryReader, payload: bytes, *, max_pad: int = 3) -> None:
+    align_histfig_links_start(reader, payload, max_pad=max_pad)
+
+
+def skip_historical_figure_body(
+    reader: BinaryReader,
+    payload: bytes,
+    *,
+    xml_dir: Path | None = None,
+    next_anchor: int | None = None,
+    scan_stop: int | None = None,
+    scan_limit: int = 2_000_000,
+    expected_next_id: int | None = None,
+) -> tuple[int, int]:
+    """Skip one historical_figure by fully reading it (values discarded)."""
+    from .record_reader import read_historical_figure_record
+
     xml_dir = default_xml_dir() if xml_dir is None else Path(xml_dir)
     start = reader.tell()
-
-    if type_name == "language_name":
-        read_language_name(reader)
-        return reader.tell() - start
-    if type_name in _SPECIAL_SIZES:
-        reader.read_bytes(_SPECIAL_SIZES[type_name])
-        return reader.tell() - start
-    # Tolerate primitive / string type-names used as vector or array element types.
-    if type_name in _PRIMITIVE_TYPE_WIDTH:
-        reader.read_bytes(_PRIMITIVE_TYPE_WIDTH[type_name])
-        return reader.tell() - start
-    if type_name in ("stl-string", "ptr-string"):
-        DfString.read(reader)
-        return reader.tell() - start
-
-    struct = _struct_def(type_name, xml_dir)
-    if struct is None:
-        raise SkipError(f"unknown struct {type_name!r}")
-    for fd in resolve_fields(struct, xml_dir):
-        skip_field(reader, fd, xml_dir=xml_dir)
-    return reader.tell() - start
+    record, consumed = read_historical_figure_record(
+        reader,
+        payload,
+        xml_dir=xml_dir,
+        next_anchor=next_anchor,
+        scan_stop=scan_stop,
+        scan_limit=scan_limit,
+        expected_next_id=expected_next_id,
+    )
+    return consumed, int(record["id"])
 
 
 def read_struct(
@@ -333,33 +351,12 @@ def read_struct(
     type_name: str,
     *,
     xml_dir: Path | None = None,
-) -> tuple[dict[str, int | float | str], int]:
-    """Read a struct, capturing top-level scalar field values. Returns (values, bytes)."""
+) -> tuple[dict, int]:
+    """Read a complete struct (delegates to :mod:`record_reader`)."""
+    from .record_reader import read_struct as _read_struct_full
+
     xml_dir = default_xml_dir() if xml_dir is None else Path(xml_dir)
-    start = reader.tell()
-    values: dict[str, int | float | str] = {}
-
-    if type_name == "language_name":
-        name = read_language_name(reader)
-        values["__language_name__"] = name.display_hint
-        return values, reader.tell() - start
-
-    struct = _struct_def(type_name, xml_dir)
-    if struct is None:
-        raise SkipError(f"unknown struct {type_name!r}")
-
-    for fd in resolve_fields(struct, xml_dir):
-        if fd.kind in _SCALAR_WIDTH and fd.kind not in ("flag-bit",):
-            values[fd.name] = _read_scalar_value(reader, fd.kind)
-        elif fd.kind == "enum":
-            width = _enum_width(fd.base_type)
-            raw = reader.read_bytes(width)
-            values[fd.name] = int.from_bytes(raw, "little", signed=width <= 2)
-        elif fd.kind in ("stl-string", "ptr-string"):
-            values[fd.name] = DfString.read(reader).value
-        else:
-            skip_field(reader, fd, xml_dir=xml_dir)
-    return values, reader.tell() - start
+    return _read_struct_full(reader, type_name, xml_dir=xml_dir, payload=None)
 
 
 def skip_struct_bytes(
@@ -371,4 +368,4 @@ def skip_struct_bytes(
 ) -> int:
     reader = BinaryReader(BytesIO(payload))
     reader.seek(offset)
-    return skip_struct(reader, type_name, xml_dir=xml_dir)
+    return skip_struct(reader, type_name, xml_dir=xml_dir, payload=payload)

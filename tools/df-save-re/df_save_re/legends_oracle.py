@@ -22,21 +22,22 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Record kind -> (container tag, element tag) in exportlegends XML.
-_RECORD_KINDS: dict[str, tuple[str, str]] = {
-    "sites": ("sites", "site"),
-    "figures": ("historical_figures", "historical_figure"),
-    "events": ("historical_events", "historical_event"),
-    "entities": ("entities", "entity"),
-    "artifacts": ("artifacts", "artifact"),
-    "written_contents": ("written_contents", "written_content"),
+# Record kind -> (container tag, element tag, id required on element)
+_RECORD_KINDS: dict[str, tuple[str, str, bool]] = {
+    "sites": ("sites", "site", True),
+    "figures": ("historical_figures", "historical_figure", True),
+    "events": ("historical_events", "historical_event", True),
+    "entities": ("entities", "entity", True),
+    "artifacts": ("artifacts", "artifact", True),
+    "written_contents": ("written_contents", "written_content", True),
     "event_collections": (
         "historical_event_collections",
         "historical_event_collection",
+        True,
     ),
-    "eras": ("historical_eras", "historical_era"),
-    "regions": ("regions", "region"),
-    "underground_regions": ("underground_regions", "underground_region"),
+    "eras": ("historical_eras", "historical_era", False),
+    "regions": ("regions", "region", True),
+    "underground_regions": ("underground_regions", "underground_region", True),
 }
 
 
@@ -81,12 +82,14 @@ class LegendsOracle:
     def kind(self, name: str) -> OracleRecords | None:
         return self.records.get(name)
 
+    def counts_summary(self) -> dict[str, int]:
+        return {kind: self.count(kind) for kind in _RECORD_KINDS}
+
 
 def _scalar_fields(elem: ET.Element) -> dict[str, str]:
     """Collect direct scalar child fields (text-only leaves) into a dict."""
     out: dict[str, str] = {}
     for child in elem:
-        # Only capture leaf scalars; nested record lists are handled separately.
         if len(child) == 0 and child.text is not None:
             text = child.text.strip()
             if text:
@@ -104,6 +107,31 @@ def _record_id(fields: dict[str, str]) -> int | None:
         return None
 
 
+def _parse_container_records(
+    root: ET.Element,
+    *,
+    kind: str,
+    container_tag: str,
+    elem_tag: str,
+    id_required: bool,
+) -> OracleRecords:
+    """Parse top-level records from one exportlegends container section."""
+    records = OracleRecords(kind=kind)
+    container = root.find(container_tag)
+    if container is None:
+        return records
+
+    for index, record in enumerate(container.findall(elem_tag)):
+        fields = _scalar_fields(record)
+        rid = _record_id(fields)
+        if rid is None:
+            if id_required:
+                continue
+            rid = index
+        records.by_id[rid] = fields
+    return records
+
+
 def parse_legends_oracle(path: Path | str) -> LegendsOracle:
     """Parse a DFHack exportlegends XML into per-id field maps."""
     path = Path(path)
@@ -117,42 +145,37 @@ def parse_legends_oracle(path: Path | str) -> LegendsOracle:
     if alt is not None and alt.text:
         oracle.alt_name = alt.text.strip()
 
-    for kind, (container_tag, elem_tag) in _RECORD_KINDS.items():
-        records = OracleRecords(kind=kind)
-        # Records may be nested in a container or appear directly under root.
-        for record in root.iter(elem_tag):
-            fields = _scalar_fields(record)
-            rid = _record_id(fields)
-            if rid is None:
-                continue
-            records.by_id[rid] = fields
-        if records.by_id:
-            oracle.records[kind] = records
+    for kind, (container_tag, elem_tag, id_required) in _RECORD_KINDS.items():
+        parsed = _parse_container_records(
+            root,
+            kind=kind,
+            container_tag=container_tag,
+            elem_tag=elem_tag,
+            id_required=id_required,
+        )
+        if parsed.by_id:
+            oracle.records[kind] = parsed
 
     if not oracle.records:
         oracle.notes.append(
             f"no recognized legends records in {path.name}; "
             "file may be partial or not an exportlegends XML"
         )
+    elif oracle.count("eras") and oracle.max_id("eras") == 0:
+        oracle.notes.append(
+            "historical_eras have no <id> in exportlegends; stored by section index"
+        )
     return oracle
 
 
 def find_legends_xml(*, save_path: Path | str | None = None) -> Path | None:
-    """Locate a ``*-legends.xml`` near the save or in the uploads dir."""
-    candidates: list[Path] = []
-    if save_path is not None:
-        save_path = Path(save_path)
-        folder = save_path.parent
-        candidates.extend(sorted(folder.glob("*-legends.xml")))
-        candidates.extend(sorted(folder.glob("*legends.xml")))
-    uploads = Path("/home/ubuntu/.cursor/projects/workspace/uploads")
-    if uploads.is_dir():
-        candidates.extend(sorted(uploads.glob("*-legends.xml")))
-        candidates.extend(sorted(uploads.glob("*legends.xml")))
-    for cand in candidates:
-        if cand.is_file():
-            return cand
-    return None
+    """Locate a ``*-legends.xml`` beside the save (and nearby export dirs)."""
+    if save_path is None:
+        return None
+    from .legends_exports import discover_legends_exports
+
+    bundle = discover_legends_exports(save_path)
+    return bundle.legends_xml
 
 
 def resolve_oracle(*, save_path: Path | str | None = None) -> LegendsOracle | None:

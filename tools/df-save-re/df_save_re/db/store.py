@@ -7,36 +7,45 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..deserializers.entity_names import resolve_language_name_display
 from ..deserializers.vector_anchor import VectorAnchor as ParsedVectorAnchor
 from ..deserializers.vector_anchor import anchor_history_vectors
+from ..deserializers.engine_walk import walk_pointer_vector
 from ..legends_extract import LegendsSnapshot, extract_legends_snapshot
 from ..save_preamble import resolve_save_payload
 from ..save_validate import fingerprint_path
 from ..target import TARGET_DF_VERSION
 from .migrate import create_legends_database
 from .models import (
+    Artifact,
+    EventCollection,
     ExtractionNote,
     ExtractionRun,
     HistoricalEntity,
     HistoricalFigure,
     HistoricalFigureCatalogMeta,
+    HistoryEra,
+    HistoryEvent,
     HistoryEventsMeta,
     HistoryStatsBlock,
     LayerStatus,
     LayoutLandmark,
     LayoutRegion,
+    RawRecord,
     SiteCatalogMeta,
     StringTableSection,
     VectorAnchor,
     World,
     WorldHeaderCounter,
     WorldSite,
+    WrittenContent,
 )
 from .paths import DEFAULT_DATA_DIR, fortress_slug, legends_db_path
 from .registry import LegendsRegistryEntry, register_legends
+from .stream_writer import StreamWriter
 
 PARSER_VERSION = "0.1.0"
 
@@ -55,6 +64,38 @@ class ImportResult:
 
 def _json_int_list(values: tuple[int, ...] | list[int]) -> str:
     return json.dumps(list(values))
+
+
+def stream_snapshot_records(
+    session: Session,
+    snapshot: LegendsSnapshot,
+    payload: bytes,
+) -> int:
+    """Stream full-fidelity records from binary walks into SQLite."""
+    writer = StreamWriter(session)
+
+    if snapshot.historical_figure_catalog is not None:
+        anchor = snapshot.historical_figure_catalog.anchor
+        walk_pointer_vector(
+            payload,
+            vector_offset=anchor.vector_offset,
+            element_type="historical_figure",
+            next_anchor=anchor.death_events_offset,
+            bodies_start=anchor.bodies_start,
+            on_record=writer.on_record,
+            layer="figures",
+        )
+        if anchor.death_events_offset is not None:
+            walk_pointer_vector(
+                payload,
+                vector_offset=anchor.death_events_offset,
+                element_type="history_event",
+                on_record=writer.on_record,
+                layer="events_death",
+            )
+
+    writer.flush()
+    return writer.records_written
 
 
 def _histfig_name_display(snapshot: LegendsSnapshot, header) -> str:
@@ -92,6 +133,12 @@ def persist_snapshot(
     session.query(HistoricalFigureCatalogMeta).delete()
     session.query(HistoryEventsMeta).delete()
     session.query(HistoryStatsBlock).delete()
+    session.query(HistoryEvent).delete()
+    session.query(Artifact).delete()
+    session.query(WrittenContent).delete()
+    session.query(HistoryEra).delete()
+    session.query(EventCollection).delete()
+    session.query(RawRecord).delete()
     session.query(LayoutLandmark).delete()
     session.query(LayoutRegion).delete()
     session.query(VectorAnchor).delete()
@@ -185,33 +232,37 @@ def persist_snapshot(
                 max_id_seen=snapshot.historical_figure_catalog.max_id_seen,
             )
         )
-        for header in snapshot.historical_figure_catalog.headers:
-            session.add(
-                HistoricalFigure(
-                    figure_id=header.figure_id,
-                    profession=header.profession,
-                    race=header.race,
-                    caste=header.caste,
-                    sex=header.sex,
-                    civ_id=header.civ_id,
-                    population_id=header.population_id,
-                    breed_id=header.breed_id,
-                    cultural_identity=header.cultural_identity,
-                    family_head_id=header.family_head_id,
-                    unit_id=header.unit_id,
-                    nemesis_id=header.nemesis_id,
-                    appeared_year=header.appeared_year,
-                    born_year=header.born_year,
-                    born_seconds=header.born_seconds,
-                    died_year=header.died_year,
-                    died_seconds=header.died_seconds,
-                    curse_year=header.curse_year,
-                    curse_seconds=header.curse_seconds,
-                    name_display=_histfig_name_display(snapshot, header),
-                    name_words_json=_json_int_list(header.name.words),
-                    payload_offset=header.payload_offset,
+        # Full records are streamed via walk_pointer_vector (record_json); header chain
+        # is metadata-only fallback when the body walk yields nothing.
+        streamed_count = stream_snapshot_records(session, snapshot, payload)
+        if streamed_count == 0:
+            for header in snapshot.historical_figure_catalog.headers:
+                session.add(
+                    HistoricalFigure(
+                        figure_id=header.figure_id,
+                        profession=header.profession,
+                        race=header.race,
+                        caste=header.caste,
+                        sex=header.sex,
+                        civ_id=header.civ_id,
+                        population_id=header.population_id,
+                        breed_id=header.breed_id,
+                        cultural_identity=header.cultural_identity,
+                        family_head_id=header.family_head_id,
+                        unit_id=header.unit_id,
+                        nemesis_id=header.nemesis_id,
+                        appeared_year=header.appeared_year,
+                        born_year=header.born_year,
+                        born_seconds=header.born_seconds,
+                        died_year=header.died_year,
+                        died_seconds=header.died_seconds,
+                        curse_year=header.curse_year,
+                        curse_seconds=header.curse_seconds,
+                        name_display=_histfig_name_display(snapshot, header),
+                        name_words_json=_json_int_list(header.name.words),
+                        payload_offset=header.payload_offset,
+                    )
                 )
-            )
 
     if snapshot.history_events_catalog:
         death = snapshot.history_events_catalog.death_events
@@ -312,7 +363,18 @@ def persist_snapshot(
     )
     session.add(run)
     session.flush()
-    for line_no, note in enumerate(snapshot.notes, start=1):
+
+    note_lines = list(snapshot.notes)
+    if snapshot.historical_figure_catalog:
+        streamed = session.scalar(
+            select(func.count()).select_from(HistoricalFigure).where(
+                HistoricalFigure.record_json.is_not(None)
+            )
+        )
+        if streamed:
+            note_lines.append(f"streamed {streamed:,} historical_figure records with record_json")
+    run.note_count = len(note_lines)
+    for line_no, note in enumerate(note_lines, start=1):
         session.add(ExtractionNote(run_id=run.id, line_number=line_no, text=note))
 
     return run.id

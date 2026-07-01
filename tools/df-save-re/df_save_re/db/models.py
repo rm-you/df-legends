@@ -122,6 +122,7 @@ class HistoricalEntity(Base):
     resolved_name: Mapped[str | None] = mapped_column(Text)
     name_source: Mapped[str | None] = mapped_column(String(16))
     payload_offset: Mapped[int | None] = mapped_column(Integer)
+    record_json: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (Index("ix_historical_entity_class", "entity_class"),)
 
@@ -142,6 +143,7 @@ class WorldSite(Base):
     word_indices_json: Mapped[str | None] = mapped_column(Text)
     name_marker_offset: Mapped[int | None] = mapped_column(Integer)
     header_offset: Mapped[int | None] = mapped_column(Integer)
+    record_json: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
         Index("ix_world_site_civ_id", "civ_id"),
@@ -206,6 +208,7 @@ class HistoricalFigure(Base):
     name_display: Mapped[str | None] = mapped_column(Text)
     name_words_json: Mapped[str | None] = mapped_column(Text)
     payload_offset: Mapped[int | None] = mapped_column(Integer)
+    record_json: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
         Index("ix_historical_figure_civ_id", "civ_id"),
@@ -305,6 +308,7 @@ class HistoryEvent(Base):
     site_id: Mapped[int | None] = mapped_column(Integer)
     hfid: Mapped[int | None] = mapped_column(Integer)
     fields_json: Mapped[str | None] = mapped_column(Text)
+    record_json: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
         Index("ix_history_event_year", "year"),
@@ -338,6 +342,7 @@ class Artifact(Base):
     item_type: Mapped[int | None] = mapped_column(Integer)
     holder_hfid: Mapped[int | None] = mapped_column(Integer)
     site_id: Mapped[int | None] = mapped_column(Integer)
+    record_json: Mapped[str | None] = mapped_column(Text)
 
 
 class WrittenContent(Base):
@@ -349,6 +354,7 @@ class WrittenContent(Base):
     title: Mapped[str | None] = mapped_column(Text)
     content_type: Mapped[int | None] = mapped_column(Integer)
     author_hfid: Mapped[int | None] = mapped_column(Integer)
+    record_json: Mapped[str | None] = mapped_column(Text)
 
 
 class HistoryEra(Base):
@@ -359,6 +365,7 @@ class HistoryEra(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str | None] = mapped_column(Text)
     start_year: Mapped[int | None] = mapped_column(Integer)
+    record_json: Mapped[str | None] = mapped_column(Text)
 
 
 class EventCollection(Base):
@@ -371,3 +378,21 @@ class EventCollection(Base):
     start_year: Mapped[int | None] = mapped_column(Integer)
     end_year: Mapped[int | None] = mapped_column(Integer)
     name_display: Mapped[str | None] = mapped_column(Text)
+    record_json: Mapped[str | None] = mapped_column(Text)
+
+
+class RawRecord(Base):
+    """Generic landing table for any streamed layer record."""
+
+    __tablename__ = "raw_record"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    layer: Mapped[str] = mapped_column(String(32), nullable=False)
+    record_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    payload_offset: Mapped[int] = mapped_column(Integer, nullable=False)
+    record_json: Mapped[str] = mapped_column(Text, nullable=False)
+
+    __table_args__ = (
+        Index("ix_raw_record_layer", "layer"),
+        UniqueConstraint("layer", "record_id", "payload_offset", name="uq_raw_record_layer_id_offset"),
+    )

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import struct
 from dataclasses import dataclass, field
 from io import BytesIO
+from pathlib import Path
+import struct
 
 from ..binary_reader import BinaryReader
 from .language_name import LanguageName, read_language_name
@@ -74,7 +77,9 @@ def _read_flagarray(reader: BinaryReader) -> list[int]:
     count = reader.read_int32()
     if count < 0 or count > 64:
         raise ValueError(f"implausible histfig flagarray count {count} at 0x{reader.tell() - 4:x}")
-    return [reader.read_int32() for _ in range(count)]
+    # Save writer FUN_14070a090 uses a byte-vector helper for histfig flags,
+    # not the in-memory df-flagarray int32 element layout.
+    return [reader.read_uint8() for _ in range(count)]
 
 
 def read_historical_figure_header(reader: BinaryReader) -> HistoricalFigureHeader:
@@ -83,7 +88,9 @@ def read_historical_figure_header(reader: BinaryReader) -> HistoricalFigureHeade
     profession = reader.read_int16()
     race = reader.read_int16()
     caste = reader.read_int16()
-    sex = reader.read_int16()
+    # Save writer FUN_14070a090 writes pronoun_type as one byte.
+    sex = reader.read_uint8()
+    reader.read_uint8()  # one-byte struct pad before the first int32 field
     orientation_flags = reader.read_int32()
     appeared_year = reader.read_int32()
     born_year = reader.read_int32()
@@ -102,11 +109,13 @@ def read_historical_figure_header(reader: BinaryReader) -> HistoricalFigureHeade
     breed_id = reader.read_int32()
     cultural_identity = reader.read_int32()
     family_head_id = reader.read_int32()
-    flag_indices = _read_flagarray(reader)
+    # Save order after family_head_id is not the same as df-structures'
+    # in-memory declaration order.
+    art_count = reader.read_int32()
     unit_id = reader.read_int32()
     nemesis_id = reader.read_int32()
+    flag_indices = _read_flagarray(reader)
     figure_id = reader.read_int32()
-    art_count = reader.read_int32()
     end = reader.tell()
     return HistoricalFigureHeader(
         profession=profession,
@@ -141,18 +150,26 @@ def read_historical_figure_header(reader: BinaryReader) -> HistoricalFigureHeade
     )
 
 
+# Empirical max on Namushul; values like 1703 appear inside opaque blobs, not real headers.
+MAX_HISTFIG_ART_COUNT = 20
+
+
 def header_looks_valid(header: HistoricalFigureHeader, *, expect_id: int | None = None) -> bool:
     if expect_id is not None and header.figure_id != expect_id:
         return False
-    if not (0 <= header.figure_id <= 200_000):
+    if not (0 <= header.figure_id <= 20_000):
+        return False
+    if header.art_count < 0 or header.art_count > MAX_HISTFIG_ART_COUNT:
         return False
     if not (0 <= header.race <= 500 and 0 <= header.caste <= 50 and -1 <= header.sex <= 2):
         return False
-    if header.profession < -1 or header.profession > 500:
+    if header.profession < -1 or header.profession > 200:
         return False
     if not (0 <= header.civ_id <= 500):
         return False
     if header.name.language not in (-1, 0, 1):
+        return False
+    if len(header.name.first_name) > 64 or len(header.name.nickname) > 64:
         return False
     if any(word > 500_000 or word < -2 for word in header.name.words):
         return False
@@ -184,17 +201,15 @@ def _count_present_flags(payload: bytes, vector_offset: int, count: int) -> tupl
 
 
 def _find_death_events_vector(payload: bytes, *, search_start: int, search_end: int) -> int | None:
-    """Locate ``events_death`` posnull vector (count=151 on Namushul)."""
-    for offset in range(search_start, search_end - 4, 4):
-        if int.from_bytes(payload[offset : offset + 4], "little", signed=True) != 151:
-            continue
-        sample = payload[offset + 4 : offset + 4 + 151]
-        if len(sample) < 151:
-            continue
-        quality = sum(1 for byte in sample if byte in (0, 1)) / 151
-        if quality >= 0.95:
-            return offset
-    return None
+    """Locate ``events_death`` posnull vector after the figures body region."""
+    from .history_events import locate_death_events_vector
+
+    death = locate_death_events_vector(
+        payload,
+        search_start=search_start,
+        search_end=search_end,
+    )
+    return death.vector_offset if death else None
 
 
 def _find_first_body_offset(
@@ -204,7 +219,8 @@ def _find_first_body_offset(
     search_limit: int = 512,
 ) -> int | None:
     """Scan the post-vector prefix for the first plausible ``id=0`` header."""
-    for delta in range(0, search_limit, 2):
+    best: tuple[int, int] | None = None  # -prefix distance, offset
+    for delta in range(search_limit):
         offset = flags_end + delta
         if offset + 200 > len(payload):
             break
@@ -212,8 +228,10 @@ def _find_first_body_offset(
         reader.seek(offset)
         header = try_read_historical_figure_header(reader, expect_id=0)
         if header is not None:
-            return offset
-    return None
+            score = (-abs(delta - 80), offset)
+            if best is None or score > best:
+                best = score
+    return best[1] if best is not None else None
 
 
 def locate_figures_vector(
@@ -257,11 +275,20 @@ def locate_figures_vector(
     if bodies_start is None:
         return None
 
-    death_offset = _find_death_events_vector(
-        payload,
-        search_start=bodies_start,
-        search_end=min(len(payload), bodies_start + 20_000_000),
-    )
+    death_offset = None
+    tail_bytes = len(payload) - bodies_start
+    if tail_bytes > 0:
+        if len(payload) < 80_000_000:
+            d_start = bodies_start + 1_150_000
+            d_end = min(len(payload), bodies_start + 1_280_000)
+        else:
+            d_start = bodies_start + max(90_000_000, tail_bytes // 2)
+            d_end = min(len(payload), bodies_start + tail_bytes)
+        death_offset = _find_death_events_vector(
+            payload,
+            search_start=d_start,
+            search_end=d_end,
+        )
 
     notes = [
         f"vector count={figure_count:,} posnull_score={score:,}",
@@ -284,11 +311,125 @@ def locate_figures_vector(
     )
 
 
+def _quick_histfig_header_check(payload: bytes, offset: int) -> bool:
+    """Reject scan candidates before expensive ``language_name`` parsing.
+
+    Header byte layout (confirmed by save writer ``FUN_14070a090`` and the
+    ``language_name`` writer ``FUN_1403159b0``):
+      ``+0`` int16 profession, ``+2`` int16 race, ``+4`` int16 caste,
+      ``+6`` uint8 sex, ``+7`` pad, ``+8..+55`` ten int32 year/time fields,
+      ``+56`` uint8 has_name. When ``has_name == 0`` the name section is one
+      byte; when ``has_name == 1`` it is first-string, nickname, then the
+      word/parts_of_speech/language/name_type block.
+    """
+    if offset + 57 > len(payload):
+        return False
+    prof, race, caste = struct.unpack_from("<hhh", payload, offset)
+    sex = payload[offset + 6]
+    if not (-1 <= prof <= 200 and 0 <= race <= 500 and 0 <= caste <= 50 and -1 <= sex <= 2):
+        return False
+    has_name = payload[offset + 56]
+    if has_name not in (0, 1):
+        return False
+    if has_name == 0:
+        return True
+    pos = offset + 57
+    if pos + 2 > len(payload):
+        return False
+    first_len = struct.unpack_from("<h", payload, pos)[0]
+    if first_len < 0 or first_len > 64:
+        return False
+    pos += 2 + first_len
+    if pos + 2 > len(payload):
+        return False
+    nick_len = struct.unpack_from("<h", payload, pos)[0]
+    if nick_len < 0 or nick_len > 64:
+        return False
+    return True
+
+
+
+def _find_next_figure_start(
+    payload: bytes,
+    *,
+    scan_start: int,
+    previous_id: int,
+    stop_before: int,
+    max_scan: int = 2_000_000,
+    art_count: int = 0,
+    xml_dir: Path | None = None,
+    expected_id: int | None = None,
+) -> int | None:
+    """Scan forward for the next figure header (minimum ``figure_id`` > ``previous_id``)."""
+    del art_count, xml_dir
+    scan_end = min(scan_start + max_scan, stop_before)
+    best_off: int | None = None
+    best_id = 2_000_000
+    for candidate in range(scan_start, scan_end):
+        if not _quick_histfig_header_check(payload, candidate):
+            continue
+        reader = BinaryReader(BytesIO(payload))
+        reader.seek(candidate)
+        header = try_read_historical_figure_header(reader)
+        if header is None or header.figure_id <= previous_id:
+            continue
+        if expected_id is not None and header.figure_id != expected_id:
+            continue
+        if header.figure_id < best_id:
+            best_id = header.figure_id
+            best_off = candidate
+    return best_off
+
+
+def build_figure_body_starts(
+    payload: bytes,
+    *,
+    bodies_start: int,
+    stop_before: int,
+    max_bodies: int,
+    scan_limit: int = 2_000_000,
+    min_body_gap: int = 600,
+    xml_dir: Path | None = None,
+) -> list[int]:
+    """Locate present figure body starts using tail skip + min-id header scan."""
+    from .body_skipper import SkipError, default_xml_dir as _default_xml, skip_historical_figure_body
+
+    xml_dir = _default_xml() if xml_dir is None else Path(xml_dir)
+    starts: list[int] = []
+    offset = bodies_start
+    while len(starts) < max_bodies and offset < stop_before:
+        reader = BinaryReader(BytesIO(payload))
+        reader.seek(offset)
+        header = try_read_historical_figure_header(reader)
+        if header is None:
+            break
+        starts.append(offset)
+        if len(starts) >= max_bodies:
+            break
+        reader.seek(offset)
+        try:
+            skip_historical_figure_body(
+                reader,
+                payload,
+                xml_dir=xml_dir,
+                next_anchor=stop_before if len(starts) >= max_bodies - 1 else None,
+                scan_stop=stop_before,
+                scan_limit=scan_limit,
+            )
+        except SkipError:
+            break
+        nxt = reader.tell()
+        if nxt <= offset or nxt > stop_before:
+            break
+        offset = nxt
+    return starts
+
+
 def walk_figure_id_chain(
     payload: bytes,
     *,
     start_offset: int,
-    max_scan_per_body: int = 500_000,
+    max_scan_per_body: int = 2_000_000,
     max_figures: int = 12747,
     stop_before: int | None = None,
 ) -> tuple[list[HistoricalFigureHeader], int]:
@@ -314,18 +455,25 @@ def walk_figure_id_chain(
     while expected_id < max_figures and len(headers) < max_figures:
         scan_end = min(body_end + max_scan_per_body, stop_before)
         found: HistoricalFigureHeader | None = None
-        for candidate in range(body_end, scan_end, 2):
+        best_off: int | None = None
+        best_id = 2_000_000
+        for candidate in range(body_end, scan_end):
+            if not _quick_histfig_header_check(payload, candidate):
+                continue
             reader = BinaryReader(BytesIO(payload))
             reader.seek(candidate)
-            header = try_read_historical_figure_header(reader, expect_id=expected_id)
-            if header is not None:
+            header = try_read_historical_figure_header(reader, expect_id=None)
+            if header is None or header.figure_id <= headers[-1].figure_id:
+                continue
+            if header.figure_id < best_id:
+                best_id = header.figure_id
+                best_off = candidate
                 found = header
-                break
-        if found is None:
+        if found is None or best_off is None:
             break
         headers.append(found)
-        body_end = found.payload_offset + found.header_bytes
-        expected_id += 1
+        body_end = best_off + found.header_bytes
+        expected_id = found.figure_id + 1
 
     last_id = headers[-1].figure_id if headers else -1
     return headers, last_id

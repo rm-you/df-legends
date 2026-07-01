@@ -38,9 +38,12 @@ def test_engine_walks_present(namushul_snapshot) -> None:
 def test_figures_authoritative_count(namushul_snapshot) -> None:
     walk = _walk(namushul_snapshot, "figures")
     assert walk is not None
-    assert walk.authoritative_count == namushul_snapshot.header.max_ids[8]
-    # Body landing is RE-blocked; the harness must report honestly, not fake it.
     assert walk.result is not None
+    # Authoritative figure count = vector present flags, not header max_ids[8] (declared slots).
+    assert walk.authoritative_count == walk.result.present_count
+    assert walk.authoritative_count == namushul_snapshot.historical_figure_catalog.anchor.present_count
+    assert namushul_snapshot.header.max_ids[8] == walk.result.declared_count
+    # Body landing is RE-blocked; the harness must report honestly, not fake it.
     if not walk.deterministic:
         assert walk.result.error is not None
         assert walk.result.error_offset is not None
@@ -49,7 +52,10 @@ def test_figures_authoritative_count(namushul_snapshot) -> None:
 def test_events_authoritative_count(namushul_snapshot) -> None:
     walk = _walk(namushul_snapshot, "events_death")
     assert walk is not None
-    assert walk.authoritative_count == namushul_snapshot.header.max_ids[9]
+    assert walk.result is not None
+    # events_death covers only the death-event sub-vector, not all max_ids[9] events.
+    assert walk.authoritative_count == walk.result.present_count
+    assert walk.authoritative_count < namushul_snapshot.header.max_ids[9]
 
 
 def test_sites_authoritative_count(namushul_snapshot) -> None:

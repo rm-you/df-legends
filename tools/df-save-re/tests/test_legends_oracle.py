@@ -27,6 +27,10 @@ _SAMPLE_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <historical_event><id>1</id><year>2</year><type>change hf state</type></historical_event>
 <historical_event><id>2</id><year>3</year><type>hf died</type></historical_event>
 </historical_events>
+<historical_eras>
+<historical_era><name>Age of Myth</name><start_year>-1</start_year></historical_era>
+<historical_era><name>Age of Legends</name><start_year>100</start_year></historical_era>
+</historical_eras>
 <entities>
 <entity><id>0</id><name>the realm</name></entity>
 </entities>
@@ -48,8 +52,31 @@ def test_parse_legends_oracle_counts(tmp_path: Path) -> None:
     assert oracle.count("figures") == 2
     assert oracle.count("events") == 3
     assert oracle.count("entities") == 1
+    assert oracle.count("eras") == 2
     assert oracle.max_id("figures") == 5
     assert oracle.max_id("events") == 2
+
+
+def test_oracle_ignores_nested_tags_outside_container(tmp_path: Path) -> None:
+    xml_path = tmp_path / "nested-legends.xml"
+    xml_path.write_text(
+        """<?xml version="1.0"?>
+<df_world>
+<artifacts>
+  <artifact><id>0</id><name>real</name></artifact>
+</artifacts>
+<historical_figures>
+  <historical_figure><id>1</id><name>hero</name>
+    <artifact><id>999</id><name>nested-not-counted</name></artifact>
+  </historical_figure>
+</historical_figures>
+</df_world>
+""",
+        encoding="utf-8",
+    )
+    oracle = parse_legends_oracle(xml_path)
+    assert oracle.count("artifacts") == 1
+    assert oracle.count("figures") == 1
 
 
 def test_oracle_field_lookup(tmp_path: Path) -> None:

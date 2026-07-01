@@ -9,6 +9,47 @@ cd tools/df-save-re
 pip install -e .
 ```
 
+Optional extras:
+
+```bash
+pip install -e ".[test]"   # pytest + httpx
+pip install -e ".[re]"     # pyghidra — Ghidra API from Python
+```
+
+## PyGhidra (binary RE)
+
+Use this when you want the Ghidra API inside Python (decompiler, symbols, xrefs) instead of only the GUI or `analyzeHeadless`.
+
+**Prerequisites:** Java 17+ and a local Ghidra install (e.g. Ghidra 12.1.2).
+
+```powershell
+# Windows
+pip install -e ".[re]"
+$env:GHIDRA_INSTALL_DIR = "C:\Users\rm_yo\Downloads\ghidra_12.1.2_PUBLIC"
+
+pyghidra                                    # REPL
+pyghidra path\to\Dwarf_Fortress.exe         # load binary, then REPL
+pyghidra path\to\binary.exe script.py       # headless script (.py)
+```
+
+```bash
+# Linux / macOS
+export GHIDRA_INSTALL_DIR=/path/to/ghidra_12.1.2_PUBLIC
+pyghidra
+```
+
+Or pass `--install-dir` instead of setting `GHIDRA_INSTALL_DIR`.
+
+From Python:
+
+```python
+import pyghidra
+pyghidra.start()
+# ... use ghidra.* APIs via JPype
+```
+
+Headless Ghidra project import (no PyGhidra) is documented in `ghidra_scripts/README.md`.
+
 ## Quick start
 
 ```bash

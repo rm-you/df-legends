@@ -34,10 +34,15 @@ from .deserializers.history_rulers import RulerCatalog
 from .deserializers.engine_layers import (
     LayerWalk,
     summarize_layer_walks,
+    walk_artifacts_layer,
     walk_entities_layer,
+    walk_eras_layer,
+    walk_event_collections_layer,
     walk_events_death_layer,
+    walk_events_layer,
     walk_figures_layer,
     walk_sites_layer,
+    walk_written_content_layer,
 )
 from .deserializers.world_header_ids import resolve_site_ceiling
 from .deserializers.world_layout import WorldLayoutLandmarks, discover_layout_landmarks, resolve_history_search_start
@@ -391,6 +396,21 @@ def extract_legends_snapshot(
                 entities.first_entity_offset,
             )
         )
+        fig_anchor = (
+            historical_figure_catalog.anchor if historical_figure_catalog else None
+        )
+        engine_walks.append(
+            walk_events_layer(
+                payload,
+                preamble.header,
+                layout,
+                figures_anchor=fig_anchor,
+            )
+        )
+        engine_walks.append(walk_artifacts_layer(payload, preamble.header, layout))
+        engine_walks.append(walk_written_content_layer(payload, preamble.header, layout))
+        engine_walks.append(walk_event_collections_layer(payload, preamble.header, layout))
+        engine_walks.append(walk_eras_layer(payload, preamble.header, layout))
 
     for line in summarize_layer_walks(engine_walks):
         notes.append(line)

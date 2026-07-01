@@ -9,6 +9,7 @@ from pathlib import Path
 from .compression import decompress_file, describe_save_version, is_target_save_version, read_header
 from .save_preamble import parse_save_preamble, preamble_kind_for_path
 from .save_bundle import SaveKind, index_save_folder, legends_parse_target
+from .legends_exports import LegendsExportBundle, discover_legends_exports
 from .target import TARGET_DF_VERSION, TARGET_SAVE_VERSION
 
 # SHA-256 of Namushul small-retired world.dat (matches tests/fixture_paths.py).
@@ -48,6 +49,7 @@ class SaveFingerprint:
     is_active: bool | None = None
     is_retired: bool | None = None
     legends_target: Path | None = None
+    exports: LegendsExportBundle | None = None
     warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
@@ -119,6 +121,7 @@ def fingerprint_path(path: Path) -> SaveFingerprint:
         fp.is_retired = index.is_retired
         fp.legends_target = target.path
         fp.kind = target.kind.value
+        fp.exports = discover_legends_exports(index.folder)
         sidecars = [e for e in index.entries if e.kind not in (SaveKind.WORLD_DAT, SaveKind.WORLD_SAV)]
         fp.notes.append(f"save folder: {len(index.entries)} files ({len(sidecars)} sidecars)")
         if index.is_active:
@@ -129,39 +132,54 @@ def fingerprint_path(path: Path) -> SaveFingerprint:
 
     if not path.is_file():
         raise FileNotFoundError(path)
-    return fingerprint_world_blob(path)
+    fp = fingerprint_world_blob(path)
+    fp.exports = discover_legends_exports(path)
+    return fp
 
 
 LEGENDS_EXPORT_STEPS = """
-Legends text export for validation (DF 0.47.05)
-===============================================
+Legends exports for validation (DF 0.47.05)
+============================================
 
-Press [p] in Legends mode (Export Map/Gen information). DF writes to the game
-root directory (not the save folder):
+Vanilla Legends mode ([p] key) writes text files to the game root directory:
 
   • regionNN-world_gen_param.txt
-  • regionNN-YYYY-MM-DD-world_history.txt      ← required for name cross-check
+  • regionNN-YYYY-MM-DD-world_history.txt
   • regionNN-YYYY-MM-DD-world_sites_and_pops.txt
   • regionNN-YYYY-MM-DD-world_map.bmp
 
-Workflow:
-  1. Main menu → Legends → select the same world as your world.dat.
-  2. Press [p] once and wait for files in your DF install directory.
-  3. Validate (pass the history file or a folder containing the exports):
+DFHack ``exportlegends all`` writes a much richer verify-only oracle:
 
-       df-save-re validate <world.dat> --legends-text path/to/world_history.txt
-       df-save-re validate <world.dat> --legends-text path/to/df-root/
+  • regionNN-YYYY-MM-DD-legends.xml
+
+Recommended layout for this project:
+
+  data/saves/regionNN/world.dat
+  data/saves/regionNN/regionNN-*-legends.xml     ← copy/symlink oracle here
+  data/saves/regionNN-*-world_history.txt        ← parent dir also searched
+
+Workflow:
+  1. Main menu → Legends → select the same world as your save.
+  2. Press [p] for text exports; run ``exportlegends all`` in DFHack for XML.
+  3. Copy exports beside the save (or keep the regionNN-* prefix in data/saves/).
+  4. Validate:
+
+       df-save-re validate data/saves/region1
+       df-save-re verify data/saves/region1/world.dat
+       df-save-re folder data/saves/region1
 
 Checks performed:
-  • world name in world_history.txt matches world.dat header ({world_name})
+  • world name in world_history.txt matches world.dat header
   • DF version in world_gen_param.txt matches target {target_df}
+  • exportlegends XML parses completely and record counts are reported
+  • header max_ids[*] cross-checked against oracle totals (verify-only)
 
-This save's header counters (for RE reference, not checked against text exports):
+This save's header counters (for RE reference):
   max_histfig (max_ids[8]) = {max_histfig}
   max_event   (max_ids[9]) = {max_event}
+  max_civ     (max_ids[4]) = {max_civ}
 
-Note: [x] produces legends.xml — optional and not required for this project.
-Text exports do not include event/figure counts.
+Exports are NEVER read by the binary extraction path — validation only.
 """.strip()
 
 
@@ -187,6 +205,7 @@ def fingerprint_to_dict(fp: SaveFingerprint) -> dict:
         "is_active": fp.is_active,
         "is_retired": fp.is_retired,
         "legends_target": str(fp.legends_target) if fp.legends_target else None,
+        "exports": fp.exports.to_dict() if fp.exports else None,
         "warnings": fp.warnings,
         "notes": fp.notes,
     }

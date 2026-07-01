@@ -191,6 +191,63 @@ def load_structs_from_file(path: Path | str) -> dict[str, StructDef]:
 _STRUCT_XML_GLOB = "df*.xml"
 _FILE_CACHE: dict[str, dict[str, StructDef]] = {}
 _INDEX_CACHE: dict[str, dict[str, StructDef]] = {}
+_ENUM_BASE_CACHE: dict[str, dict[str, str | None]] = {}
+
+
+def _load_enum_bases(xml_dir: Path) -> dict[str, str | None]:
+    key = str(xml_dir.resolve())
+    if key in _ENUM_BASE_CACHE:
+        return _ENUM_BASE_CACHE[key]
+    bases: dict[str, str | None] = {}
+    for path in sorted(xml_dir.glob(_STRUCT_XML_GLOB)):
+        root = ET.parse(path).getroot()
+        for elem in root:
+            if elem.tag != "enum-type":
+                continue
+            name = _attr(elem, "type-name")
+            if name:
+                bases[name] = _attr(elem, "base-type")
+    _ENUM_BASE_CACHE[key] = bases
+    return bases
+
+
+def enum_type_width(type_name: str, xml_dir: Path | str) -> int | None:
+    """On-disk element width for a named enum type used as stl-vector element."""
+    base = _load_enum_bases(Path(xml_dir)).get(type_name)
+    if not base:
+        return None
+    width = _scalar_width(base)
+    if width is None:
+        return 4
+    return max(width, 2) if width == 1 else width
+
+
+def enum_storage_width(field: FieldDef, xml_dir: Path | str) -> int:
+    """On-disk width for an ``enum`` field in a serialized struct."""
+    if field.base_type:
+        width = _scalar_width(field.base_type)
+        if width is not None:
+            return width
+    if field.type_name:
+        base = _load_enum_bases(Path(xml_dir)).get(field.type_name)
+        if base:
+            width = _scalar_width(base)
+            if width is not None:
+                # DF saves struct enums at least int16-wide (validated on histfig sex).
+                return max(width, 2) if width == 1 else width
+    return 4
+
+
+def _scalar_width(base_type: str) -> int | None:
+    if base_type in ("int8_t", "uint8_t"):
+        return 1
+    if base_type in ("int16_t", "uint16_t"):
+        return 2
+    if base_type in ("int64_t", "uint64_t"):
+        return 8
+    if base_type in ("int32_t", "uint32_t"):
+        return 4
+    return None
 
 
 def _load_all_structs(xml_dir: Path) -> dict[str, StructDef]:
@@ -204,7 +261,8 @@ def _load_all_structs(xml_dir: Path) -> dict[str, StructDef]:
         if pkey not in _FILE_CACHE:
             _FILE_CACHE[pkey] = load_structs_from_file(path)
         for name, struct in _FILE_CACHE[pkey].items():
-            index.setdefault(name, struct)
+            # Later files (e.g. df.history_figure.xml) supersede stubs in df.history.xml.
+            index[name] = struct
     _INDEX_CACHE[key] = index
     return index
 
@@ -295,3 +353,15 @@ def summarize_fields(struct: StructDef, loadversion: str = TARGET_DF_VERSION) ->
             suffix = f"[{f.array_count}]"
         lines.append(f"  {type_part} {f.name}{suffix}")
     return lines
+
+
+__all__ = [
+    "FieldDef",
+    "StructDef",
+    "enum_storage_width",
+    "enum_type_width",
+    "field_active",
+    "load_struct",
+    "resolve_fields",
+    "summarize_fields",
+]

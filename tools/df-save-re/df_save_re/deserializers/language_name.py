@@ -28,13 +28,27 @@ class LanguageName:
 
 def read_language_name(reader: BinaryReader) -> LanguageName:
     start = reader.tell()
+    has_name = reader.read_bool()
+    if not has_name:
+        end = reader.tell()
+        return LanguageName(
+            first_name="",
+            nickname="",
+            words=[],
+            parts_of_speech=[],
+            language=-1,
+            name_type=0,
+            has_name=False,
+            payload_offset=start,
+            bytes_consumed=end - start,
+        )
+
     first_name = DfString.read(reader).value
     nickname = DfString.read(reader).value
     words = [reader.read_int32() for _ in range(7)]
     parts_of_speech = [reader.read_int16() for _ in range(7)]
     language = reader.read_int32()
     name_type = reader.read_int16()
-    has_name = reader.read_bool()
     end = reader.tell()
     return LanguageName(
         first_name=first_name,
@@ -55,10 +69,15 @@ _MAX_NAME_STRING = 64
 def try_read_language_name(reader: BinaryReader) -> LanguageName | None:
     start = reader.tell()
     try:
-        first_len = reader.read_int16()
-        if first_len < 0 or first_len > _MAX_NAME_STRING:
+        has_name = reader.read_uint8()
+        if has_name not in (0, 1):
             reader.seek(start)
             return None
+        if has_name:
+            first_len = reader.read_int16()
+            if first_len < 0 or first_len > _MAX_NAME_STRING:
+                reader.seek(start)
+                return None
         reader.seek(start)
         name = read_language_name(reader)
     except (EOFError, ValueError):

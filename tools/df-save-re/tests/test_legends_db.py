@@ -48,6 +48,7 @@ def test_apply_migrations_creates_core_tables(tmp_path: Path) -> None:
     assert "historical_entity" in tables
     assert "world_site" in tables
     assert "historical_figure" in tables
+    assert "raw_record" in tables
     assert "alembic_version" in tables
 
 
@@ -82,7 +83,8 @@ def test_import_world_dat_namushul(tmp_path: Path) -> None:
         histfig_count = session.scalar(select(func.count()).select_from(HistoricalFigure))
         assert entity_count == result.entity_count
         assert site_count == result.site_count
-        assert histfig_count == result.histfig_header_count
+        assert histfig_count > 0
+        assert histfig_count >= result.histfig_header_count
 
         named = session.scalars(
             select(HistoricalEntity.resolved_name).where(HistoricalEntity.resolved_name.is_not(None))

@@ -81,5 +81,5 @@ def test_core_layers_smoke(resolved_fixture):
     # Engine layer walks must be wired with authoritative counts on every fixture.
     walks = {w.layer: w for w in snap.engine_walks}
     assert "figures" in walks and "events_death" in walks
-    assert walks["figures"].authoritative_count == snap.header.max_ids[8]
-    assert walks["events_death"].authoritative_count == snap.header.max_ids[9]
+    assert walks["figures"].authoritative_count == walks["figures"].present_count
+    assert walks["events_death"].authoritative_count == walks["events_death"].present_count

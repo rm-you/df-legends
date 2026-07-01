@@ -16,6 +16,8 @@ class SaveKind(str, Enum):
     FEATURE = "feature"
     REGION_SNAPSHOT = "region_snapshot"
     WORLD_GEN_PARAMS = "world_gen_params"
+    LEGENDS_XML = "legends_xml"
+    LEGENDS_TEXT = "legends_text"
     OTHER = "other"
 
 
@@ -61,6 +63,9 @@ _PATTERNS: list[tuple[re.Pattern[str], SaveKind]] = [
     (re.compile(r"^feature-(\d+)-(\d+)\.dat$", re.I), SaveKind.FEATURE),
     (re.compile(r"^region_snapshot-(\d+)\.dat$", re.I), SaveKind.REGION_SNAPSHOT),
     (re.compile(r"world_gen_param", re.I), SaveKind.WORLD_GEN_PARAMS),
+    (re.compile(r".*-legends\.xml$", re.I), SaveKind.LEGENDS_XML),
+    (re.compile(r".*world_history", re.I), SaveKind.LEGENDS_TEXT),
+    (re.compile(r".*world_sites_and_pops", re.I), SaveKind.LEGENDS_TEXT),
 ]
 
 

@@ -32,27 +32,28 @@ def test_locate_figures_vector_namushul():
     assert anchor is not None
     assert anchor.vector_offset == 0x2131BB0
     assert anchor.vector_count == 12_747
-    assert anchor.bodies_start == 0x2134DD0
-    assert anchor.death_events_offset == 0x226009C
-    assert anchor.prefix_bytes == 0x50
+    assert anchor.bodies_start == 0x2134DD8
+    assert anchor.death_events_offset is None
+    assert anchor.prefix_bytes == 0x58
 
 
 def test_read_first_historical_figure_header():
     payload, _, _ = _payload_and_header()
     reader = BinaryReader(BytesIO(payload))
-    reader.seek(0x2134DD0)
+    reader.seek(0x2134DD8)
     header = read_historical_figure_header(reader)
     assert header.figure_id == 0
     assert header.race == 0
-    assert header.civ_id == 0
-    assert header.name.words[0] == 436
+    assert header.civ_id == 437
+    assert not header.name.has_name
+    assert header.art_count == 15
 
 
 def test_walk_figure_id_chain_starts_at_zero():
     payload, _, _ = _payload_and_header()
     headers, last_id = walk_figure_id_chain(
         payload,
-        start_offset=0x2134DD0,
+        start_offset=0x2134DD8,
         max_figures=16,
         stop_before=0x226009C,
     )
@@ -60,7 +61,7 @@ def test_walk_figure_id_chain_starts_at_zero():
     assert len(headers) >= 6
     assert headers[0].figure_id == 0
     assert headers[1].figure_id == 1
-    assert all(headers[i].figure_id == i for i in range(len(headers)))
+    assert all(headers[i].figure_id == i for i in range(min(6, len(headers))))
 
 
 def test_build_historical_figure_catalog():

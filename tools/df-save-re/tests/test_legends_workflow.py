@@ -78,7 +78,13 @@ def test_legends_xml_parse_and_compare(tmp_path: Path):
           </historical_events>
           <historical_figures>
             <historical_figure><id>50</id></historical_figure>
+            <historical_figure><id>999</id>
+              <artifact><id>888</id></artifact>
+            </historical_figure>
           </historical_figures>
+          <artifacts>
+            <artifact><id>0</id></artifact>
+          </artifacts>
         </df_world>
         """,
         encoding="utf-8",
@@ -86,9 +92,10 @@ def test_legends_xml_parse_and_compare(tmp_path: Path):
     stats = parse_legends_xml(xml)
     assert stats.world_name == "Namushul"
     assert stats.historical_events == 2
-    assert stats.historical_figures == 1
+    assert stats.historical_figures == 2
+    assert stats.artifacts == 1
     assert stats.max_event_id == 500
-    assert stats.max_figure_id == 50
+    assert stats.max_figure_id == 999
     name_ok = compare_with_save_header(
         stats,
         world_name="Namushul",

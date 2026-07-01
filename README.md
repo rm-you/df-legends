@@ -24,6 +24,22 @@ df-save-re scan /path/to/region1/world.dat
 
 Layer 1 handles save headers and zlib decompression. Layer 2 hypothesis deserializers are in progress — see `docs/binary-re-findings-0.47.05.md`.
 
+## Binary RE (PyGhidra)
+
+For Ghidra-backed analysis of the DF binary, install the optional RE extras and point PyGhidra at your Ghidra install:
+
+```bash
+cd tools/df-save-re && pip install -e ".[re]"
+```
+
+```powershell
+# Windows — set once per shell (or add to your user environment)
+$env:GHIDRA_INSTALL_DIR = "C:\path\to\ghidra_12.1.2_PUBLIC"
+pyghidra   # drops into a Python REPL with the Ghidra API
+```
+
+Requires **Java 17+** and a local **Ghidra** install (tested with 12.1.2). See [tools/df-save-re/README.md](tools/df-save-re/README.md) and [tools/df-save-re/ghidra_scripts/README.md](tools/df-save-re/ghidra_scripts/README.md) for headless scripts and project setup.
+
 ## Reference data
 
 - `data/df_47_05_history_event_types.txt` — 155 `history_event_*` RTTI type names from the 0.47.05 binary

@@ -13,6 +13,8 @@ from .deserializers.probe import probe_save
 from .hexdump import format_hexdump, scan_int32_values
 from .legends_extract import extract_legends_snapshot, snapshot_to_dict
 from .legends_scan import scan_legends_region
+from .legends_exports import discover_legends_exports
+from .legends_oracle import parse_legends_oracle, resolve_oracle
 from .legends_text import compare_text_with_save, load_legends_text, text_bundle_to_dict
 from .legends_xml import compare_with_save_header, parse_legends_xml
 from .save_bundle import index_save_folder, legends_parse_target
@@ -334,15 +336,50 @@ def cmd_list_legends(args: argparse.Namespace) -> int:
     return 0
 
 
+def _print_export_bundle(exports) -> None:
+    print("exports:")
+    if exports.legends_xml:
+        size = exports.legends_xml.stat().st_size
+        print(f"  legends xml: {exports.legends_xml.name} ({size:,} bytes)")
+    else:
+        print("  legends xml: (not found)")
+    for label, path in (
+        ("world_history", exports.world_history),
+        ("world_sites", exports.world_sites),
+        ("world_gen", exports.world_gen),
+    ):
+        if path:
+            print(f"  {label}: {path.name}")
+        else:
+            print(f"  {label}: (not found)")
+    for note in exports.notes:
+        print(f"  note: {note}")
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     """Cross-check world.dat/sav extraction against legends text exports."""
     resolved = resolve_save_payload(args.path)
     path = resolved.path
+    exports = discover_legends_exports(path)
+
+    if args.legends_text:
+        text_source = args.legends_text
+    elif exports.text_directory is not None:
+        text_source = str(exports.text_directory)
+    else:
+        print(
+            "error: no legends text exports found beside save; pass world_history.txt "
+            "or a folder containing p-key exports",
+            file=sys.stderr,
+        )
+        _print_export_bundle(exports)
+        return 1
+
     snap = extract_legends_snapshot(
         resolved.payload,
         preamble=resolved.preamble,
     )
-    report = verify_world_dat_against_text(snap, args.legends_text, save_path=str(path))
+    report = verify_world_dat_against_text(snap, text_source, save_path=str(path))
 
     if args.json:
         print(json.dumps(report_to_dict(report), indent=2))
@@ -350,7 +387,11 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
     print(f"file: {path}")
     print(f"world_name: {snap.world_name}")
-    print(f"legends text: {args.legends_text}")
+    print(f"legends text: {text_source}")
+    if exports.has_oracle:
+        print(f"legends oracle: {exports.legends_xml}")
+    else:
+        print("legends oracle: (not found)")
     print(
         f"checks: {report.passed} pass, {report.failed} fail, "
         f"{report.pending} pending (unparsed layers)"
@@ -511,18 +552,25 @@ def cmd_legends_compare(args: argparse.Namespace) -> int:
 def cmd_validate(args: argparse.Namespace) -> int:
     path = Path(args.path)
     fp = fingerprint_path(path)
+    exports = fp.exports or discover_legends_exports(path)
     mismatches: list[str] = []
     xml_mismatches: list[str] = []
     text_mismatches: list[str] = []
     xml_stats = None
+    oracle = None
     text_bundle = None
 
-    if args.legends_xml:
-        xml_path = Path(args.legends_xml)
+    xml_path = Path(args.legends_xml) if args.legends_xml else exports.legends_xml
+    if xml_path is not None:
         if not xml_path.is_file():
             print(f"error: legends xml not found: {xml_path}", file=sys.stderr)
             return 1
         xml_stats = parse_legends_xml(xml_path)
+        try:
+            oracle = parse_legends_oracle(xml_path)
+        except Exception as exc:
+            print(f"error: legends oracle parse failed: {exc}", file=sys.stderr)
+            return 1
         xml_mismatches = compare_with_save_header(
             xml_stats,
             world_name=fp.world_name,
@@ -531,8 +579,8 @@ def cmd_validate(args: argparse.Namespace) -> int:
         )
         mismatches.extend(xml_mismatches)
 
-    if args.legends_text:
-        text_path = Path(args.legends_text)
+    text_path = Path(args.legends_text) if args.legends_text else exports.text_directory
+    if text_path is not None:
         if not text_path.exists():
             print(f"error: legends text export not found: {text_path}", file=sys.stderr)
             return 1
@@ -543,18 +591,20 @@ def cmd_validate(args: argparse.Namespace) -> int:
     if args.json:
         out = fingerprint_to_dict(fp)
         if xml_stats is not None:
-            out["legends_xml"] = str(args.legends_xml)
-            out["xml_stats"] = {
+            out["legends_xml"] = str(xml_path)
+            out["xml_stats"] = xml_stats.counts_dict() | {
                 "world_name": xml_stats.world_name,
-                "historical_events": xml_stats.historical_events,
-                "historical_figures": xml_stats.historical_figures,
                 "max_event_id": xml_stats.max_event_id,
                 "max_figure_id": xml_stats.max_figure_id,
+                "max_site_id": xml_stats.max_site_id,
+                "max_entity_id": xml_stats.max_entity_id,
                 "format_notes": xml_stats.notes,
             }
             out["xml_mismatches"] = xml_mismatches
+            if oracle is not None:
+                out["oracle_counts"] = oracle.counts_summary()
         if text_bundle is not None:
-            out["legends_text"] = str(args.legends_text)
+            out["legends_text"] = str(text_path)
             out["legends_text_export"] = text_bundle_to_dict(text_bundle)
             out["text_mismatches"] = text_mismatches
         print(json.dumps(out, indent=2))
@@ -591,10 +641,15 @@ def cmd_validate(args: argparse.Namespace) -> int:
     for warn in fp.warnings:
         print(f"warning: {warn}", file=sys.stderr)
 
+    print()
+    _print_export_bundle(exports)
+
     if xml_stats is not None:
-        print(f"\nlegends xml: {args.legends_xml}")
-        print(f"  xml world_name: {xml_stats.world_name}")
-        print(f"  xml events: {xml_stats.historical_events:,}  figures: {xml_stats.historical_figures:,}")
+        print(f"\nlegends xml: {xml_path}")
+        print("  oracle parse: OK")
+        for label, value in xml_stats.counts_dict().items():
+            if value:
+                print(f"  {label}: {value:,}")
         for note in xml_stats.notes:
             print(f"  note: {note}")
         if xml_mismatches:
@@ -605,7 +660,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
             print("  header/xml counts: OK")
 
     if text_bundle is not None:
-        print(f"\nlegends text export: {args.legends_text}")
+        print(f"\nlegends text export: {text_path}")
         if text_bundle.history:
             print(f"  world_name: {text_bundle.history.world_name!r}")
             if text_bundle.history.alt_name:
@@ -636,12 +691,12 @@ def cmd_validate(args: argparse.Namespace) -> int:
         print()
         hist = f"{fp.max_histfig:,}" if fp.max_histfig is not None else "?"
         ev = f"{fp.max_event:,}" if fp.max_event is not None else "?"
-        wn = fp.world_name or "?"
+        civ = f"{fp.max_civ:,}" if fp.max_civ is not None else "?"
         print(
             LEGENDS_EXPORT_STEPS.format(
                 max_histfig=hist,
                 max_event=ev,
-                world_name=wn,
+                max_civ=civ,
                 target_df=TARGET_DF_VERSION,
             )
         )
@@ -771,6 +826,7 @@ def cmd_fields(args: argparse.Namespace) -> int:
 def cmd_folder(args: argparse.Namespace) -> int:
     index = index_save_folder(args.path)
     target = legends_parse_target(index)
+    exports = discover_legends_exports(index.folder)
     if args.json:
         payload = {
             "folder": str(index.folder),
@@ -778,6 +834,7 @@ def cmd_folder(args: argparse.Namespace) -> int:
             "is_active": index.is_active,
             "is_retired": index.is_retired,
             "legends_parse_target": str(target.path) if target else None,
+            "exports": exports.to_dict(),
             "entries": [
                 {
                     "path": str(e.path),
@@ -796,6 +853,8 @@ def cmd_folder(args: argparse.Namespace) -> int:
     print(f"retired: {index.is_retired}")
     if target:
         print(f"legends target: {target.path.name} ({target.kind.value})")
+    print()
+    _print_export_bundle(exports)
     print("files:")
     for e in index.entries:
         idx = f" #{e.index}" if e.index is not None else ""
@@ -978,10 +1037,12 @@ def main(argv: list[str] | None = None) -> int:
         "verify",
         help="Cross-check world.dat parse against legends text exports (p key)",
     )
-    p_verify.add_argument("path", help="Path to world.dat")
+    p_verify.add_argument("path", help="Path to world.dat or save folder")
     p_verify.add_argument(
         "legends_text",
-        help="world_history.txt or folder with p-key text exports",
+        nargs="?",
+        default=None,
+        help="Optional world_history.txt or folder with p-key exports (auto-discovered)",
     )
     p_verify.add_argument("--json", action="store_true")
     p_verify.set_defaults(func=cmd_verify)
@@ -1002,7 +1063,7 @@ def main(argv: list[str] | None = None) -> int:
     p_validate.add_argument(
         "--legends-xml",
         default=None,
-        help="Optional legends.xml (not normally used; event count cross-check only)",
+        help="Optional legends.xml path (auto-discovered beside save when omitted)",
     )
     p_validate.add_argument(
         "--export-help",

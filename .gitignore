@@ -1,5 +1,6 @@
 # Local research artifacts (game binaries, extracted saves) — do not commit
 research/
+data/saves/
 tests/fixtures/*.dat
 tests/fixtures/*.sav
 tools/df-save-re/tests/fixtures/*.dat
@@ -7,6 +8,13 @@ tools/df-save-re/tests/fixtures/*.sav
 tools/df-save-re/tests/fixtures/**/world.dat
 tools/df-save-re/tests/fixtures/**/world.sav
 tools/df-save-re/.fixture-cache/
+
+# Ghidra RE artifacts
+# The 630MB Ghidra project is regenerable from the DF binary — do not commit.
+tools/df-save-re/ghidra/
+# Decompiled C + index.json ARE committed (the canonical function map).
+tools/df-save-re/ghidra_*.log
+tools/df-save-re/*.log
 
 # Python
 __pycache__/

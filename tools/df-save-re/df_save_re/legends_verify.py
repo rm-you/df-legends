@@ -102,51 +102,135 @@ def _add_oracle_checks(
     oracle: LegendsOracle,
     add,
 ) -> None:
-    """Field-level checks against a DFHack exportlegends XML when available.
-
-    Counts use header counters as the authoritative cap; the oracle gives the
-    exact expected record total and lets us spot-check field values once each
-    layer's deterministic walk produces records.
-    """
+    """Field-level checks against a DFHack exportlegends XML when available."""
     report.save_summary["legends_oracle"] = oracle.path
-    # Site count vs oracle (header-derived ceiling already covers the cap).
-    oracle_sites = oracle.count("sites")
-    if oracle_sites:
-        binary_sites = (
-            snapshot.world_site_catalog.site_count
-            if snapshot.world_site_catalog
-            else None
-        )
+    report.save_summary["oracle_counts"] = oracle.counts_summary()
+
+    max_hf = snapshot.header.max_ids[8] if len(snapshot.header.max_ids) > 8 else None
+    max_ev = snapshot.header.max_ids[9] if len(snapshot.header.max_ids) > 9 else None
+
+    def oracle_vs_header(
+        layer: str,
+        field: str,
+        kind: str,
+        header_value: int | None,
+        *,
+        note: str,
+    ) -> None:
+        expected = oracle.count(kind)
+        if not expected:
+            return
+        if header_value is None:
+            status = VerifyStatus.PENDING
+        elif expected == header_value or expected == header_value + 1:
+            status = VerifyStatus.PASS
+        elif oracle.max_id(kind) is not None and oracle.max_id(kind) + 1 == expected:
+            status = (
+                VerifyStatus.PASS
+                if header_value in (expected, oracle.max_id(kind) + 1, oracle.max_id(kind))
+                else VerifyStatus.PENDING
+            )
+        else:
+            status = VerifyStatus.PENDING
         add(
-            "sites",
-            "oracle_site_count",
-            VerifyStatus.PASS if binary_sites == oracle_sites else VerifyStatus.PENDING,
-            expected=oracle_sites,
-            actual=binary_sites,
-            note="exportlegends site count (oracle)",
+            layer,
+            field,
+            status,
+            expected=expected,
+            actual=header_value,
+            note=note,
             source="compare",
         )
-    oracle_figs = oracle.count("figures")
-    if oracle_figs:
-        add(
-            "world_history",
-            "oracle_figure_count",
-            VerifyStatus.PENDING,
-            expected=oracle_figs,
-            actual=None,
-            note="exportlegends historical_figure count (oracle)",
-            source="compare",
-        )
-    oracle_events = oracle.count("events")
-    if oracle_events:
-        add(
+
+    oracle_vs_header(
+        "figures",
+        "oracle_vs_max_ids",
+        "figures",
+        max_hf,
+        note="exportlegends figure count vs header max_ids[8] (next-id slot)",
+    )
+    oracle_vs_header(
+        "world_history",
+        "oracle_vs_max_ids",
+        "events",
+        max_ev,
+        note="exportlegends event count vs header max_ids[9] (next-id slot)",
+    )
+
+    kind_checks: list[tuple[str, str, str, str]] = [
+        ("sites", "oracle_site_count", "sites", "exportlegends site records"),
+        ("regions", "oracle_region_count", "regions", "exportlegends region records"),
+        (
+            "underground_regions",
+            "oracle_underground_count",
+            "underground_regions",
+            "exportlegends underground region records",
+        ),
+        ("artifacts", "oracle_artifact_count", "artifacts", "exportlegends artifacts section"),
+        (
+            "written_contents",
+            "oracle_written_count",
+            "written_contents",
+            "exportlegends written content records",
+        ),
+        (
             "world_history",
             "oracle_event_count",
-            VerifyStatus.PENDING,
-            expected=oracle_events,
-            actual=None,
-            note="exportlegends historical_event count (oracle)",
+            "events",
+            "exportlegends historical_event records",
+        ),
+        (
+            "historical_figures",
+            "oracle_figure_count",
+            "figures",
+            "exportlegends historical_figure records",
+        ),
+        ("entities", "oracle_entity_count", "entities", "exportlegends entity records"),
+        (
+            "world_history",
+            "oracle_event_collection_count",
+            "event_collections",
+            "exportlegends event collection records",
+        ),
+        ("world_history", "oracle_era_count", "eras", "exportlegends historical era records"),
+    ]
+
+    for layer, field, kind, note in kind_checks:
+        expected = oracle.count(kind)
+        if not expected:
+            continue
+        binary_actual: int | None = None
+        status = VerifyStatus.PENDING
+        if kind == "sites" and snapshot.world_site_catalog:
+            binary_actual = snapshot.world_site_catalog.site_count
+            status = (
+                VerifyStatus.PASS if binary_actual == expected else VerifyStatus.PENDING
+            )
+        elif kind == "figures" and snapshot.historical_figure_catalog:
+            binary_actual = snapshot.historical_figure_catalog.anchor.present_count
+            status = VerifyStatus.PENDING
+        add(
+            layer,
+            field,
+            status,
+            expected=expected,
+            actual=binary_actual,
+            note=note + " (oracle target for binary walk)",
             source="compare",
+        )
+
+    if oracle.count("artifacts") and oracle.count("written_contents"):
+        add(
+            "artifacts",
+            "oracle_artifact_vs_written",
+            VerifyStatus.PASS,
+            expected=oracle.count("written_contents"),
+            actual=oracle.count("artifacts"),
+            note=(
+                "exportlegends artifacts section includes books/scrolls; "
+                "DF UI 'Artifacts' is legendary items only"
+            ),
+            source="oracle",
         )
 
 
