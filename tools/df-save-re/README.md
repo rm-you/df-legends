@@ -1,119 +1,99 @@
 # df-save-re
 
-Layer-1 tools for reverse-engineering Dwarf Fortress save files (Path C).
+Binary legends extractor for Dwarf Fortress 0.47.05 saves (Path C — parse the
+save without running the game).
 
-> **Agents: read [`../../AGENTS.md`](../../AGENTS.md) first** for the goal,
-> critical paths (DF binary, Ghidra, radare2), where work history lives
+> **Agents: read [`../../AGENTS.md`](../../AGENTS.md) first** — goal, critical
+> paths (DF binary, Ghidra, radare2), where work history lives
 > (`ATTEMPTS.md`, `FUNCTIONS.md`, `ghidra_decompiles/`), and the definitive
-> reverse-engineered save/load findings (figures vector is DENSE; histfig
-> header has no sex pad and no `figure_id`/`art_count`; full on-disk layout
-> in `AGENTS.md` §4).
+> reverse-engineered save/load findings.
 
 ## Install
 
 ```bash
 cd tools/df-save-re
 pip install -e .
+pip install -e ".[test]"   # pytest + httpx (for tests)
+pip install -e ".[re]"     # pyghidra — Ghidra API from Python (optional)
 ```
-
-Optional extras:
-
-```bash
-pip install -e ".[test]"   # pytest + httpx
-pip install -e ".[re]"     # pyghidra — Ghidra API from Python
-```
-
-## PyGhidra (binary RE)
-
-Use this when you want the Ghidra API inside Python (decompiler, symbols, xrefs) instead of only the GUI or `analyzeHeadless`.
-
-**Prerequisites:** Java 17+ and a local Ghidra install (e.g. Ghidra 12.1.2).
-
-```powershell
-# Windows
-pip install -e ".[re]"
-$env:GHIDRA_INSTALL_DIR = "C:\Users\rm_yo\Downloads\ghidra_12.1.2_PUBLIC"
-
-pyghidra                                    # REPL
-pyghidra path\to\Dwarf_Fortress.exe         # load binary, then REPL
-pyghidra path\to\binary.exe script.py       # headless script (.py)
-```
-
-```bash
-# Linux / macOS
-export GHIDRA_INSTALL_DIR=/path/to/ghidra_12.1.2_PUBLIC
-pyghidra
-```
-
-Or pass `--install-dir` instead of setting `GHIDRA_INSTALL_DIR`.
-
-From Python:
-
-```python
-import pyghidra
-pyghidra.start()
-# ... use ghidra.* APIs via JPype
-```
-
-Headless Ghidra project import (no PyGhidra) is documented in `ghidra_scripts/README.md`.
 
 ## Quick start
 
 ```bash
+# Fetch test saves (gitignored) — Namushul (small) + Waterlures
+python scripts/fetch_fixtures.py
+python scripts/fetch_fixtures.py --all    # + Ironhand world.sav
+
 # Fingerprint — world name, SHA-256, header counters
-df-save-re validate /path/to/region1/world.dat
+df-save-re validate tests/fixtures/small-retired/world.dat
 
 # Extract string tables, entity catalog, history landmarks
-df-save-re extract /path/to/region1/world.dat
-df-save-re extract /path/to/region1/world.dat --json
+df-save-re extract tests/fixtures/small-retired/world.dat --json
+
+# Persist to a per-fortress SQLite DB + browse it
+df-save-re import-db tests/fixtures/small-retired/world.dat --overwrite
+df-save-re serve        # explorer at http://127.0.0.1:8765
+
+# Cross-check binary parse against your [p] text exports (verify-only)
+df-save-re verify tests/fixtures/small-retired/world.dat /path/to/txt-exports/
 ```
 
-If you pass a **region folder** instead of a file, `validate` picks `world.dat` (retired) or `world.sav` (active) automatically.
+Pass a **region folder** instead of a file and `validate` picks `world.dat`
+(retired) or `world.sav` (active) automatically.
 
-## Verify parsing against your text exports
-
-Cross-check what we extract from `world.dat` against your **[p]** exports:
+## Commands
 
 ```bash
-df-save-re verify /path/to/world.dat /path/to/folder-with-txt-exports/
+df-save-re inspect <world.dat>          # raw header + decompressed layout
+df-save-re probe <world.dat> --json     # hypothesis parsers + landmark scan
+df-save-re legends-scan <world.dat> --full
+df-save-re fields historical_figure     # show df-structures field order
+df-save-re validate <world.dat> --export-help   # how to get [p] exports
 ```
 
-- **PASS** — binary parse matches text export for that layer
-- **PENDING** — text records a target; that layer is not parsed from the save yet
+`legends-compare` / `--legends-xml` remain available if you have `legends.xml`,
+but are not part of the normal workflow (exports are verify-only).
 
-On Namushul: world name, 15 named civs, 63 subterranean peoples, 350 site text records, and 71 ruler lines all **PASS**. Site title word markers reach **346/350** in binary (full `world_site` struct still open). Figures (12,747) and events (113,118) are **PENDING**.
+## Key modules
 
-```bash
-df-save-re validate /path/to/world.dat --export-help   # how to get p-key exports
-```
+| Path | Role |
+|------|------|
+| `df_save_re/structures/xml_fields.py` | df-structures XML parser → field tree; `resolve_fields()` (inheritance + version gating) |
+| `df_save_re/structures/polymorph.py` | Discriminator-tag → subclass registry (events, links, collections, buildings) |
+| `df_save_re/deserializers/body_skipper.py` | The engine: read/skip any struct |
+| `df_save_re/deserializers/engine_walk.py` | Self-validating harness — exact-landing or desync offset |
+| `df_save_re/deserializers/engine_layers.py` | Runs the harness per layer → `LayerWalk` |
+| `df_save_re/deserializers/historical_figures.py` | Histfig reader + vector locator (⚠ layout fix pending — see AGENTS.md §4) |
+| `df_save_re/deserializers/world_layout.py` | Landmark discovery + `resolve_history_search_start` |
+| `df_save_re/deserializers/world_header_ids.py` | Header-slot → layer ceilings (`max_ids`) |
+| `df_save_re/legends_extract.py` | Orchestrator; produces `LegendsSnapshot` (binary-only) |
+| `df_save_re/legends_oracle.py` | Verify-only legends.xml ground-truth loader (None if absent) |
+| `df_save_re/legends_verify.py` | Compares snapshot to text exports / oracle |
+| `df_save_re/db/` + `alembic/versions/` | SQLite schema + persistence |
+| `df_save_re/web/` | FastAPI explorer |
 
-## Other commands
+## Binary RE
 
-```bash
-df-save-re inspect /path/to/world.dat
-df-save-re folder /path/to/region1
-df-save-re legends-scan /path/to/world.dat --full
-df-save-re probe /path/to/world.dat --json
-```
-
-`legends-compare` / `--legends-xml` remain available if you happen to have `legends.xml`, but are not part of the normal workflow.
-
-## Test fixtures
-
-Fixtures are gitignored. From `tools/df-save-re`:
-
-```bash
-python3 scripts/fetch_fixtures.py
-python3 -m pytest
-```
-
-See `tests/fixtures/README.md` for SHA-256 fingerprints and DFFD sources.
+Ghidra scripts and the decompiled function map live in
+[`ghidra_scripts/`](ghidra_scripts/) and [`ghidra_decompiles/`](ghidra_decompiles/)
+(see [`ghidra_scripts/README.md`](ghidra_scripts/README.md) for the pipeline).
+The 630MB Ghidra project itself is gitignored at `ghidra/`.
 
 ## Status
 
-Target: **DF 0.47.05** Linux 64-bit (`save_version` 1716).
+Target: **DF 0.47.05** Windows (`save_version` 1716). See
+[`../../AGENTS.md`](../../AGENTS.md) §5 for the full current status. Summary:
 
-**Track B (world.sav):** Ironhand active fixture parses via `parse_sav_preamble()` — SAV header (13×int32 + metadata blob), gamemode/names, plant-anchored string tables @ ~0x74A8D8, entity catalog @ ~0x9D83B1. CLI `extract`, `import-db`, and `probe` accept `world.sav` paths.
+- **Done** — infrastructure (serialization engine, self-validating harness,
+  per-fortress SQLite + Alembic, FastAPI explorer, cross-fixture tests);
+  authoritative counts and top-level identity (sites, figures, events,
+  entities) on all three fixtures.
+- **Pending** — full per-record bodies. Root cause is known and mechanical
+  (see AGENTS.md §4): the parser assumed a `sex` pad byte, fabricated
+  `figure_id`/`art_count` fields, and treated the figures vector as posnull.
+  All three are wrong per the decompiles. The figures vector is **DENSE**.
+  Next step: fix the histfig parser to the definitive layout and walk the
+  dense figures vector from the real `world_history` start.
 
 | Layer | Status |
 |-------|--------|
@@ -121,5 +101,19 @@ Target: **DF 0.47.05** Linux 64-bit (`save_version` 1716).
 | Generated raws + post-header stream | Done |
 | String tables + index | Done |
 | Entity civ headers (partial catalog) | Done |
-| History events vector | Not yet — events factory `FUN_14070b7a0` decompiled (134 type tags); per-subclass `read_file` extraction pending (see `AGENTS.md` §4) |
-| Historical figures | Not yet — definitive on-disk layout known (no sex pad, no `figure_id`/`art_count`, DENSE vector); parser fix pending (see `AGENTS.md` §4–5) |
+| History events | Events factory decompiled (134 type tags); per-subclass `read_file` extraction pending |
+| Historical figures | Definitive on-disk layout known; parser fix + dense-vector walk pending |
+| Sites / entities / artifacts | Bodies pending on the same engine-walk fix |
+
+## Tests
+
+```bash
+python -m pytest tests/test_engine_walk.py tests/test_body_skipper.py \
+                  tests/test_legends_oracle.py -q          # fast engine tests
+python -m pytest tests/test_engine_layers.py -q           # per-layer (Namushul)
+python -m pytest tests/test_cross_fixture_reliability.py -q   # all 3 saves (~8 min)
+```
+
+Fixtures are gitignored — run `python scripts/fetch_fixtures.py` first. See
+[`tests/fixtures/README.md`](tests/fixtures/README.md) for SHA-256 fingerprints
+and DFFD sources.

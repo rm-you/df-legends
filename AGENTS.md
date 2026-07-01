@@ -21,10 +21,10 @@ and decompile every `read_file`/`write_file` in the save/load pipeline. Do
 not guess from XML; do not iterate blindly on byte offsets. Decompile and map
 everything, then encode the real layout as parser overrides.
 
-The extraction tooling lives in `tools/df-save-re/` and is described in
-`tools/df-save-re/HANDOVER.md` (infrastructure status, modules, test recipes).
-This file (`AGENTS.md`) is the higher-level memory: paths, where we store work
-history, and the RE findings that supersede earlier guesses.
+The extraction tooling lives in `tools/df-save-re/` (install, usage, module
+map, and status in its `README.md`). This file (`AGENTS.md`) is the
+higher-level memory: paths, where we store work history, and the RE findings
+that supersede earlier guesses.
 
 ---
 
@@ -44,7 +44,7 @@ history, and the RE findings that supersede earlier guesses.
 | Function index (machine-readable) | `tools\df-save-re\ghidra_decompiles\index.json` |
 | Reverse-engineered function notes | `FUNCTIONS.md` |
 | Chronological attempt log | `ATTEMPTS.md` |
-| Old handover doc (infrastructure) | `tools\df-save-re\HANDOVER.md` |
+| Tool docs (install, usage, modules, status) | `tools\df-save-re\README.md` |
 
 The save fixtures are gitignored; fetch with
 `python scripts/fetch_fixtures.py` from `tools\df-save-re\`. The Namushul
@@ -110,8 +110,8 @@ FUN_1405f3a60  world writer            FUN_140330310  world reader
 
 `FUN_140709410` (writer) and `FUN_1407099a0` (reader) confirm the figures
 vector is **`int32 count` then `count` bodies back-to-back** — NO presence-flag
-array. The earlier `HANDOVER.md` claim of a posnull figures vector with an
-`~0x50` gap is WRONG. `locate_figures_vector()`'s posnull heuristic is also
+array. The earlier posnull-figures-vector claim (with an `~0x50` gap) is
+WRONG. `locate_figures_vector()`'s posnull heuristic is also
 wrong and must be replaced with a definitive walk from `world_history` start.
 
 ### Historical figure header has NO sex pad byte
@@ -171,7 +171,8 @@ versions.
 
 ## 5. Where we are right now
 
-- Infrastructure (engine, harness, DB, explorer) is done — see `HANDOVER.md`.
+- Infrastructure (engine, harness, DB, explorer) is done — see
+  `tools/df-save-re/README.md` (module map + status).
 - **Counts and top-level identity extract correctly** on all fixtures.
 - **Per-record bodies do not yet land.** Root cause is now precisely known
   (above): the parser assumed a sex pad + fabricated `figure_id`/`art_count` +

@@ -1,0 +1,30 @@
+Clean up README/docs: current, legible, no duplicates
+
+Rewrite the READMEs and docs so newcomers/agents can read them without our
+prior context, and remove duplicated/superseded files.
+
+Deleted (redundant or superseded by AGENTS.md / FUNCTIONS.md /
+ghidra_decompiles/):
+- docs/binary-re-findings-0.47.05.md (root) — old Linux pre-sample exploration;
+  duplicate name; superseded by the tools/ version + FUNCTIONS.md
+- tools/df-save-re/HANDOVER.md — superseded by AGENTS.md; useful bits (module
+  map, test recipes, status) folded into tools/df-save-re/README.md
+- tools/df-save-re/docs/execution-progress.md — redundant with coverage-matrix.md
+
+Rewritten to current truth (no supersession banners, just the facts):
+- README.md — clean newcomer front door; points to AGENTS.md as the start
+- tools/df-save-re/README.md — install, commands, module map, current status,
+  test recipes (folded from HANDOVER)
+- tools/df-save-re/docs/binary-re-findings-0.47.05.md — empirical findings +
+  pipeline call chain + definitive histfig on-disk layout + read order
+- tools/df-save-re/docs/coverage-matrix.md — current coverage + known root cause
+
+Trimmed:
+- docs/path-c-save-reverse-engineering.md — keep methodology + architecture +
+  prior art + version strategy; drop the now-done phases/next-steps
+- docs/save-formats-0.47.05.md — update stale fixtures table
+
+Light fix:
+- tools/df-save-re/docs/legends-db-schema.md — record tables now exist
+  (schema-ready), not "planned"
+- AGENTS.md — drop HANDOVER.md references (file deleted)

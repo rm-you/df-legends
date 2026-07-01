@@ -103,15 +103,17 @@ flowchart TB
 2. **`world.sav`** — RE Game data entry; locate `world_history` (likely same in-memory layout as DAT, different file offset).
 3. **Sidecars** — `site-*.dat` / `unit-*.dat` when you need map or unit detail beyond legends.
 
-### Test fixtures (when available)
+### Test fixtures
 
-| Fixture | Purpose |
-|---------|---------|
-| `tests/fixtures/region-retired/world.dat` | Track A — legends parsing |
-| `tests/fixtures/small-retired/world.dat` | Track A — compact Namushul world (fast tests) |
-| `tests/fixtures/waterlures-retired/world.dat` | Track A — DFFD Waterlures / Minbazkar (larger) |
-| `tests/fixtures/region-active/world.sav` | Track B — Game data + legends inside active save |
-| Same world retired then loaded | Compare history counts between DAT and SAV |
+Fixtures are gitignored; fetch with `python scripts/fetch_fixtures.py` from
+`tools/df-save-re/`. See `tools/df-save-re/tests/fixtures/README.md` for
+SHA-256 fingerprints and DFFD sources.
+
+| Fixture | File | Purpose |
+|---------|------|---------|
+| `small-retired` | `world.dat` | Track A — compact Namushul world (fast default) |
+| `waterlures-retired` | `world.dat` | Track A — DFFD Waterlures / Minbazkar (larger) |
+| `ironhand-active` | `world.sav` | Track B — Game data + legends inside an active save |
 
 ## CLI
 

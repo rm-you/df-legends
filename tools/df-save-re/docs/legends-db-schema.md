@@ -32,12 +32,15 @@ python3 -m df_save_re.cli list-legends
 | `VectorAnchor` (RE) | `vector_anchor` | Located posnull vectors |
 | `LegendsSnapshot.notes` | `extraction_run`, `extraction_note` | Provenance / debug trail |
 
-## Planned tables (future migrations)
+## Record tables (schema-ready, populated once body walks land)
 
-- `history_event` — polymorphic event bodies once vector walk lands
+The following tables exist via migrations (`001_initial_core`, `003_record_json`)
+and are populated as each layer's body walk starts landing:
+
+- `history_event` — polymorphic event bodies
 - `entity_position`, `entity_position_assignment` — rulers and offices
 - `site_population` — pops from binary (replacing text export)
-- `artifact`, `written_content`, `collection`
+- `artifact`, `written_content`, `event_collection`
 - `historical_era`
 
 ## Query examples
