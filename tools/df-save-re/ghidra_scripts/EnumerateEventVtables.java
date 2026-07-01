@@ -130,6 +130,14 @@ public class EnumerateEventVtables extends GhidraScript {
     }
 
     private Address findVtableAddress(SymbolTable st, String className) {
+        ghidra.program.model.symbol.SymbolIterator it = st.getSymbols("vftable");
+        while (it.hasNext()) {
+            Symbol s = it.next();
+            ghidra.program.model.symbol.Namespace ns = s.getParentNamespace();
+            if (ns != null && ns.getName().equals(className)) {
+                return s.getAddress();
+            }
+        }
         String needle = className + "::vftable";
         for (Symbol s : st.getAllSymbols(true)) {
             if (s.getName().equals(needle) || s.getName().contains(needle)) {

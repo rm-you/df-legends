@@ -330,3 +330,49 @@ Kept the 18 scripts still useful for the next step: `diag_walk_until_fail.py`,
 `walk_figures_read.py`, `show_fig_walk.py`, `test_fig_walk.py`,
 `test_build_starts.py`, `analyze_binary.py`, `analyze_post_tail_boundaries.py`,
 `extract_rtti_types.py`, `fetch_fixtures.py`, `show_fig_walk_region1.py`.
+
+## 2026-07-01 — Event vtables unblocked; all 128 event layouts extracted
+
+Phase 3 of the pipeline-mapping plan (the critical-path step) is done.
+
+#### Vtable fix (Step 2)
+
+`EnumerateEventVtables.java`'s `findVtableAddress` compared full symbol names
+against `Class::vftable`, but Ghidra stores the symbol as plain `vftable`
+inside the class **namespace**. Replaced with a namespace-aware lookup
+(`st.getSymbols("vftable")` + `getParentNamespace().getName()` match, old
+full-name check kept as fallback). Result: `event_vtables.json` went from
+0/128 to **128/128** entries with real `vtable_addr`, `slot_0x118`
+(write_file) and `slot_0x120` (read_file).
+
+#### Batch decompile + layout extraction (Step 3)
+
+- 111 unique read/write addresses (66 read, 45 write — many subclasses share
+  impls, e.g. all four topicagreement events read via `FUN_140081c80`).
+  Batch-decompiled via `DecompileWithCallees.java` in one ~25s run; index
+  rebuilt to 242 entries.
+- Wrote `scripts/extract_event_layouts.py` → `ghidra_decompiles/event_layouts.json`:
+  **128/128 tags with non-empty field lists, zero unknown helper calls.**
+- Field-kind census across all events: 981 scalars i32, 55 i16, 1 u8,
+  123 byte-vectors (flags, `FUN_140002380`), 18 i32-vectors
+  (`FUN_140002250`), 1 i16-vector (`FUN_140002140`), 1 temp-bool
+  (hist_figure_woundedst `+0x46`), 7 base-call delegations.
+- Confirmed the **common event base prefix** read inline by nearly every
+  subclass (and via call to `FUN_140019190` by the 7 masterpiece events):
+  `+0x08 i32 year`, `+0x0c i32 seconds`, `+0x10 byte-vector flags`,
+  `+0x20 i32 id` — marked `"base": true` in the JSON.
+- Version gates captured per field (e.g. war_attacked_sitest gains 3 i32s
+  when `save_version > 0x66f`; hist_figure_woundedst gains `+0x48 i32` when
+  `> 0x669`). All gates < 0x6b4, so every gated field is present in the
+  Namushul fixture.
+
+#### Caveats / follow-ups
+
+- `event_layouts.json` field offsets are **in-memory** offsets; on-disk order
+  is the source order of the field list (offsets are for cross-referencing
+  df-structures names, not stream positions).
+- The 7 masterpiece events have `kind: "call", target: "140019190"` as their
+  first field — consumers must expand that to the base prefix.
+- Not yet folded into `save_layouts.py` / the parser (plan Step 7), and the
+  events-layer walk (Step 8) still needs the world_history events start.
+

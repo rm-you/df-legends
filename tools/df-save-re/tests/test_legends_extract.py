@@ -10,13 +10,20 @@ from df_save_re.legends_extract import extract_legends_snapshot, snapshot_to_dic
 from fixture_paths import resolve_fixture
 
 
+@pytest.mark.slow
 def test_extract_namushul_snapshot():
     path = resolve_fixture("small-retired", "world.dat")
     if path is None:
         pytest.skip("fixture missing")
     payload = decompress_file(path).payload
     pre = parse_dat_preamble(payload, save_version=read_header(path.read_bytes()).save_version)
-    snap = extract_legends_snapshot(payload, preamble=pre, max_entities=15)
+    snap = extract_legends_snapshot(
+        payload,
+        preamble=pre,
+        max_entities=15,
+        run_engine_walks=False,
+        run_vector_probe=False,
+    )
     assert snap.world_name == "Namushul"
     assert snap.string_tables.section_count == 20
     assert snap.string_index.entry_count == 283

@@ -6,9 +6,6 @@ from pathlib import Path
 
 import pytest
 
-from df_save_re.compression import decompress_file, read_header
-from df_save_re.deserializers.world_dat import parse_dat_preamble
-from df_save_re.legends_extract import extract_legends_snapshot
 from df_save_re.legends_verify import VerifyStatus, parse_history_details, verify_snapshot_against_text
 from df_save_re.legends_text import load_legends_text
 from fixture_paths import resolve_fixture
@@ -44,7 +41,7 @@ def test_parse_history_details_subterranean_and_civs():
     assert details["ruler_count"] == 1
 
 
-def test_verify_namushul_fixture(tmp_path: Path):
+def test_verify_namushul_fixture(tmp_path: Path, namushul_snapshot_light):
     path = resolve_fixture("small-retired", "world.dat")
     if path is None:
         pytest.skip("fixture missing")
@@ -72,9 +69,7 @@ def test_verify_namushul_fixture(tmp_path: Path):
     ]
     hist.write_text("\n".join(lines), encoding="utf-8")
 
-    payload = decompress_file(path).payload
-    pre = parse_dat_preamble(payload, save_version=read_header(path.read_bytes()).save_version)
-    snap = extract_legends_snapshot(payload, preamble=pre)
+    snap = namushul_snapshot_light
     bundle = load_legends_text(hist)
     report = verify_snapshot_against_text(snap, bundle)
 
@@ -88,16 +83,14 @@ def test_verify_namushul_fixture(tmp_path: Path):
     assert report.ok_for_parsed_layers()
 
 
-def test_verify_uploaded_exports_if_present():
+def test_verify_uploaded_exports_if_present(namushul_snapshot_light):
     upload = Path("/home/ubuntu/.cursor/projects/workspace/uploads")
     world = resolve_fixture("small-retired", "world.dat")
     if not upload.is_dir() or world is None:
         pytest.skip("uploads or fixture missing")
 
-    payload = decompress_file(world).payload
-    pre = parse_dat_preamble(payload, save_version=read_header(world.read_bytes()).save_version)
     bundle = load_legends_text(upload)
-    snap = extract_legends_snapshot(payload, preamble=pre)
+    snap = namushul_snapshot_light
     report = verify_snapshot_against_text(snap, bundle)
 
     assert report.failed == 0

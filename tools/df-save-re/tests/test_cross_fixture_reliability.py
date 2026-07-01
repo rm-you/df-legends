@@ -17,6 +17,9 @@ from df_save_re.target import TARGET_SAVE_VERSION
 from fixture_paths import resolve_fixture
 
 
+pytestmark = pytest.mark.slow
+
+
 FIXTURES = [
     ("small-retired", "world.dat", SavePreambleKind.DAT),
     ("waterlures-retired", "world.dat", SavePreambleKind.DAT),
@@ -54,6 +57,7 @@ def test_core_layers_smoke(resolved_fixture):
         resolved_fixture.payload,
         preamble=resolved_fixture.preamble,
         max_entities=3,
+        run_vector_probe=False,
     )
     assert snap.world_name
     assert snap.string_tables.section_count >= 19

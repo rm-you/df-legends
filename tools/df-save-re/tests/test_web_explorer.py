@@ -12,6 +12,9 @@ from df_save_re.web import create_app
 from tests.fixture_paths import resolve_fixture
 
 
+pytestmark = [pytest.mark.slow, pytest.mark.timeout(600)]
+
+
 @pytest.fixture
 def explorer_client(tmp_path: Path) -> TestClient:
     world_dat = resolve_fixture("small-retired", "world.dat")

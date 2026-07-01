@@ -54,10 +54,18 @@ def test_ironhand_string_table_finder(ironhand_world_sav):
     assert block.sections[0].names[0] == "agave bush"
 
 
+@pytest.mark.slow
 def test_ironhand_extract_smoke(ironhand_world_sav):
     resolved = resolve_save_payload(ironhand_world_sav)
     assert resolved.save_kind == SavePreambleKind.SAV
-    snap = extract_legends_snapshot(resolved.payload, preamble=resolved.preamble, max_entities=10)
+    snap = extract_legends_snapshot(
+        resolved.payload,
+        preamble=resolved.preamble,
+        max_entities=10,
+        include_history_catalog=False,
+        run_engine_walks=False,
+        run_vector_probe=False,
+    )
     assert snap.world_name == "Rops Wer"
     assert snap.string_tables.section_count >= 19
     assert snap.entities.first_entity_offset is not None

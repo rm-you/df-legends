@@ -8,7 +8,6 @@ from df_save_re.deserializers.world_header_ids import (
     resolve_max_site_id,
     resolve_site_ceiling,
 )
-from df_save_re.legends_extract import extract_legends_snapshot
 from df_save_re.save_preamble import resolve_save_payload
 from tests.fixture_paths import resolve_fixture
 
@@ -27,9 +26,8 @@ def test_resolve_site_ceiling_waterlures() -> None:
     assert resolve_site_ceiling(header) == header.max_ids[26] + SITE_CEILING_TAIL
 
 
-def test_extract_namushul_uses_header_site_ceiling() -> None:
-    resolved = resolve_save_payload(resolve_fixture("small-retired", "world.dat"))
-    snap = extract_legends_snapshot(resolved.payload, preamble=resolved.preamble)
+def test_extract_namushul_uses_header_site_ceiling(namushul_snapshot_light) -> None:
+    snap = namushul_snapshot_light
     ceiling = resolve_site_ceiling(snap.header)
     assert ceiling == 350
     assert snap.world_site_catalog is not None

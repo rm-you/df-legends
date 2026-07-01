@@ -424,7 +424,8 @@ def _find_next_figure_start(
     scan_start: int,
     previous_id: int,
     stop_before: int,
-    max_scan: int = 2_000_000,
+    max_scan: int = 65_536,
+    max_header_tries: int = 256,
     expected_id: int | None = None,
     save_version: int = 1716,
 ) -> int | None:
@@ -432,9 +433,13 @@ def _find_next_figure_start(
     scan_end = min(scan_start + max_scan, stop_before)
     best_off: int | None = None
     best_id = 2_000_000
+    header_tries = 0
     for candidate in range(scan_start, scan_end):
         if not _quick_histfig_header_check(payload, candidate):
             continue
+        header_tries += 1
+        if header_tries > max_header_tries:
+            break
         reader = BinaryReader(BytesIO(payload))
         reader.seek(candidate)
         header = try_read_historical_figure_header(
@@ -502,7 +507,7 @@ def walk_figure_id_chain(
     *,
     start_offset: int,
     save_version: int = 1716,
-    max_scan_per_body: int = 2_000_000,
+    max_scan_per_body: int = 65_536,
     max_figures: int = 12747,
     stop_before: int | None = None,
     xml_dir: Path | None = None,

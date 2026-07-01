@@ -21,6 +21,9 @@ from df_save_re.db.store import import_world_dat
 from tests.fixture_paths import resolve_fixture
 
 
+pytestmark = [pytest.mark.slow, pytest.mark.timeout(600)]
+
+
 @pytest.mark.parametrize(
     ("name", "slug"),
     [

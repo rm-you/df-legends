@@ -15,10 +15,10 @@ XML_DIR = Path(__file__).resolve().parents[3] / "data" / "df-structures"
 def test_skip_language_name_roundtrip():
     if not XML_DIR.exists():
         pytest.skip("df-structures missing")
-    parts = [b"\x05\x00", b"Urist", b"\x00\x00"]
+    parts = [b"\x01", b"\x05\x00", b"Urist", b"\x00\x00"]
     parts.extend([b"\x01\x00\x00\x00"] * 7)
     parts.extend([b"\x00\x00"] * 7)
-    parts.extend([b"\x00\x00\x00\x00", b"\x00\x00", b"\x01"])
+    parts.extend([b"\x00\x00\x00\x00", b"\x00\x00", b"\x01\x00"])
     payload = b"".join(parts)
 
     consumed = skip_struct_bytes(payload, 0, "language_name", xml_dir=XML_DIR)

@@ -132,6 +132,8 @@ def walk_pointer_vector(
 
     max_count: int = 5_000_000,
 
+    save_version: int = 1716,
+
 ) -> WalkResult:
 
     """Walk a posnull pointer vector and report exact-landing / desync.
@@ -266,6 +268,10 @@ def walk_pointer_vector(
 
                         scan_stop=scan_stop,
 
+                        figure_id=idx,
+
+                        save_version=save_version,
+
                     )
 
                     if on_record is not None:
@@ -293,6 +299,10 @@ def walk_pointer_vector(
                         next_anchor=anchor,
 
                         scan_stop=scan_stop,
+
+                        figure_id=idx,
+
+                        save_version=save_version,
 
                     )
 

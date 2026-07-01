@@ -124,6 +124,9 @@ def extract_legends_snapshot(
     max_entities: int = 50,
     catalog_entities: bool = True,
     expected_site_count: int | None = None,
+    run_engine_walks: bool = True,
+    run_vector_probe: bool = True,
+    include_history_catalog: bool = True,
 ) -> LegendsSnapshot:
     """Extract legends data from decompressed world.dat or world.sav (no text exports)."""
     header = preamble.header
@@ -258,7 +261,7 @@ def extract_legends_snapshot(
     ruler_catalog: RulerCatalog | None = None
     engine_walks: list[LayerWalk] = []
     history_search_start = resolve_history_search_start(payload, layout, preamble.header)
-    if history_search_start is not None:
+    if include_history_catalog and history_search_start is not None:
         historical_figure_catalog = build_historical_figure_catalog(
             payload,
             preamble.header,
@@ -274,23 +277,23 @@ def extract_legends_snapshot(
             )
             for line in historical_figure_catalog.notes:
                 notes.append(f"  histfig: {line}")
-            # Deterministic engine walks of history records (self-validating).
-            engine_walks.append(
-                walk_figures_layer(
-                    payload,
-                    preamble.header,
-                    layout,
-                    anchor=historical_figure_catalog.anchor,
+            if run_engine_walks:
+                engine_walks.append(
+                    walk_figures_layer(
+                        payload,
+                        preamble.header,
+                        layout,
+                        anchor=historical_figure_catalog.anchor,
+                    )
                 )
-            )
-            engine_walks.append(
-                walk_events_death_layer(
-                    payload,
-                    preamble.header,
-                    layout,
-                    anchor=historical_figure_catalog.anchor,
+                engine_walks.append(
+                    walk_events_death_layer(
+                        payload,
+                        preamble.header,
+                        layout,
+                        anchor=historical_figure_catalog.anchor,
+                    )
                 )
-            )
 
         history_events_catalog = build_history_events_catalog(
             payload,
@@ -331,7 +334,7 @@ def extract_legends_snapshot(
     if stats_probe:
         for line in stats_probe.notes:
             notes.append(f"history stats probe: {line}")
-    if layout.last_catalog_entity is not None and history_search_start is not None:
+    if run_vector_probe and layout.last_catalog_entity is not None and history_search_start is not None:
         probe_start = layout.last_catalog_entity
         probe_end = history_search_start
         site_cands = find_posnull_vector_candidates(
@@ -386,7 +389,7 @@ def extract_legends_snapshot(
                     f"(best @ {site_cands[0].payload_offset:#x}, score={site_cands[0].posnull_score})"
                 )
 
-    if layout is not None:
+    if run_engine_walks and layout is not None:
         engine_walks.append(walk_sites_layer(payload, preamble.header, layout))
         engine_walks.append(
             walk_entities_layer(
@@ -412,8 +415,9 @@ def extract_legends_snapshot(
         engine_walks.append(walk_event_collections_layer(payload, preamble.header, layout))
         engine_walks.append(walk_eras_layer(payload, preamble.header, layout))
 
-    for line in summarize_layer_walks(engine_walks):
-        notes.append(line)
+    if run_engine_walks and engine_walks:
+        for line in summarize_layer_walks(engine_walks):
+            notes.append(line)
 
     return LegendsSnapshot(
         world_name=preamble.header.world_name.value if preamble.header.world_name else None,

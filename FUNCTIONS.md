@@ -95,7 +95,9 @@ FUN_1405f3a60  world writer            FUN_140330310  world reader
 ## History Events
 
 - `FUN_14070b7a0`: events factory. Reads a 4-byte event tag (`0x00`..`0x85`, 134 types), `operator_new`s the matching `history_event_*` subclass, assigns its vtable, and returns it. The world_history reader then calls the event's `read_file` (vtable +0x120). The full tag→subclass map is derivable from this function's switch; vtable addresses for each subclass are extracted by `ghidra_scripts/EnumerateEventVtables.java` (walks the factory's data refs and dumps vtable slots [0x0]=dtor, [0x100], [0x118]=write_file, [0x120]=read_file).
-- **PENDING**: batch-decompile each event subclass's `read_file`/`write_file` so event bodies can be walked definitively (needed to reach the figures vector by walking the events vector first).
+- **DONE 2026-07-01**: all 128 event subclass `read_file`/`write_file` functions decompiled (111 unique addresses; 66 read, 45 write — subclasses share impls). Per-tag on-disk layouts extracted to `ghidra_decompiles/event_layouts.json` by `scripts/extract_event_layouts.py` (128/128 tags, zero unknown helper calls).
+- `FUN_140019190`: the common **event base reader** — `+0x08 i32 year`, `+0x0c i32 seconds`, `+0x10 flags byte-vector` (`FUN_140002380`), `+0x20 i32 id`, then `+0x28/+0x2c/+0x30/+0x34` i32s. Nearly every subclass inlines this prefix; the 7 masterpiece events call it directly (recorded as `kind:"call"` in the layout JSON).
+- Event-body helper readers seen in subclass `read_file`s: `FUN_140002380` byte vector, `FUN_140002250` int32 vector, `FUN_140002140` int16 vector (each: i32 count + count×elem via `FUN_1405bba90`).
 
 ## Rejected / Low-Confidence
 

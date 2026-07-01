@@ -326,7 +326,7 @@ def skip_historical_figure_body(
     xml_dir: Path | None = None,
     next_anchor: int | None = None,
     scan_stop: int | None = None,
-    scan_limit: int = 2_000_000,
+    scan_limit: int = 65_536,
     expected_next_id: int | None = None,
     figure_id: int | None = None,
     save_version: int = 1716,
