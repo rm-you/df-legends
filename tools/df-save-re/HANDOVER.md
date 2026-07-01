@@ -1,5 +1,16 @@
 # df-save-re — Handover
 
+> **STATUS (2026-07-01): partially superseded — read [`../../AGENTS.md`](../../AGENTS.md)
+> first.** The infrastructure status, module map, and test recipes below are
+> still accurate, but the **blocker analysis in §5/§6/§12 is outdated**: the
+> DF Windows binary and Ghidra are now available, the save/load pipeline is
+> decompiled (see `ghidra_decompiles/` + `FUNCTIONS.md`), and the real root
+> cause is known — the parser assumed a `sex` pad byte, fabricated
+> `figure_id`/`art_count` fields, and treated the figures vector as posnull.
+> All three are wrong. The figures vector is **DENSE**. See `AGENTS.md` §4
+> for the definitive on-disk histfig layout and §5 for the concrete next step.
+> Stale lines below are marked ⚠ SUPERSEDED.
+
 Last updated: 2026-06-30. This document lets another agent (or human) pick up
 exactly where we left off on **binary legends extraction from Dwarf Fortress
 0.47.05 saves**, with no prior context.
@@ -79,7 +90,7 @@ blind.
 
 | Layer | Authoritative count | Body walk | Desync offset |
 |-------|---------------------|-----------|---------------|
-| figures | 12,747 (`max_ids[8]`, vector confirmed @ `0x2131bb0`) | 1 body then desync | `0x21353a3` |
+| figures | 12,747 (`max_ids[8]`, vector confirmed @ `0x2131bb0`) | 1 body then desync | `0x21353a3` | ⚠ SUPERSEDED — figures vector is DENSE; the `0x2131bb0` posnull anchor and the `0x21353a3` desync were symptoms of the parser's sex-pad + fabricated-field misalignment, not the real layout. See `AGENTS.md` §4–5. |
 | events_death | total events 113,118 (`max_ids[9]`); death vector @ `0x226009c` | 3 bodies then desync | `0x22601de` |
 | sites | 350 (`max_ids[26]+4`); ~315 names via discovery | canonical `world_data.sites` vector NOT located | — |
 | entities | capacity 7,949 (`max_ids[4]`); ~78 headers | 0 bodies (reference vector) | `0x8a7773` |
@@ -87,6 +98,14 @@ blind.
 Counts are correct and reliable. Bodies are the gap.
 
 ## 6. The single blocker (root cause)
+
+> ⚠ SUPERSEDED 2026-07-01 — see `AGENTS.md` §4. The real root cause is now
+> known precisely: the parser assumed a `sex` pad byte + fabricated
+> `figure_id`/`art_count` fields + a posnull figures vector. All three are
+> wrong per the decompiles. The "mysterious pointer serialization" framing
+> below was the pre-RE guess; the actual fix is mechanical (correct the
+> layout) once the dense figures vector is walked from the real
+> world_history start.
 
 DF's compressed save serializes pointers differently than the **in-memory**
 df-structures layout we walk:
@@ -218,11 +237,16 @@ PR #8 is based on the PR #7 branch. Merge order should respect the chain.
 
 - `df.world.xml` `world` struct is in-memory layout (starts with runtime-only
   vectors); do NOT derive top-level save order from it — use the empirical
-  order in `binary-re-findings-0.47.05.md`.
+  order in `binary-re-findings-0.47.05.md` and the decompiles in
+  `ghidra_decompiles/`.
 - Empirically validated serialization quirks the engine preserves: `coord2d` =
   2×int32 (not 2×int16), `coord` = 3×int32, `df-flagarray` = count×int32,
   posnull pointer vectors (count + presence bytes + bodies).
-- The figures vector has an ~`0x50` gap between presence flags and bodies on
-  Namushul — pass `bodies_start` explicitly to the harness.
-- No DF binary or `legends.xml` oracle was available in the build env; that is
-  the only reason bodies aren't landing.
+- ⚠ SUPERSEDED: the figures vector is **DENSE** (count + bodies), NOT posnull
+  — there is no `~0x50` gap. Do not pass a posnull `bodies_start` to the
+  harness for figures. See `AGENTS.md` §4.
+- ⚠ SUPERSEDED: a DF binary and Ghidra ARE now available (paths in
+  `AGENTS.md` §2); the save/load pipeline is decompiled in `ghidra_decompiles/`.
+  The blocker is no longer "no binary" — it is fixing the parser to the
+  definitive no-sex-pad layout and walking the dense figures vector from the
+  real world_history start.

@@ -1,5 +1,14 @@
 # Legends coverage matrix — binary extract vs text verify
 
+> **STATUS (2026-07-01): the per-layer "body desync" framing below is
+> superseded.** Counts remain authoritative, but the body-walk failures are
+> now explained precisely (not "save-specific pointer serialization"): the
+> parser assumed a `sex` pad byte, fabricated `figure_id`/`art_count` fields,
+> and treated the figures vector as posnull. All three are wrong per Ghidra
+> decompilation. See [`../../AGENTS.md`](../../AGENTS.md) §4–5 and
+> `ghidra_decompiles/` for the definitive layouts. Stale rows are marked
+> ⚠ SUPERSEDED.
+
 Exports (`*-world_history*`, `*-world_sites_and_pops*`, `*-world_gen_param*`) are **verify-only**.
 `extract_legends_snapshot()` must not read them.
 
@@ -38,16 +47,17 @@ asserts exact landing on the next anchor, or reports the first desync record + o
 
 | Layer | Authoritative count | Engine body walk |
 |-------|---------------------|------------------|
-| figures | 12,747 (`max_ids[8]`, vector confirmed) | desync at figure 1 tail (`0x21353a3`) |
+| figures | 12,747 (`max_ids[8]`, vector confirmed) | desync at figure 1 tail (`0x21353a3`) — ⚠ SUPERSEDED: caused by the parser's sex-pad + fabricated-field misalignment on a DENSE vector, not pointer serialization. See `AGENTS.md` §4 |
 | events_death | total events 113,118 (`max_ids[9]`) | desync after 3 death events (`0x22601de`) |
 | sites | 350 (`max_ids[26]+4`) | canonical `world_data.sites` posnull vector not located |
 | entities | capacity 7,949 (`max_ids[4]`) | desync at reference vector in entity body (`0x8a7773`) |
 
-**Counts are authoritative.** Full record-body landing is uniformly blocked by DF's
-save-specific pointer serialization (owned vs reference pointers, has-bad-pointers,
-nested optional substructs) which the in-memory df-structures layout does not fully
-describe. Closing it is a binary-disassembly task (Ghidra trace of each `read_file`),
-which the harness now localizes to exact offsets per layer.
+**Counts are authoritative.** ⚠ SUPERSEDED: the body-walk blocker is **not**
+mysterious save-specific pointer serialization — it is a concrete parser-layout
+bug (see `AGENTS.md` §4). The fix is to correct the histfig on-disk layout
+(no sex pad, no `figure_id`/`art_count`, dense figures vector) and walk from
+the real world_history start. The decompiles in `ghidra_decompiles/` give the
+exact field order for every function in the pipeline.
 
 ## Reliability (0.47.05)
 

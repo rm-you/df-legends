@@ -1,5 +1,15 @@
 # Binary RE Findings — DF 0.47.05 Linux 64-bit
 
+> **STATUS (2026-07-01): earlier exploration, largely superseded.** This
+> doc captured the **pre-save-sample Linux-binary** RE (libgraphics.so PLT
+> stubs, rodata magic strings, early hypothesis structs). The active RE is
+> now on the **Windows** `Dwarf Fortress.exe` with full decompilations in
+> [`../tools/df-save-re/ghidra_decompiles/`](../tools/df-save-re/ghidra_decompiles/).
+> For authoritative on-disk layouts and current status, read
+> [`../AGENTS.md`](../AGENTS.md) §4–5 and [`../FUNCTIONS.md`](../FUNCTIONS.md).
+> The landmark/string-table findings here remain useful context, but treat
+> the histfig/event layout hypotheses as stale.
+
 Preemptive reverse-engineering performed without a `world.dat` sample. All virtual addresses (VA) assume the stock Bay12 binary loaded at base **0x400000**.
 
 ## Key discovery: `file_compressorst` lives in `libgraphics.so`

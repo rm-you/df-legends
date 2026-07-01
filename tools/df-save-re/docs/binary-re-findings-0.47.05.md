@@ -1,5 +1,16 @@
 # Binary RE findings — DF 0.47.05 (`save_version` 1716)
 
+> **STATUS (2026-07-01): partially superseded.** The landmark offsets and
+> top-level read order below remain valid, but the **historical-figure /
+> figures-vector claims are WRONG** and have been corrected by Ghidra
+> decompilation of the Windows `Dwarf Fortress.exe`. Read [`AGENTS.md`](../../../../AGENTS.md)
+> first, then [`FUNCTIONS.md`](../../../../FUNCTIONS.md) and the decompiled C
+> in [`ghidra_decompiles/`](../ghidra_decompiles/) for the authoritative
+> on-disk layouts. Key corrections: the figures vector is **DENSE** (not
+> posnull); the histfig header has **no sex pad byte** and **no `figure_id` /
+> `art_count` fields** (the id is the vector index). Stale lines below are
+> called out inline with `⚠ SUPERSEDED`.
+
 Validated on **Namushul** fixture (`tests/fixtures/small-retired/world.dat`).
 
 ## Layout landmarks
@@ -25,18 +36,25 @@ Validated on **Namushul** fixture (`tests/fixtures/small-retired/world.dat`).
 | +12 | 12747 | max histfig id echo |
 | +24 | 12748 | next histfig id (`+1`) |
 
-This block is **metadata**, not the start of the `world_history` stl-vectors. The `figures` pointer vector is downstream @ `0x2131bb0`.
+This block is **metadata**, not the start of the `world_history` stl-vectors. ⚠ SUPERSEDED: the figures vector is DENSE and sits at the real `world_history` start (events count from `max_ids` followed by a valid event tag), not a posnull block at `0x2131bb0`. See `AGENTS.md` §4 and `scripts/diag_find_worldhistory_start.py`.
 
 ## Historical figures (Namushul)
+
+> ⚠ SUPERSEDED — the table below reflects the old posnull hypothesis. The
+> figures vector is **DENSE** (`int32 count` + `count` bodies, no presence
+> flags). Figure bodies begin immediately after the count. The histfig header
+> has **no sex pad** and **no stored `id`/`art_count`** (id = vector index).
+> Authoritative layout: `AGENTS.md` §4 + `ghidra_decompiles/14070a9d0.c` (reader)
+> and `14070a090.c` (writer).
 
 | Landmark | Offset | Notes |
 |----------|--------|-------|
 | Stats echo | `0x15BEB28` | event/death/rel/fig counter block |
-| `figures` vector | `0x2131BB0` | count=12747; flags end `0x2134D80` |
-| Figure bodies | `0x2134DD0` | 80-byte prefix after flags; first header id=0 |
+| `figures` vector | `0x2131BB0` | ⚠ SUPERSEDED — was assumed posnull; actually dense, real start is the world_history events count |
+| Figure bodies | `0x2134DD0` | ⚠ SUPERSEDED — no 80-byte posnull prefix; bodies follow the dense count directly |
 | `events_death` vector | `0x226009C` | count=151, 95% posnull |
 
-Header layout matches `df.history_figure.xml` through `art_count`. Bodies are variable-size (polymorphic link vectors + profile pointers); id chain 0..14+ validated via forward scan.
+⚠ SUPERSEDED: header layout does **not** match `df.history_figure.xml` through `art_count` — there is no `art_count` field on disk, and the on-disk order diverges from the in-memory struct (see `AGENTS.md` §4). The earlier "id chain 0..14+ validated" was a coincidental misread of the misaligned tail.
 
 ## Rulers (Namushul)
 
@@ -53,7 +71,7 @@ Header layout matches `df.history_figure.xml` through `art_count`. Bodies are va
 | `events` vector | not confirmed | count echo @ stats is metadata only; no 95%+ posnull prefix |
 | Relationship blocks | 4 | stats `field_4` echo |
 
-Event bodies likely live in pre-stats region blocks (~14 MB entity-gap/mid payload); polymorphic `history_event` body skipper still open.
+Event bodies likely live in pre-stats region blocks (~14 MB entity-gap/mid payload); polymorphic `history_event` body skipper still open. ⚠ UPDATE: the events factory `FUN_14070b7a0` (switch over tag 0x00..0x85, 134 types) is now decompiled in `ghidra_decompiles/`; remaining work is extracting each subclass's `read_file`/`write_file` vtable slots. See `AGENTS.md` §4.
 
 ## Sites
 
@@ -80,14 +98,14 @@ Event bodies likely live in pre-stats region blocks (~14 MB entity-gap/mid paylo
 |--------|--------------|------------------------------|
 | `history_event` | 113118 | Count echo @ stats; vector not confirmed (bodies pre-stats) |
 | `events_death` | 151 | **Vector @ `0x226009c`** after figure bodies |
-| `historical_figure` | 12747 | **Vector @ `0x2131bb0`** (posnull score ~8.8k/20k sample); bodies @ `0x2134dd0` |
+| `historical_figure` | 12747 | ⚠ SUPERSEDED — figures vector is DENSE (not posnull); see `AGENTS.md` §4. Real start = world_history events count. |
 | `world_site` | 350 | Marker-anchored catalog @ name table ~0x1193ae5 stride 354; posnull vector still unconfirmed |
 
 ## Site name table (Namushul cluster)
 
 Fixed-stride records in `0x1193ae5` + `site_id_offset * 354` hold `language_name.words` runs for many late site ids (341–350). Earlier sites use scattered marker offsets in the entity→history gap.
 
-Next step: Ghidra trace of `world_site::read_file` and `historyst::read_file` in libgraphics.so / DF 0.47.05 binary.
+Next step: ⚠ DONE — the DF Windows binary and Ghidra are now set up; `world_site::read_file` and the world_history/histfig readers are decompiled in `ghidra_decompiles/`. See `AGENTS.md` §4–5.
 
 ---
 
@@ -123,7 +141,7 @@ Empirical order, low → high address (Namushul offsets):
 | 6 | Entity catalog (`historical_entity` records) | `0x2F7D79` → `0x51FDA0` | heuristic header scan | engine walk of entity bodies |
 | 7 | `world_data` (regions + `sites` + mid blob) | `0x51FDA0`/`0x86C157` → `0x15BEB28` | region marker heuristic; sites scattered | engine walk of `world_data` |
 | 8 | History stats echo (metadata, NOT a vector) | `0x15BEB28` | heuristic paired-counter scan | landmark only |
-| 9 | `world_history.figures` vector + bodies | `0x2131BB0` / bodies `0x2134DD0` | heuristic anchor + partial walk | engine walk all `max_ids[8]` |
+| 9 | `world_history.figures` vector + bodies | `0x2131BB0` / bodies `0x2134DD0` | ⚠ SUPERSEDED — DENSE vector; real start is the world_history events count (row 8 is metadata only). See `AGENTS.md` §4 | engine walk all `max_ids[8]` |
 | 10 | `world_history.events_death` vector | `0x226009C` | heuristic | engine walk |
 | 11 | Tail (events, collections, eras, artifacts) | → EOF `0x2AE0005` | open | engine walk |
 
@@ -168,6 +186,13 @@ records (count = `next_site_id`). It comes **after** `constructions` /
 → `index` → region bounds → seeds → `resident_count` → ... → realization data.
 
 ### `historical_figure` (`df.history_figure.xml`)
+
+> ⚠ SUPERSEDED — the on-disk order is **not** the df-structures declaration
+> order. The authoritative on-disk layout (from `FUN_14070a090` writer /
+> `FUN_14070a9d0` reader) is in `AGENTS.md` §4 and `FUNCTIONS.md`. In
+> particular: no `sex` pad, no stored `id`/`art_count`, version-gated
+> `family_head_id` (>0x618) and `vague_relationships` (>0x6a0), three dense
+> polymorphic link vectors, then byte-flagged `info` and `vague_relationships`.
 
 Fixed prefix through `art_count` (already parsed today), then variable tail:
 `entity_links`, `site_links`, `histfig_links` (all polymorphic pointer

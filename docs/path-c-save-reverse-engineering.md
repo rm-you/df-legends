@@ -1,5 +1,15 @@
 # Path C: Native Save Parser via Binary Reverse Engineering
 
+> **STATUS (2026-07-01): methodology still valid; environment/next-steps
+> sections superseded.** This is the original methodology writeup. The RE is
+> now underway on the **Windows** `Dwarf Fortress.exe` (not the Linux tarball
+> — see paths in [`../AGENTS.md`](../AGENTS.md)), Ghidra is installed, test
+> fixtures exist, and the save/load pipeline is decompiled in
+> [`../tools/df-save-re/ghidra_decompiles/`](../tools/df-save-re/ghidra_decompiles/).
+> For current status and the definitive on-disk layouts, read
+> [`../AGENTS.md`](../AGENTS.md) §4–5, not the "Immediate next steps" below.
+> Stale lines are marked ⚠ SUPERSEDED.
+
 This document describes how to build a **standalone Dwarf Fortress save deserializer** by analyzing the game binary, without running DF or DFHack at parse time.
 
 **Target:** DF 0.47.05 Linux 64-bit (`save_version` **1716**) — the tarball we have locally at `research/df_extract/df_linux/`.
@@ -259,6 +269,12 @@ Each DF release that changes memory layout also changes save layout. Budget **RE
 ---
 
 ## Immediate next steps
+
+> ⚠ SUPERSEDED 2026-07-01 — these steps are done. We have test fixtures, the
+> Windows DF binary, and Ghidra set up; the save/load pipeline is decompiled.
+> See [`../AGENTS.md`](../AGENTS.md) §5 for the current next step (fix the
+> histfig parser to the definitive no-sex-pad layout and walk the dense
+> figures vector from the real world_history start).
 
 1. **Obtain a small test save** (0.47.05, retired world → `world.dat`).
 2. Run `df-save-re inspect` and `df-save-re scan` on it; record marker offsets.

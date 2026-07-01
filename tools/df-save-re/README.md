@@ -2,6 +2,13 @@
 
 Layer-1 tools for reverse-engineering Dwarf Fortress save files (Path C).
 
+> **Agents: read [`../../AGENTS.md`](../../AGENTS.md) first** for the goal,
+> critical paths (DF binary, Ghidra, radare2), where work history lives
+> (`ATTEMPTS.md`, `FUNCTIONS.md`, `ghidra_decompiles/`), and the definitive
+> reverse-engineered save/load findings (figures vector is DENSE; histfig
+> header has no sex pad and no `figure_id`/`art_count`; full on-disk layout
+> in `AGENTS.md` §4).
+
 ## Install
 
 ```bash
@@ -114,4 +121,5 @@ Target: **DF 0.47.05** Linux 64-bit (`save_version` 1716).
 | Generated raws + post-header stream | Done |
 | String tables + index | Done |
 | Entity civ headers (partial catalog) | Done |
-| History events vector | Not yet — stats block located, event parse unsolved |
+| History events vector | Not yet — events factory `FUN_14070b7a0` decompiled (134 type tags); per-subclass `read_file` extraction pending (see `AGENTS.md` §4) |
+| Historical figures | Not yet — definitive on-disk layout known (no sex pad, no `figure_id`/`art_count`, DENSE vector); parser fix pending (see `AGENTS.md` §4–5) |

@@ -4,9 +4,17 @@ Tools for extracting data from **Dwarf Fortress** game save files and **legends*
 
 ## Target version
 
-**Dwarf Fortress 0.47.05** (Linux 64-bit, `save_version` **1716**).
+**Dwarf Fortress 0.47.05** (Windows `Dwarf Fortress.exe`, `save_version` **1716**).
 
 All binary RE, structure layouts, and validation are scoped to this release. Saves from other DF versions will not parse correctly until separately reverse-engineered.
+
+## Where to start (agents)
+
+**Read [`AGENTS.md`](AGENTS.md) first** — it has the goal, all critical paths
+(DF binary, Ghidra, radare2), where work history is stored, and the
+definitive reverse-engineered save/load findings. Then [`FUNCTIONS.md`](FUNCTIONS.md)
+and the decompiled C in [`tools/df-save-re/ghidra_decompiles/`](tools/df-save-re/ghidra_decompiles/).
+The chronological attempt log is [`ATTEMPTS.md`](ATTEMPTS.md).
 
 ## Approach
 
