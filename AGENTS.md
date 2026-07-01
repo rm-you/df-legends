@@ -67,11 +67,10 @@ The save fixtures are gitignored; fetch with
   header comment naming the function and listing direct callees), plus
   `index.json` (`[{addr,name,entry,callees,decompile_file}]`). This is what
   we committed to git so other agents can read the decompiles without
-  re-running Ghidra. **Regenerate** with `ghidra_scripts\DecompileWithCallees.java`.
-  NOTE: there are currently 51 committed `.c` files but `index.json` only
-  lists 12 (it was not regenerated after later batches). Treat the `.c` files
-  as the source of truth; regenerating `index.json` over all of them is
-  Phase 0 of the mapping plan.
+  re-running Ghidra. Currently 51 functions. **Regenerate** the decompiles
+  with `ghidra_scripts\DecompileWithCallees.java`; rebuild just `index.json`
+  from the existing `.c` headers (no Ghidra needed) with
+  `scripts\rebuild_index_from_decompiles.py`.
 - **`tools\df-save-re\ghidra_scripts\`** — the Ghidra postScripts that produce
   the above (`DecompileWithCallees.java`, `FindCallers.java`,
   `EnumerateEventVtables.java`). Keep these; they are the repeatable RE
