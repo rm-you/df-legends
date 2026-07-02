@@ -260,14 +260,22 @@ def extract_legends_snapshot(
     history_events_catalog: HistoryEventsCatalog | None = None
     ruler_catalog: RulerCatalog | None = None
     engine_walks: list[LayerWalk] = []
-    history_search_start = resolve_history_search_start(payload, layout, preamble.header)
+    history_search_start = None
+    if include_history_catalog or run_vector_probe:
+        try:
+            history_search_start = resolve_history_search_start(payload, layout, preamble.header)
+        except Exception:  # noqa: BLE001 - legacy heuristic; superseded by world_history_walk
+            history_search_start = None
     if include_history_catalog and history_search_start is not None:
-        historical_figure_catalog = build_historical_figure_catalog(
-            payload,
-            preamble.header,
-            search_start=history_search_start,
-            id_chain_limit=2048,
-        )
+        try:
+            historical_figure_catalog = build_historical_figure_catalog(
+                payload,
+                preamble.header,
+                search_start=history_search_start,
+                id_chain_limit=2048,
+            )
+        except Exception:  # noqa: BLE001 - legacy heuristic; superseded by world_history_walk
+            historical_figure_catalog = None
         if historical_figure_catalog:
             anchor = historical_figure_catalog.anchor
             notes.append(
@@ -295,14 +303,17 @@ def extract_legends_snapshot(
                     )
                 )
 
-        history_events_catalog = build_history_events_catalog(
-            payload,
-            preamble.header,
-            search_start=history_search_start,
-            figures_anchor=(
-                historical_figure_catalog.anchor if historical_figure_catalog else None
-            ),
-        )
+        try:
+            history_events_catalog = build_history_events_catalog(
+                payload,
+                preamble.header,
+                search_start=history_search_start,
+                figures_anchor=(
+                    historical_figure_catalog.anchor if historical_figure_catalog else None
+                ),
+            )
+        except Exception:  # noqa: BLE001 - legacy heuristic; superseded by world_history_walk
+            history_events_catalog = None
         if history_events_catalog:
             notes.append(
                 f"history events: count={history_events_catalog.event_count:,} "

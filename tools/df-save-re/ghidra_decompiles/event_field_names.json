@@ -1,0 +1,2037 @@
+{
+ "0": {
+  "symbol": "history_event_war_attacked_sitest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "attacker_civ",
+   "44": "defender_civ",
+   "48": "site_civ",
+   "52": "site",
+   "56": "attacker_general_hf",
+   "60": "defender_general_hf",
+   "64": "attacker_merc_enid",
+   "68": "defender_merc_enid",
+   "72": "merc_roles"
+  }
+ },
+ "1": {
+  "symbol": "history_event_war_destroyed_sitest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "attacker_civ",
+   "44": "defender_civ",
+   "48": "site_civ",
+   "52": "site",
+   "56": "spec_flag"
+  }
+ },
+ "2": {
+  "symbol": "history_event_created_sitest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "civ",
+   "44": "site_civ",
+   "48": "resident_civ_id",
+   "52": "site",
+   "56": "builder_hf"
+  }
+ },
+ "3": {
+  "symbol": "history_event_hist_figure_diedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "victim_hf",
+   "44": "slayer_hf",
+   "48": "slayer_race",
+   "52": "slayer_caste",
+   "56": "weapon.item",
+   "60": "weapon.item_type",
+   "62": "weapon.item_subtype",
+   "64": "weapon.mattype",
+   "68": "weapon.matindex",
+   "72": "weapon.shooter_item",
+   "76": "weapon.shooter_item_type",
+   "78": "weapon.shooter_item_subtype",
+   "80": "weapon.shooter_mattype",
+   "84": "weapon.shooter_matindex",
+   "88": "site",
+   "92": "subregion",
+   "96": "feature_layer",
+   "100": "death_cause"
+  }
+ },
+ "4": {
+  "symbol": "history_event_add_hf_entity_linkst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "civ",
+   "44": "histfig",
+   "48": "link_type",
+   "52": "position_id",
+   "56": "appointer_hfid",
+   "60": "promise_to_hfid"
+  }
+ },
+ "5": {
+  "symbol": "history_event_remove_hf_entity_linkst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "civ",
+   "44": "histfig",
+   "48": "link_type",
+   "52": "position_id"
+  }
+ },
+ "6": {
+  "symbol": "history_event_first_contactst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "contactor",
+   "44": "contacted",
+   "48": "site"
+  }
+ },
+ "7": {
+  "symbol": "history_event_first_contact_failedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "contactor",
+   "44": "rejector",
+   "48": "site"
+  }
+ },
+ "8": {
+  "symbol": "history_event_topicagreement_concludedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "source",
+   "44": "destination",
+   "48": "site",
+   "52": "topic",
+   "56": "result"
+  }
+ },
+ "9": {
+  "symbol": "history_event_topicagreement_rejectedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "topic",
+   "44": "source",
+   "48": "destination",
+   "52": "site"
+  }
+ },
+ "10": {
+  "symbol": "history_event_topicagreement_madest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "topic",
+   "44": "source",
+   "48": "destination",
+   "52": "site"
+  }
+ },
+ "11": {
+  "symbol": "history_event_war_peace_acceptedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "topic",
+   "44": "source",
+   "48": "destination",
+   "52": "site"
+  }
+ },
+ "12": {
+  "symbol": "history_event_war_peace_rejectedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "topic",
+   "44": "source",
+   "48": "destination",
+   "52": "site"
+  }
+ },
+ "13": {
+  "symbol": "history_event_diplomat_lostst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity",
+   "44": "involved",
+   "48": "site"
+  }
+ },
+ "14": {
+  "symbol": "history_event_agreements_voidedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "source",
+   "44": "destination"
+  }
+ },
+ "15": {
+  "symbol": "history_event_merchantst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "source",
+   "44": "destination",
+   "48": "site",
+   "56": "flags2",
+   "72": "goods_value_initial",
+   "76": "goods_value_end"
+  }
+ },
+ "16": {
+  "symbol": "history_event_artifact_hiddenst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "artifact",
+   "44": "unit",
+   "48": "histfig",
+   "52": "site"
+  }
+ },
+ "17": {
+  "symbol": "history_event_artifact_possessedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "artifact",
+   "44": "unit",
+   "48": "histfig",
+   "52": "site",
+   "56": "subregion_id",
+   "60": "feature_layer_id",
+   "64": "circumstance.type",
+   "68": "circumstance.data",
+   "72": "reason.type",
+   "76": "reason.data"
+  }
+ },
+ "18": {
+  "symbol": "history_event_artifact_createdst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "artifact_id",
+   "44": "creator_unit_id",
+   "48": "creator_hfid",
+   "52": "entity",
+   "56": "site",
+   "60": "flags2",
+   "64": "circumstance.type",
+   "68": "circumstance.data",
+   "72": "reason.type",
+   "76": "reason.data"
+  }
+ },
+ "19": {
+  "symbol": "history_event_artifact_lostst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "artifact",
+   "44": "site",
+   "48": "site_property_id",
+   "52": "subregion_id",
+   "56": "layer_id"
+  }
+ },
+ "20": {
+  "symbol": "history_event_artifact_foundst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "artifact",
+   "44": "unit",
+   "48": "histfig",
+   "52": "site",
+   "56": "site_property_id",
+   "60": "subregion_id",
+   "64": "layer_id"
+  }
+ },
+ "21": {
+  "symbol": "history_event_artifact_recoveredst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "artifact",
+   "44": "unit",
+   "48": "histfig",
+   "52": "site",
+   "56": "structure",
+   "60": "region",
+   "64": "layer"
+  }
+ },
+ "22": {
+  "symbol": "history_event_artifact_droppedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "artifact",
+   "44": "unit",
+   "48": "histfig",
+   "52": "site",
+   "56": "flags2"
+  }
+ },
+ "23": {
+  "symbol": "history_event_reclaim_sitest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "civ",
+   "44": "site_civ",
+   "48": "site",
+   "52": "flags2"
+  }
+ },
+ "24": {
+  "symbol": "history_event_hf_destroyed_sitest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "attacker_hf",
+   "44": "defender_civ",
+   "48": "site_civ",
+   "52": "site"
+  }
+ },
+ "25": {
+  "symbol": "history_event_site_diedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "civ",
+   "44": "site_civ",
+   "48": "site",
+   "52": "flags2"
+  }
+ },
+ "26": {
+  "symbol": "history_event_site_retiredst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "civ",
+   "44": "site_civ",
+   "48": "site",
+   "52": "flags2"
+  }
+ },
+ "27": {
+  "symbol": "history_event_entity_createdst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity",
+   "44": "site",
+   "48": "structure",
+   "52": "creator_hfid"
+  }
+ },
+ "28": {
+  "symbol": "history_event_entity_actionst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity",
+   "44": "site",
+   "48": "structure",
+   "52": "action"
+  }
+ },
+ "29": {
+  "symbol": "history_event_entity_incorporatedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "migrant_entity",
+   "44": "join_entity",
+   "48": "leader_hfid",
+   "52": "site",
+   "56": "flags2"
+  }
+ },
+ "30": {
+  "symbol": "history_event_created_buildingst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "civ",
+   "44": "site_civ",
+   "48": "site",
+   "52": "structure",
+   "56": "builder_hf",
+   "60": "flags2"
+  }
+ },
+ "31": {
+  "symbol": "history_event_replaced_buildingst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "civ",
+   "44": "site_civ",
+   "48": "site",
+   "52": "old_structure",
+   "56": "new_structure"
+  }
+ },
+ "32": {
+  "symbol": "history_event_add_hf_site_linkst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "site",
+   "44": "structure",
+   "48": "histfig",
+   "52": "civ",
+   "56": "type"
+  }
+ },
+ "33": {
+  "symbol": "history_event_remove_hf_site_linkst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "site",
+   "44": "structure",
+   "48": "histfig",
+   "52": "civ",
+   "56": "type"
+  }
+ },
+ "34": {
+  "symbol": "history_event_add_hf_hf_linkst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "hf",
+   "44": "hf_target",
+   "48": "type"
+  }
+ },
+ "35": {
+  "symbol": "history_event_remove_hf_hf_linkst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "hf",
+   "44": "hf_target",
+   "48": "type"
+  }
+ },
+ "36": {
+  "symbol": "history_event_entity_razed_buildingst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "civ",
+   "44": "site",
+   "48": "structure"
+  }
+ },
+ "37": {
+  "symbol": "history_event_masterpiece_created_arch_designst",
+  "names": {
+   "56": "building_type",
+   "58": "building_subtype",
+   "60": "building_custom",
+   "64": "unk_2",
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "maker",
+   "44": "maker_entity",
+   "48": "site",
+   "52": "skill_at_time"
+  }
+ },
+ "38": {
+  "symbol": "history_event_masterpiece_created_arch_constructst",
+  "names": {
+   "56": "building_type",
+   "58": "building_subtype",
+   "60": "building_custom",
+   "64": "building_id",
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "maker",
+   "44": "maker_entity",
+   "48": "site",
+   "52": "skill_at_time"
+  }
+ },
+ "39": {
+  "symbol": "history_event_masterpiece_created_itemst",
+  "names": {
+   "56": "item_type",
+   "58": "item_subtype",
+   "60": "mat_type",
+   "62": "mat_index",
+   "64": "item_id",
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "maker",
+   "44": "maker_entity",
+   "48": "site",
+   "52": "skill_at_time"
+  }
+ },
+ "40": {
+  "symbol": "history_event_masterpiece_created_dye_itemst",
+  "names": {
+   "56": "item_type",
+   "58": "item_subtype",
+   "60": "mat_type",
+   "64": "mat_index",
+   "68": "item_id",
+   "72": "dye_mat_type",
+   "76": "dye_mat_index",
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "maker",
+   "44": "maker_entity",
+   "48": "site",
+   "52": "skill_at_time"
+  }
+ },
+ "41": {
+  "symbol": "history_event_masterpiece_created_item_improvementst",
+  "names": {
+   "56": "item_type",
+   "58": "item_subtype",
+   "60": "mat_type",
+   "64": "mat_index",
+   "68": "item_id",
+   "72": "improvement_type",
+   "76": "improvement_subtype",
+   "80": "imp_mat_type",
+   "84": "imp_mat_index",
+   "88": "art_id",
+   "92": "art_subid",
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "maker",
+   "44": "maker_entity",
+   "48": "site",
+   "52": "skill_at_time"
+  }
+ },
+ "42": {
+  "symbol": "history_event_masterpiece_created_foodst",
+  "names": {
+   "56": "item_subtype",
+   "60": "item_id",
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "maker",
+   "44": "maker_entity",
+   "48": "site",
+   "52": "skill_at_time"
+  }
+ },
+ "43": {
+  "symbol": "history_event_masterpiece_created_engravingst",
+  "names": {
+   "56": "art_id",
+   "60": "art_subid",
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "maker",
+   "44": "maker_entity",
+   "48": "site",
+   "52": "skill_at_time"
+  }
+ },
+ "44": {
+  "symbol": "history_event_masterpiece_lostst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "creation_event",
+   "44": "histfig",
+   "48": "site",
+   "52": "method"
+  }
+ },
+ "45": {
+  "symbol": "history_event_change_hf_statest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "hfid",
+   "44": "state",
+   "48": "reason",
+   "52": "site",
+   "56": "region",
+   "60": "layer",
+   "64": "region_pos.x",
+   "66": "region_pos.y"
+  }
+ },
+ "46": {
+  "symbol": "history_event_change_hf_jobst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "hfid",
+   "44": "new_job",
+   "46": "old_job",
+   "48": "site",
+   "52": "region",
+   "56": "layer"
+  }
+ },
+ "47": {
+  "symbol": "history_event_war_field_battlest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "attacker_civ",
+   "44": "defender_civ",
+   "48": "region",
+   "52": "layer",
+   "56": "region_pos.x",
+   "58": "region_pos.y",
+   "60": "attacker_general_hf",
+   "64": "defender_general_hf",
+   "68": "attacker_merc_enid",
+   "72": "defender_merc_enid",
+   "76": "merc_roles"
+  }
+ },
+ "48": {
+  "symbol": "history_event_war_plundered_sitest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "attacker_civ",
+   "44": "defender_civ",
+   "48": "site_civ",
+   "52": "site",
+   "56": "spec_flag"
+  }
+ },
+ "49": {
+  "symbol": "history_event_war_site_new_leaderst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "attacker_civ",
+   "44": "new_site_civ",
+   "48": "defender_civ",
+   "52": "site_civ",
+   "56": "site",
+   "64": "new_leaders"
+  }
+ },
+ "50": {
+  "symbol": "history_event_war_site_tribute_forcedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "attacker_civ",
+   "44": "defender_civ",
+   "48": "site_civ",
+   "52": "site",
+   "56": "season",
+   "60": "tribute_flags"
+  }
+ },
+ "51": {
+  "symbol": "history_event_war_site_taken_overst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "attacker_civ",
+   "44": "new_site_civ",
+   "48": "defender_civ",
+   "52": "site_civ",
+   "56": "site"
+  }
+ },
+ "52": {
+  "symbol": "history_event_body_abusedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "bodies",
+   "64": "victim_entity",
+   "68": "civ",
+   "72": "histfig",
+   "76": "site",
+   "80": "region",
+   "84": "layer",
+   "88": "region_pos.x",
+   "90": "region_pos.y",
+   "92": "abuse_type",
+   "96": "abuse_data",
+   "100": "abuse_data.item_subtype",
+   "104": "abuse_data.mat_type",
+   "108": "abuse_data.mat_index"
+  }
+ },
+ "53": {
+  "symbol": "history_event_hist_figure_abductedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "target",
+   "44": "snatcher",
+   "48": "site",
+   "52": "region",
+   "56": "layer"
+  }
+ },
+ "54": {
+  "symbol": "history_event_item_stolenst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "item_type",
+   "42": "item_subtype",
+   "44": "mattype",
+   "48": "matindex",
+   "52": "item",
+   "56": "entity",
+   "60": "histfig",
+   "64": "site",
+   "68": "structure",
+   "72": "region",
+   "76": "layer",
+   "80": "region_pos.x",
+   "82": "region_pos.y",
+   "84": "stash_site",
+   "88": "circumstance.type",
+   "92": "circumstance.data",
+   "96": "reason.type",
+   "100": "reason.data",
+   "104": "theft_method"
+  }
+ },
+ "55": {
+  "symbol": "history_event_hf_razed_buildingst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "histfig",
+   "44": "site",
+   "48": "structure"
+  }
+ },
+ "56": {
+  "symbol": "history_event_creature_devouredst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "victim",
+   "44": "race",
+   "48": "caste",
+   "52": "eater",
+   "56": "entity",
+   "60": "site",
+   "64": "region",
+   "68": "layer"
+  }
+ },
+ "57": {
+  "symbol": "history_event_hist_figure_woundedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "woundee",
+   "44": "wounder",
+   "48": "site",
+   "52": "region",
+   "56": "layer",
+   "60": "woundee_race",
+   "64": "woundee_caste",
+   "66": "body_part",
+   "68": "injury_type",
+   "72": "part_lost",
+   "76": "flags2"
+  }
+ },
+ "58": {
+  "symbol": "history_event_hist_figure_simple_battle_eventst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "group1",
+   "64": "group2",
+   "88": "site",
+   "92": "region",
+   "96": "layer",
+   "100": "subtype"
+  }
+ },
+ "59": {
+  "symbol": "history_event_created_world_constructionst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "civ",
+   "44": "site_civ",
+   "48": "construction",
+   "52": "master_construction",
+   "56": "site1",
+   "60": "site2"
+  }
+ },
+ "60": {
+  "symbol": "history_event_hist_figure_reunionst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "missing",
+   "64": "reunited_with",
+   "92": "site",
+   "96": "region",
+   "100": "layer",
+   "88": "assistant"
+  }
+ },
+ "61": {
+  "symbol": "history_event_hist_figure_reach_summitst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "group",
+   "64": "region",
+   "68": "layer",
+   "72": "region_pos.x",
+   "74": "region_pos.y"
+  }
+ },
+ "62": {
+  "symbol": "history_event_hist_figure_travelst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "group",
+   "64": "site",
+   "68": "region",
+   "72": "layer",
+   "80": "region_pos.x",
+   "82": "region_pos.y",
+   "76": "reason"
+  }
+ },
+ "63": {
+  "symbol": "history_event_hist_figure_new_petst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "group",
+   "64": "pets",
+   "88": "site",
+   "92": "region",
+   "96": "layer",
+   "100": "region_pos.x",
+   "102": "region_pos.y"
+  }
+ },
+ "64": {
+  "symbol": "history_event_assume_identityst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "trickster",
+   "44": "identity",
+   "48": "target"
+  }
+ },
+ "65": {
+  "symbol": "history_event_create_entity_positionst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "histfig",
+   "44": "civ",
+   "48": "site_civ",
+   "52": "position",
+   "56": "reason"
+  }
+ },
+ "66": {
+  "symbol": "history_event_change_creature_typest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "changee",
+   "44": "changer",
+   "48": "old_race",
+   "52": "old_caste",
+   "56": "new_race",
+   "60": "new_caste"
+  }
+ },
+ "67": {
+  "symbol": "history_event_hist_figure_revivedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "histfig",
+   "44": "site",
+   "48": "region",
+   "52": "layer",
+   "56": "ghost_type",
+   "60": "flags2",
+   "64": "actor_hfid",
+   "68": "interaction",
+   "72": "interaction_effect"
+  }
+ },
+ "68": {
+  "symbol": "history_event_hf_learns_secretst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "student",
+   "44": "teacher",
+   "48": "artifact",
+   "52": "interaction",
+   "56": "interaction_source"
+  }
+ },
+ "69": {
+  "symbol": "history_event_change_hf_body_statest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "histfig",
+   "44": "body_state",
+   "48": "site",
+   "52": "structure",
+   "56": "region",
+   "60": "layer",
+   "64": "region_pos.x",
+   "66": "region_pos.y"
+  }
+ },
+ "70": {
+  "symbol": "history_event_hf_act_on_buildingst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "action",
+   "44": "histfig",
+   "48": "site",
+   "52": "structure"
+  }
+ },
+ "71": {
+  "symbol": "history_event_hf_does_interactionst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "doer",
+   "44": "target",
+   "48": "interaction",
+   "52": "source",
+   "56": "site",
+   "60": "region",
+   "64": "layer"
+  }
+ },
+ "72": {
+  "symbol": "history_event_hf_confrontedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "target",
+   "44": "situation",
+   "48": "reasons",
+   "72": "site",
+   "76": "region",
+   "80": "layer",
+   "84": "region_pos.x",
+   "86": "region_pos.y"
+  }
+ },
+ "73": {
+  "symbol": "history_event_entity_lawst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity",
+   "44": "histfig",
+   "48": "add_flags",
+   "52": "remove_flags"
+  }
+ },
+ "74": {
+  "symbol": "history_event_hf_gains_secret_goalst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "histfig",
+   "44": "goal",
+   "48": "circumstance.type",
+   "52": "circumstance.data",
+   "56": "reason.type",
+   "60": "reason.data"
+  }
+ },
+ "75": {
+  "symbol": "history_event_artifact_storedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "artifact",
+   "44": "unit",
+   "48": "histfig",
+   "52": "site",
+   "56": "building"
+  }
+ },
+ "76": {
+  "symbol": "history_event_agreement_formedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "agreement_id",
+   "44": "spec_flag"
+  }
+ },
+ "77": {
+  "symbol": "history_event_site_disputest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "dispute_type",
+   "44": "entity_1",
+   "48": "entity_2",
+   "52": "site_1",
+   "56": "site_2"
+  }
+ },
+ "78": {
+  "symbol": "history_event_agreement_concludedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "agreement_id",
+   "44": "subject_id",
+   "48": "reason",
+   "52": "concluder_hf"
+  }
+ },
+ "79": {
+  "symbol": "history_event_insurrection_startedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "target_civ",
+   "44": "site"
+  }
+ },
+ "80": {
+  "symbol": "history_event_insurrection_endedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "target_civ",
+   "44": "site",
+   "48": "outcome"
+  }
+ },
+ "81": {
+  "symbol": "history_event_hf_attacked_sitest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "attacker_hf",
+   "44": "defender_civ",
+   "48": "site_civ",
+   "52": "site"
+  }
+ },
+ "82": {
+  "symbol": "history_event_performancest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity",
+   "44": "occasion",
+   "48": "schedule",
+   "52": "site",
+   "56": "region",
+   "60": "layer"
+  }
+ },
+ "83": {
+  "symbol": "history_event_competitionst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity",
+   "44": "occasion",
+   "48": "schedule",
+   "52": "site",
+   "56": "region",
+   "60": "layer",
+   "64": "competitor_hf",
+   "88": "winner_hf"
+  }
+ },
+ "84": {
+  "symbol": "history_event_processionst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity",
+   "44": "occasion",
+   "48": "schedule",
+   "52": "site",
+   "56": "region",
+   "60": "layer"
+  }
+ },
+ "85": {
+  "symbol": "history_event_ceremonyst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity",
+   "44": "occasion",
+   "48": "schedule",
+   "52": "site",
+   "56": "region",
+   "60": "layer"
+  }
+ },
+ "86": {
+  "symbol": "history_event_knowledge_discoveredst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "hf",
+   "44": "knowledge.flag_type",
+   "48": "knowledge.flag_data",
+   "52": "spec_flag"
+  }
+ },
+ "87": {
+  "symbol": "history_event_artifact_transformedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "new_artifact",
+   "48": "old_artifact",
+   "72": "unit",
+   "76": "histfig",
+   "80": "site"
+  }
+ },
+ "88": {
+  "symbol": "history_event_artifact_destroyedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "artifact",
+   "44": "site",
+   "48": "destroyer_hf",
+   "52": "destroyer_civ"
+  }
+ },
+ "89": {
+  "symbol": "history_event_hf_relationship_deniedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "seeker_hf",
+   "44": "target_hf",
+   "48": "type",
+   "52": "reason.type",
+   "56": "reason.data",
+   "60": "site",
+   "64": "region",
+   "68": "layer"
+  }
+ },
+ "90": {
+  "symbol": "history_event_regionpop_incorporated_into_entityst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "pop_race",
+   "44": "number_moved",
+   "48": "pop_region",
+   "52": "pop_layer",
+   "56": "join_entity",
+   "60": "site"
+  }
+ },
+ "91": {
+  "symbol": "history_event_poetic_form_createdst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "histfig",
+   "44": "form",
+   "48": "site",
+   "52": "region",
+   "56": "layer",
+   "60": "circumstance.type",
+   "64": "circumstance.data",
+   "68": "reason.type",
+   "72": "reason.data"
+  }
+ },
+ "92": {
+  "symbol": "history_event_musical_form_createdst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "histfig",
+   "44": "form",
+   "48": "site",
+   "52": "region",
+   "56": "layer",
+   "60": "circumstance.type",
+   "64": "circumstance.data",
+   "68": "reason.type",
+   "72": "reason.data"
+  }
+ },
+ "93": {
+  "symbol": "history_event_dance_form_createdst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "histfig",
+   "44": "form",
+   "48": "site",
+   "52": "region",
+   "56": "layer",
+   "60": "circumstance.type",
+   "64": "circumstance.data",
+   "68": "reason.type",
+   "72": "reason.data"
+  }
+ },
+ "94": {
+  "symbol": "history_event_written_content_composedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "histfig",
+   "44": "content",
+   "48": "site",
+   "52": "region",
+   "56": "layer",
+   "60": "circumstance.type",
+   "64": "circumstance.data",
+   "68": "reason.type",
+   "72": "reason.data"
+  }
+ },
+ "95": {
+  "symbol": "history_event_change_hf_moodst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "histfig",
+   "44": "mood",
+   "48": "reason",
+   "52": "site",
+   "56": "region",
+   "60": "layer",
+   "64": "region_pos.x",
+   "66": "region_pos.y"
+  }
+ },
+ "96": {
+  "symbol": "history_event_artifact_claim_formedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "artifact",
+   "44": "histfig",
+   "48": "entity",
+   "52": "position_profile",
+   "56": "claim_type",
+   "60": "circumstance.type",
+   "64": "circumstance.data",
+   "68": "reason.type",
+   "72": "reason.data"
+  }
+ },
+ "97": {
+  "symbol": "history_event_artifact_givenst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "artifact",
+   "44": "giver_hf",
+   "48": "giver_entity",
+   "52": "receiver_hf",
+   "56": "receiver_entity",
+   "60": "circumstance.type",
+   "64": "circumstance.data",
+   "68": "reason.type",
+   "72": "reason.data",
+   "76": "spec_flag"
+  }
+ },
+ "98": {
+  "symbol": "history_event_hf_act_on_artifactst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "action",
+   "44": "artifact",
+   "48": "histfig",
+   "52": "site",
+   "56": "structure"
+  }
+ },
+ "99": {
+  "symbol": "history_event_hf_recruited_unit_type_for_entityst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity",
+   "44": "histfig",
+   "48": "profession",
+   "52": "site",
+   "56": "region",
+   "60": "layer"
+  }
+ },
+ "100": {
+  "symbol": "history_event_hfs_formed_reputation_relationshipst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "histfig1",
+   "44": "identity1",
+   "48": "histfig2",
+   "52": "identity2",
+   "64": "site",
+   "68": "region",
+   "72": "layer",
+   "56": "rep1",
+   "60": "rep2"
+  }
+ },
+ "101": {
+  "symbol": "history_event_artifact_copiedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "artifact",
+   "44": "entity_dest",
+   "48": "entity_src",
+   "52": "site_dest",
+   "56": "site_src",
+   "60": "structure_dest",
+   "64": "structure_src",
+   "68": "flags2"
+  }
+ },
+ "102": {
+  "symbol": "history_event_sneak_into_sitest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "attacker_civ",
+   "44": "defender_civ",
+   "48": "site_civ",
+   "52": "site"
+  }
+ },
+ "103": {
+  "symbol": "history_event_spotted_leaving_sitest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "spotter_hf",
+   "44": "leaver_civ",
+   "48": "site_civ",
+   "52": "site"
+  }
+ },
+ "104": {
+  "symbol": "history_event_entity_searched_sitest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "searcher_civ",
+   "44": "site",
+   "48": "result"
+  }
+ },
+ "105": {
+  "symbol": "history_event_hf_freedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "freeing_civ",
+   "44": "freeing_hf",
+   "48": "holding_civ",
+   "52": "site_civ",
+   "56": "site",
+   "64": "rescued_hfs"
+  }
+ },
+ "106": {
+  "symbol": "history_event_hist_figure_simple_actionst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "group_hfs",
+   "64": "type",
+   "68": "entity",
+   "72": "site",
+   "76": "structure",
+   "80": "region",
+   "84": "layer"
+  }
+ },
+ "107": {
+  "symbol": "history_event_entity_rampaged_in_sitest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "rampage_civ_id",
+   "44": "site_id"
+  }
+ },
+ "108": {
+  "symbol": "history_event_entity_fled_sitest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "fled_civ_id",
+   "44": "site_id"
+  }
+ },
+ "109": {
+  "symbol": "history_event_tactical_situationst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "a_tactician_hfid",
+   "44": "d_tactician_hfid",
+   "48": "a_tactics_roll",
+   "52": "d_tactics_roll",
+   "56": "situation",
+   "60": "site",
+   "64": "structure",
+   "68": "subregion",
+   "72": "feature_layer",
+   "76": "tactics_flags"
+  }
+ },
+ "110": {
+  "symbol": "history_event_squad_vs_squadst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "48": "a_hfid",
+   "72": "a_squad_id",
+   "76": "a_race",
+   "80": "a_interaction",
+   "84": "a_effect",
+   "88": "a_number",
+   "92": "a_slain",
+   "104": "d_hfid",
+   "128": "d_squad_id",
+   "132": "d_race",
+   "136": "d_interaction",
+   "140": "d_effect",
+   "144": "d_number",
+   "148": "d_slain",
+   "40": "a_leader_hfid",
+   "44": "a_leadership_roll",
+   "96": "d_leader_hfid",
+   "100": "d_leadership_roll",
+   "152": "site",
+   "156": "structure",
+   "160": "subregion",
+   "164": "feature_layer"
+  }
+ },
+ "111": {
+  "symbol": "history_event_site_surrenderedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "attacker_civ",
+   "44": "defender_civ",
+   "48": "site_civ",
+   "52": "site"
+  }
+ },
+ "112": {
+  "symbol": "history_event_entity_expels_hfst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "civ",
+   "44": "expelled",
+   "48": "site"
+  }
+ },
+ "113": {
+  "symbol": "history_event_tradest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "hf",
+   "44": "entity",
+   "48": "source_site",
+   "52": "dest_site",
+   "56": "production_zone",
+   "60": "allotment",
+   "64": "allotment_index",
+   "68": "account_shift"
+  }
+ },
+ "114": {
+  "symbol": "history_event_add_entity_site_profile_flagst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity",
+   "44": "site",
+   "48": "added_flags"
+  }
+ },
+ "115": {
+  "symbol": "history_event_gamblest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "hf",
+   "44": "site",
+   "48": "structure",
+   "52": "account_before",
+   "56": "account_after"
+  }
+ },
+ "116": {
+  "symbol": "history_event_add_hf_entity_honorst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity_id",
+   "44": "hfid",
+   "48": "honor_id"
+  }
+ },
+ "117": {
+  "symbol": "history_event_entity_dissolvedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity",
+   "44": "circumstance.type",
+   "48": "circumstance.data",
+   "52": "reason.type",
+   "56": "reason.data"
+  }
+ },
+ "118": {
+  "symbol": "history_event_entity_equipment_purchasest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity",
+   "44": "quality",
+   "48": "hfs"
+  }
+ },
+ "119": {
+  "symbol": "history_event_modified_buildingst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "site",
+   "44": "structure",
+   "48": "hf",
+   "52": "ab_type",
+   "56": "modification"
+  }
+ },
+ "120": {
+  "symbol": "history_event_building_profile_acquiredst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "site",
+   "44": "building_profile",
+   "48": "acquirer_hf",
+   "52": "acquirer_entity",
+   "56": "acquisition_type",
+   "60": "previous_owner_hf",
+   "64": "previous_owner_civ"
+  }
+ },
+ "121": {
+  "symbol": "history_event_hf_preachst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "speaker_hf",
+   "44": "site",
+   "48": "topic",
+   "52": "entity1",
+   "56": "entity2"
+  }
+ },
+ "122": {
+  "symbol": "history_event_entity_persecutedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "persecuting_hf",
+   "44": "persecuting_entity",
+   "48": "target_entity",
+   "52": "site",
+   "56": "property_confiscated_from_hfs",
+   "80": "destroyed_structures",
+   "104": "shrines_destroyed",
+   "112": "expelled_hfs",
+   "136": "expelled_populations",
+   "160": "expelled_races",
+   "184": "expelled_counts"
+  }
+ },
+ "123": {
+  "symbol": "history_event_entity_breach_feature_layerst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "site",
+   "44": "site_entity",
+   "48": "civ_entity",
+   "52": "layer"
+  }
+ },
+ "124": {
+  "symbol": "history_event_entity_alliance_formedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "entity",
+   "48": "joining_entities"
+  }
+ },
+ "125": {
+  "symbol": "history_event_hf_ransomedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "ransomed_hf",
+   "44": "ransomer_hf",
+   "48": "payer_hf",
+   "52": "payer_entity",
+   "56": "moved_to_site"
+  }
+ },
+ "126": {
+  "symbol": "history_event_hf_enslavedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "enslaved_hf",
+   "44": "seller_hf",
+   "48": "payer_entity",
+   "52": "moved_to_site"
+  }
+ },
+ "127": {
+  "symbol": "history_event_sabotagest",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "saboteur_hf",
+   "44": "target_hf",
+   "48": "target_entity",
+   "52": "site"
+  }
+ },
+ "128": {
+  "symbol": "history_event_entity_overthrownst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "overthrown_hf",
+   "44": "position_taker_hf",
+   "48": "instigator_hf",
+   "52": "entity",
+   "56": "position_profile_id",
+   "64": "conspirator_hfs",
+   "88": "site"
+  }
+ },
+ "129": {
+  "symbol": "history_event_hfs_formed_intrigue_relationshipst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "corruptor_hf",
+   "44": "corruptor_identity",
+   "48": "target_hf",
+   "52": "target_identity",
+   "64": "site",
+   "68": "region",
+   "72": "layer",
+   "56": "target_role",
+   "60": "corruptor_role"
+  }
+ },
+ "130": {
+  "symbol": "history_event_failed_intrigue_corruptionst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "corruptor_hf",
+   "44": "corruptor_identity",
+   "48": "target_hf",
+   "52": "target_identity",
+   "56": "site",
+   "60": "region",
+   "64": "layer"
+  }
+ },
+ "131": {
+  "symbol": "history_event_hf_convictedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "convicted_hf",
+   "44": "convicter_entity",
+   "48": "recognized_by_entity",
+   "52": "recognized_by_hf",
+   "56": "implicated_hfs",
+   "80": "corrupt_hf",
+   "84": "behest_of_hf",
+   "88": "fooled_hf",
+   "92": "framer_hf",
+   "96": "surveillance_hf",
+   "100": "co_conspirator_hf",
+   "104": "target_hf",
+   "108": "crime",
+   "112": "punishment",
+   "116": "punishment.prison_time",
+   "120": "punishment.give_beating",
+   "124": "plot_flags"
+  }
+ },
+ "132": {
+  "symbol": "history_event_failed_frame_attemptst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "target_hf",
+   "44": "convicter_entity",
+   "48": "plotter_hf",
+   "52": "fooled_hf",
+   "56": "framer_hf",
+   "60": "crime"
+  }
+ },
+ "133": {
+  "symbol": "history_event_hf_interrogatedst",
+  "names": {
+   "8": "year",
+   "12": "seconds",
+   "16": "flags",
+   "32": "id",
+   "40": "target_hf",
+   "44": "arresting_entity",
+   "48": "interrogator_hf",
+   "56": "implicated_hfs",
+   "80": "interrogation_flags"
+  }
+ }
+}

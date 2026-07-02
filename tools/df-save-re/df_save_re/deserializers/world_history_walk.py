@@ -54,6 +54,73 @@ class WorldHistoryLandmarks:
 # events
 
 
+def read_event_record(
+    reader: BinaryReader,
+    tag: int,
+    *,
+    save_version: int = 1716,
+) -> dict[str, Any]:
+    """Read one event body into a typed record (after the i32 tag).
+
+    Field names come from df-structures via the mem_offset mapping baked into
+    ``SAVE_LAYOUTS`` (``scripts/build_event_field_names.py``). Unnamed fields
+    fall back to ``f_<mem_offset>``.
+    """
+    layout = SAVE_LAYOUTS.get(f"history_event:{tag}")
+    fields = (layout or {}).get("fields")
+    if not fields:
+        raise ValueError(f"missing layout for history_event:{tag}")
+    # Meta keys are underscore-prefixed: some events have fields named
+    # "type"/"tag" in df-structures which would otherwise collide.
+    rec: dict[str, Any] = {
+        "_tag": tag,
+        "_type": (layout.get("struct") or f"history_event_{tag}").removeprefix("history_event_").removesuffix("st"),
+    }
+    for fd in fields:
+        vg = fd.get("version_gt")
+        if vg is not None and save_version <= int(vg, 16):
+            continue
+        name = fd.get("name") or f"f_{fd.get('mem_offset')}"
+        kind = fd.get("kind")
+        if kind == "i32":
+            rec[name] = reader.read_int32()
+        elif kind == "i16":
+            rec[name] = reader.read_int16()
+        elif kind == "u8":
+            rec[name] = reader.read_uint8()
+        elif kind == "byte_vector":
+            n = reader.read_int32()
+            if n < 0 or n > 5_000_000:
+                raise ValueError(f"byte_vector count {n} at 0x{reader.tell() - 4:x}")
+            rec[name] = list(reader.read_bytes(n))
+        elif kind == "i32_vector":
+            n = reader.read_int32()
+            if n < 0 or n > 5_000_000:
+                raise ValueError(f"i32_vector count {n} at 0x{reader.tell() - 4:x}")
+            rec[name] = [reader.read_int32() for _ in range(n)]
+        elif kind == "i16_vector":
+            n = reader.read_int32()
+            if n < 0 or n > 5_000_000:
+                raise ValueError(f"i16_vector count {n} at 0x{reader.tell() - 4:x}")
+            rec[name] = [reader.read_int16() for _ in range(n)]
+        elif kind in ("string", "stl_string"):
+            length = reader.read_int16()
+            rec[name] = reader.read_bytes(length).decode("latin-1") if length > 0 else ""
+        elif kind == "temp":
+            reader.read_bytes(fd.get("size") or 4)
+        elif kind == "scalar":
+            size = fd.get("size") or 4
+            if size == 2:
+                rec[name] = reader.read_int16()
+            elif size == 1:
+                rec[name] = reader.read_uint8()
+            else:
+                rec[name] = reader.read_int32()
+        else:
+            raise ValueError(f"unhandled event field kind {kind!r} for history_event:{tag}")
+    return rec
+
+
 def skip_event_body(reader: BinaryReader, tag: int, *, save_version: int = 1716) -> None:
     fields = SAVE_LAYOUTS.get(f"history_event:{tag}", {}).get("fields")
     if not fields:

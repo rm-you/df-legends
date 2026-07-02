@@ -13,11 +13,18 @@ OUT = ROOT / "df_save_re" / "structures" / "save_layouts.py"
 EVENT_BASE_CALL = "140019190"
 COLLECTION_BASE_CALL = "140083d80"
 
+# FUN_140019190 reads the shared prefix year/seconds/flags/id AND the four
+# history_event_masterpiecest scalars at +0x28..+0x34 (only masterpiece events
+# call it; other events inline just the 8..32 prefix).
 EVENT_BASE_FIELDS = [
     {"mem_offset": 8, "kind": "i32", "size": 4, "base": True},
     {"mem_offset": 12, "kind": "i32", "size": 4, "base": True},
     {"mem_offset": 16, "kind": "byte_vector", "size": None, "base": True},
     {"mem_offset": 32, "kind": "i32", "size": 4, "base": True},
+    {"mem_offset": 40, "kind": "i32", "size": 4},
+    {"mem_offset": 44, "kind": "i32", "size": 4},
+    {"mem_offset": 48, "kind": "i32", "size": 4},
+    {"mem_offset": 52, "kind": "i32", "size": 4},
 ]
 
 COLLECTION_BASE_FIELDS = [
@@ -56,11 +63,17 @@ def _event_layouts() -> dict[str, dict]:
     raw = _load("event_layouts.json")
     if not raw:
         return {}
+    names = _load("event_field_names.json") or {}
     layouts: dict[str, dict] = {}
     for e in raw:
         tag = e["tag"]
         key = f"history_event:{tag}"
         fields = _expand_calls(e.get("fields") or [], base_map={EVENT_BASE_CALL: EVENT_BASE_FIELDS})
+        tag_names = (names.get(str(tag)) or {}).get("names") or {}
+        for f in fields:
+            nm = tag_names.get(str(f.get("mem_offset")))
+            if nm:
+                f["name"] = nm
         layouts[key] = {
             "struct": e.get("symbol"),
             "tag": tag,

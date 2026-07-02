@@ -3,8 +3,9 @@
 Factory FUN_140763aa0 dispatches on an i32 tag (0..17). Every subtype's
 read_file starts with the base block FUN_140083d80:
 
-    i32_vec events, i32_vec collections, 4x i32 (start_year, start_seconds,
-    end_year, end_seconds), byte flagarray (i32 count + count bytes), i32 id
+    i32_vec events, i32_vec collections, 4x i32 (start_year, end_year,
+    start_seconds, end_seconds -- memory order +0x38..+0x44 per df.history.xml),
+    byte flagarray (i32 count + count bytes), i32 id
 
 then reads type-specific fields. Only war (0) and battle (1) embed a
 language_name (FUN_140315ac0); purge (14) has a raw string.
@@ -69,9 +70,11 @@ def _read_base(reader: BinaryReader) -> dict:
     # FUN_140083d80
     events = _i32_vec(reader, "collection_events")
     collections = _i32_vec(reader, "collection_children")
+    # +0x38..+0x44 in memory = start_year, end_year, start_seconds, end_seconds
+    # (df.history.xml history_event_collection field order).
     start_year = reader.read_int32()
-    start_seconds = reader.read_int32()
     end_year = reader.read_int32()
+    start_seconds = reader.read_int32()
     end_seconds = reader.read_int32()
     flag_bytes = reader.read_bytes(_count(reader, "collection_flags"))
     coll_id = reader.read_int32()
@@ -87,12 +90,16 @@ def _read_base(reader: BinaryReader) -> dict:
     }
 
 
-def _war_body(reader: BinaryReader, v: int, rec: dict) -> None:
-    # FUN_1407699e0
-    name = read_language_name(reader)
+def _set_name(rec: dict, name) -> None:
     rec["name"] = name.display_hint or None
     rec["name_words"] = name.words if name.has_name else []
+    rec["name_parts_of_speech"] = name.parts_of_speech if name.has_name else []
     rec["language"] = name.language if name.has_name else None
+
+
+def _war_body(reader: BinaryReader, v: int, rec: dict) -> None:
+    # FUN_1407699e0
+    _set_name(rec, read_language_name(reader))
     rec["attacker_civs"] = _i32_vec(reader)
     rec["defender_civs"] = _i32_vec(reader)
     if v > 0x670:
@@ -114,10 +121,7 @@ def _war_body(reader: BinaryReader, v: int, rec: dict) -> None:
 
 def _battle_body(reader: BinaryReader, v: int, rec: dict) -> None:
     # FUN_140084360
-    name = read_language_name(reader)
-    rec["name"] = name.display_hint or None
-    rec["name_words"] = name.words if name.has_name else []
-    rec["language"] = name.language if name.has_name else None
+    _set_name(rec, read_language_name(reader))
     rec["war_id"] = reader.read_int32()
     rec["subregion_id"] = reader.read_int32()
     rec["feature_layer_id"] = reader.read_int32()

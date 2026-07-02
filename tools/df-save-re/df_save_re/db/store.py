@@ -66,6 +66,185 @@ def _json_int_list(values: tuple[int, ...] | list[int]) -> str:
     return json.dumps(list(values))
 
 
+def stream_world_history(
+    session: Session,
+    payload: bytes,
+    header,
+    *,
+    save_version: int,
+    words: list[str],
+) -> dict[str, int] | None:
+    """Stream the full world_history walk (events/figures/collections/eras).
+
+    Returns per-layer counts on success, ``None`` if location fails (caller
+    falls back to the legacy anchor-based streaming).
+    """
+    import json as _json_mod
+
+    from ..deserializers.world_history_walk import (
+        locate_world_history,
+        read_event_record,
+        walk_world_history,
+    )
+    from ..binary_reader import BinaryReader
+    from io import BytesIO
+
+    lm = locate_world_history(payload, header, save_version=save_version)
+    if lm is None:
+        return None
+
+    writer = StreamWriter(session)
+    counts = {"events": 0, "figures": 0, "event_collections": 0, "eras": 0}
+
+    # Events: read typed records at each body offset reported by the walk.
+    event_reader = BinaryReader(BytesIO(payload))
+
+    def on_event(idx: int, tag: int, body_off: int) -> None:
+        event_reader.seek(body_off)
+        rec = read_event_record(event_reader, tag, save_version=save_version)
+        row = {
+            "event_id": int(rec.get("id", idx)),
+            "year": rec.get("year"),
+            "seconds": rec.get("seconds"),
+            "event_type": rec.get("_type"),
+            "civ_id": rec.get("civ") or rec.get("civ_id"),
+            "site_id": rec.get("site") or rec.get("site_id"),
+            "hfid": rec.get("hfid") or rec.get("histfig") or rec.get("victim_hf"),
+            "fields_json": _json_mod.dumps(
+                {k: v for k, v in rec.items() if k not in ("_tag", "flags")},
+                separators=(",", ":"),
+            ),
+            "record_json": None,
+        }
+        writer._buffers["events"].append(row)
+        if len(writer._buffers["events"]) >= writer.batch_size:
+            writer._flush_layer("events")
+        counts["events"] += 1
+
+    def on_figure(slot: int, fh, tail: dict) -> None:
+        display, _src = resolve_language_name_display(fh.name, words=words)
+        row = {
+            "figure_id": slot,
+            "profession": fh.profession,
+            "race": fh.race,
+            "caste": fh.caste,
+            "sex": fh.sex,
+            "civ_id": fh.civ_id,
+            "population_id": fh.population_id,
+            "breed_id": fh.breed_id,
+            "cultural_identity": fh.cultural_identity,
+            "family_head_id": fh.family_head_id,
+            "unit_id": fh.unit_id,
+            "nemesis_id": fh.nemesis_id,
+            "appeared_year": fh.appeared_year,
+            "born_year": fh.born_year,
+            "born_seconds": fh.born_seconds,
+            "died_year": fh.died_year,
+            "died_seconds": fh.died_seconds,
+            "curse_year": fh.curse_year,
+            "curse_seconds": fh.curse_seconds,
+            "name_display": display or None,
+            "name_words_json": _json_mod.dumps(list(fh.name.words)),
+            "payload_offset": fh.payload_offset,
+            "record_json": _json_mod.dumps(tail, separators=(",", ":")) if tail else None,
+        }
+        writer._buffers["figures"].append(row)
+        if len(writer._buffers["figures"]) >= writer.batch_size:
+            writer._flush_layer("figures")
+        counts["figures"] += 1
+
+    def on_collection(idx: int, rec: dict) -> None:
+        display = rec.get("name")
+        if not display and rec.get("name_words"):
+            parts = [
+                words[w]
+                for w in rec["name_words"]
+                if isinstance(w, int) and 0 <= w < len(words)
+            ]
+            display = " ".join(parts) if parts else None
+        row = {
+            "collection_id": int(rec.get("id", idx)),
+            "collection_type": rec.get("type"),
+            "start_year": rec.get("start_year"),
+            "end_year": rec.get("end_year"),
+            "name_display": display,
+            "record_json": _json_mod.dumps(
+                {k: v for k, v in rec.items() if k != "flags"}, separators=(",", ":")
+            ),
+        }
+        writer._buffers["event_collections"].append(row)
+        if len(writer._buffers["event_collections"]) >= writer.batch_size:
+            writer._flush_layer("event_collections")
+        counts["event_collections"] += 1
+
+    def on_era(idx: int, era) -> None:
+        writer._buffers["eras"].append(
+            {
+                "id": idx + 1,
+                "name": era.name or None,
+                "start_year": era.year,
+                "record_json": _json_mod.dumps(
+                    {"index": era.index, "scalars": era.scalars}, separators=(",", ":")
+                ),
+            }
+        )
+        counts["eras"] += 1
+
+    full = walk_world_history(
+        payload,
+        header,
+        save_version=save_version,
+        landmarks=lm,
+        on_event=on_event,
+        on_figure=on_figure,
+        on_collection=on_collection,
+        on_era=on_era,
+    )
+    writer.flush()
+
+    for layer, parsed in counts.items():
+        session.merge(
+            LayerStatus(
+                layer=layer,
+                element_type={
+                    "events": "history_event",
+                    "figures": "historical_figure",
+                    "event_collections": "historical_event_collection",
+                    "eras": "history_era",
+                }[layer],
+                authoritative_count=parsed,
+                deterministic=True,
+                declared_count=parsed,
+                parsed_count=parsed,
+                vector_offset={
+                    "events": full.events_count_offset,
+                    "figures": full.figures_count_offset,
+                    "event_collections": full.collections_count_offset,
+                    "eras": full.eras_count_offset,
+                }[layer],
+                end_offset={
+                    "events": full.events_end,
+                    "figures": full.figures_end,
+                    "event_collections": full.collections_end,
+                    "eras": full.eras_end,
+                }[layer],
+                note="deterministic world_history walk",
+            )
+        )
+    session.merge(
+        HistoryEventsMeta(
+            id=1,
+            event_count=full.event_count,
+            stats_offset=None,
+            events_vector_offset=full.events_count_offset,
+            death_events_offset=None,
+            death_present_count=None,
+        )
+    )
+    session.flush()
+    return counts
+
+
 def stream_snapshot_records(
     session: Session,
     snapshot: LegendsSnapshot,
@@ -218,6 +397,21 @@ def persist_snapshot(
             )
         )
 
+    # Deterministic full world_history walk (events -> figures -> collections ->
+    # eras). Supersedes the legacy anchor-based streaming when location succeeds.
+    words = (
+        snapshot.string_tables.sections[8].names
+        if len(snapshot.string_tables.sections) > 8
+        else []
+    )
+    history_counts = stream_world_history(
+        session,
+        payload,
+        snapshot.header,
+        save_version=save_version or 1716,
+        words=words,
+    )
+
     if snapshot.historical_figure_catalog:
         anchor = snapshot.historical_figure_catalog.anchor
         session.add(
@@ -232,8 +426,9 @@ def persist_snapshot(
                 max_id_seen=snapshot.historical_figure_catalog.max_id_seen,
             )
         )
-        # Full records are streamed via walk_pointer_vector (record_json); header chain
-        # is metadata-only fallback when the body walk yields nothing.
+    if history_counts is None and snapshot.historical_figure_catalog:
+        # Legacy fallback: anchor-based streaming; header chain is metadata-only
+        # fallback when the body walk yields nothing.
         streamed_count = stream_snapshot_records(session, snapshot, payload)
         if streamed_count == 0:
             for header in snapshot.historical_figure_catalog.headers:
@@ -264,7 +459,7 @@ def persist_snapshot(
                     )
                 )
 
-    if snapshot.history_events_catalog:
+    if history_counts is None and snapshot.history_events_catalog:
         death = snapshot.history_events_catalog.death_events
         session.add(
             HistoryEventsMeta(
@@ -338,9 +533,12 @@ def persist_snapshot(
         except ValueError:
             return None
 
+    history_layers = set(history_counts or ())
     for walk in snapshot.engine_walks:
         data = walk.to_dict()
-        session.add(
+        if data["layer"] in history_layers:
+            continue  # deterministic world_history walk already recorded status
+        session.merge(
             LayerStatus(
                 layer=data["layer"],
                 element_type=data.get("element_type"),

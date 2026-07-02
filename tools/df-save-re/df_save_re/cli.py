@@ -894,6 +894,11 @@ def cmd_scan(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # World names contain latin-1 chars the Windows console codepage may not
+    # encode; never let a summary print fail an otherwise-successful command.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="backslashreplace")
     parser = argparse.ArgumentParser(
         prog="df-save-re",
         description="Dwarf Fortress save reverse-engineering tools (Path C, Layer 1)",
