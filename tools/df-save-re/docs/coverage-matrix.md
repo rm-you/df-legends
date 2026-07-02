@@ -33,7 +33,7 @@ subset; **open** = not yet from binary.
 | Artifact | Entries | Parser |
 |----------|---------|--------|
 | `event_layouts.json` | 128 tags | `SAVE_LAYOUTS["history_event:N"]` |
-| `collection_layouts.json` | 14 tags | `SAVE_LAYOUTS["historical_event_collection:N"]` |
+| `collection_layouts.json` | 18 tags | `SAVE_LAYOUTS["historical_event_collection:N"]` |
 | `link_layouts.json` | 39 tags | `SAVE_LAYOUTS["link:{factory}:N"]` |
 | `histfig_info_layouts.json` | 14 readers | keyed by subprofile |
 | `era_layout.json` | 1 struct + tail notes | `SAVE_LAYOUTS["world_history_era"]` |
@@ -59,7 +59,7 @@ desync record + offset.
 |-------|---------------------|-----------|
 | figures | 12,747 index / 4,595 present | pending — tail fields after header |
 | events | 113,118 (`max_ids[9]`) | pending — pre-stats region blocks |
-| collections | stream count | pending — 14/18 layouts |
+| collections | stream count | pending — layouts 18/18; walk not landing |
 | eras | stream count | pending |
 | sites | 350 (`max_ids[26]+4`) | pending |
 | entities | 7,949 capacity (`max_ids[4]`) | pending |

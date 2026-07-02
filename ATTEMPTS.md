@@ -401,3 +401,11 @@ full-name check kept as fallback). Result: `event_vtables.json` went from
   updated (figures index = posnull + dense present bodies). Per-layer exact-landing
   walks still pending for figures/events/collections.
 
+#### 2026-07-01 Extraction landing — collection layouts 18/18
+
+- Added `LookupVtableSlots.java`; ran on tags 0/1/4/5 (war/battle/abduction/theft).
+- Decompiled read_file helpers `1407699e0`, `140084360`, `140085a80`, `140085ec0`.
+- Merged into `collection_vtables.json`; `collection_layouts.json` now **18/18 with fields**
+  (tag 0 still has unknown helper `FUN_1406fc080` in field list as opaque call).
+- `SAVE_LAYOUTS["historical_event_collection:*"]` = 18 after `build_layout_spec.py`.
+

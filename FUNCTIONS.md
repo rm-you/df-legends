@@ -48,7 +48,7 @@ FUN_1405f3a60  world writer            FUN_140330310  world reader
   7. Version-gated (`> 0x65c`): two vectors — `int32 id`-quad records (`operator_new(0x14)`) and large `operator_new(0x4808)` records via `FUN_1406fedd0`.
   8. Version-gated (`> 0x68f`): vector of `operator_new(0x20)` records via `FUN_1406fefc0`.
   Confirms the figures vector is DENSE.
-- `FUN_140763aa0`: `history_event_collection` factory (18 tags 0–17). Vtables in `collection_vtables.json`; on-disk bodies share base prefix via `FUN_140083d80` (see `collection_layouts.json`). Tags 0/1/4/5 delegate to helper allocators without inline vtable lines in the factory decompile — layouts pending vtable enum for war/battle/abduction/theft.
+- `FUN_140763aa0`: `history_event_collection` factory (18 tags 0–17). Vtables in `collection_vtables.json` (18/18 via `LookupVtableSlots.java` for war/battle/abduction/theft); on-disk bodies share base prefix via `FUN_140083d80` (see `collection_layouts.json`, 18/18 with fields).
 - `FUN_140083d80`: shared `history_event_collection` base reader (two i32 vectors, four i32 scalars, byte flags vector, trailing i32). Called from most collection subclass `read_file` implementations.
 - `FUN_14075cd70`: `history_era` reader — `i32 id`, `i16 type`, four `i32` scalars, `stl_string` @ +0x18 (`FUN_1405bb6d0`), nested details @ +0x40 via `FUN_14075ccb0`. Layout in `era_layout.json`.
 - `FUN_14075ccb0`: era nested details — six `i32` scalars + `i32_vector` + two trailing `i32`.
@@ -77,7 +77,7 @@ FUN_1405f3a60  world writer            FUN_140330310  world reader
 | File | Coverage |
 |------|----------|
 | `event_layouts.json` | 128/128 `history_event` tags |
-| `collection_layouts.json` | 14/18 collection tags (war/battle/abduction/theft pending) |
+| `collection_layouts.json` | 18/18 collection tags |
 | `link_layouts.json` | 39 link subtypes (entity/site/histfig factories) |
 | `histfig_info_layouts.json` | 14 info subprofile readers |
 | `era_layout.json` | `history_era` + tail-vector notes |
