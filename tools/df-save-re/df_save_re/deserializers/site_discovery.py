@@ -114,7 +114,12 @@ def discover_world_sites(
     site_ceiling = resolve_site_ceiling(header) if header is not None else None
     if max_site_id is None:
         derived = resolve_max_site_id(header) if header is not None else None
-        max_site_id = derived if derived is not None else 349
+        if derived is None:
+            raise ValueError(
+                "max_site_id is required when the world header does not provide "
+                "a site ceiling (max_ids[26])"
+            )
+        max_site_id = derived
 
     if entities is None:
         entities = catalog_entity_block(payload, search_end=search_end).entities

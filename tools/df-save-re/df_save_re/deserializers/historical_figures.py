@@ -507,7 +507,7 @@ def walk_figure_id_chain(
     start_offset: int,
     save_version: int = 1716,
     max_scan_per_body: int = 65_536,
-    max_figures: int = 12747,
+    max_figures: int | None = None,
     stop_before: int | None = None,
     xml_dir: Path | None = None,
 ) -> tuple[list[HistoricalFigureHeader], int]:
@@ -518,12 +518,15 @@ def walk_figure_id_chain(
     """
     from .body_skipper import SkipError, default_xml_dir as _default_xml, skip_historical_figure_body
 
+    from itertools import count
+
     xml_dir = _default_xml() if xml_dir is None else Path(xml_dir)
     stop_before = len(payload) if stop_before is None else stop_before
     headers: list[HistoricalFigureHeader] = []
     offset = start_offset
 
-    for fig_id in range(max_figures):
+    fig_ids = range(max_figures) if max_figures is not None else count()
+    for fig_id in fig_ids:
         if offset >= stop_before:
             break
         reader = BinaryReader(BytesIO(payload))
@@ -542,7 +545,11 @@ def walk_figure_id_chain(
                 reader,
                 payload,
                 xml_dir=xml_dir,
-                next_anchor=stop_before if fig_id >= max_figures - 1 else None,
+                next_anchor=(
+                    stop_before
+                    if max_figures is not None and fig_id >= max_figures - 1
+                    else None
+                ),
                 scan_stop=stop_before,
                 scan_limit=max_scan_per_body,
                 expected_next_id=fig_id + 1,

@@ -173,6 +173,21 @@ def walk_events_layer(
 # figures
 
 
+# Tag -1 = base link class (histfig_entity_linkst / histfig_site_linkst /
+# histfig_hf_linkst). Active saves contain them; the writer emits get_type()=-1
+# followed by the base write_file body: site = 3x i32 (FUN_1406fbb40),
+# entity/histfig = i32 target + i16 strength (shared base block).
+_BASE_LINK_FIELDS = {
+    "entity": [{"mem_offset": 8, "kind": "i32", "size": 4}, {"mem_offset": 12, "kind": "i16", "size": 2}],
+    "site": [
+        {"mem_offset": 8, "kind": "i32", "size": 4},
+        {"mem_offset": 12, "kind": "i32", "size": 4},
+        {"mem_offset": 16, "kind": "i32", "size": 4},
+    ],
+    "histfig": [{"mem_offset": 8, "kind": "i32", "size": 4}, {"mem_offset": 12, "kind": "i16", "size": 2}],
+}
+
+
 def skip_figure_links(reader: BinaryReader, factory: str, *, save_version: int = 1716) -> int:
     """Skip one dense polymorphic link vector (entity/site/histfig)."""
     count = reader.read_int32()
@@ -180,6 +195,9 @@ def skip_figure_links(reader: BinaryReader, factory: str, *, save_version: int =
         raise ValueError(f"implausible {factory} link count {count} at 0x{reader.tell() - 4:x}")
     for _ in range(count):
         tag = reader.read_int16()
+        if tag == -1:
+            skip_layout_body(reader, _BASE_LINK_FIELDS[factory], save_version=save_version)
+            continue
         layout = SAVE_LAYOUTS.get(f"link:{factory}:{tag}")
         if not layout or not layout.get("fields"):
             raise ValueError(f"no layout for link:{factory}:{tag} at 0x{reader.tell() - 2:x}")
@@ -400,6 +418,27 @@ def _figures_anchor_candidates(
     return out
 
 
+def _verify_events_landmark(
+    payload: bytes,
+    count_off: int,
+    bodies_start: int,
+    events_end: int,
+    *,
+    save_version: int,
+) -> bool:
+    """Forward-walk events from ``count_off``; must land exactly on ``events_end``."""
+    declared = struct.unpack_from("<i", payload, count_off)[0]
+    if declared <= 0 or bodies_start != count_off + 4:
+        return False
+    reader = BinaryReader(BytesIO(payload))
+    reader.seek(count_off)
+    try:
+        parsed, _ = walk_events_layer(reader, save_version=save_version)
+    except (ValueError, EOFError):
+        return False
+    return parsed == declared and reader.tell() == events_end
+
+
 def _locate_events_start(
     payload: bytes,
     events_end: int,
@@ -411,7 +450,7 @@ def _locate_events_start(
     lo = max(0, events_end - scan_back)
     reader = BinaryReader(BytesIO(payload))
     chain: dict[int, int] = {events_end: 0}
-    best: tuple[int, int, int] | None = None
+    candidates: list[tuple[int, int, int]] = []
     for s in range(events_end - 4, lo - 1, -1):
         tag = struct.unpack_from("<i", payload, s)[0]
         if not (0 <= tag <= 0x85):
@@ -427,8 +466,19 @@ def _locate_events_start(
         n = chain[nxt] + 1
         chain[s] = n
         if s - 4 >= 0 and struct.unpack_from("<i", payload, s - 4)[0] == n:
-            best = (s - 4, s, n)
-    return best
+            candidates.append((s - 4, s, n))
+    if not candidates:
+        return None
+    for count_off, bodies_start, n in sorted(candidates, key=lambda t: t[2], reverse=True):
+        if _verify_events_landmark(
+            payload,
+            count_off,
+            bodies_start,
+            events_end,
+            save_version=save_version,
+        ):
+            return (count_off, bodies_start, n)
+    return None
 
 
 def locate_world_history(
@@ -436,9 +486,12 @@ def locate_world_history(
     header: WorldHeaderHypothesis,
     *,
     save_version: int = 1716,
-    scan_back: int = 0x1000000,
+    scan_back: int | None = None,
 ) -> WorldHistoryLandmarks | None:
     """Locate events + figures deterministically from the figures count echo."""
+    if scan_back is None:
+        est_events = header.max_ids[9] if len(header.max_ids) > 9 else 0
+        scan_back = min(len(payload), max(0x1000000, (est_events + 1) * 512))
     for fig_off in _figures_anchor_candidates(payload, header, save_version=save_version):
         located = _locate_events_start(
             payload, fig_off, save_version=save_version, scan_back=scan_back

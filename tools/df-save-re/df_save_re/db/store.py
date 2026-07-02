@@ -505,7 +505,12 @@ def persist_snapshot(
                 )
             )
 
-    if vector_anchors is None and snapshot.layout and snapshot.layout.history_stats is not None:
+    if (
+        vector_anchors is None
+        and history_counts is None  # legacy scan only when deterministic walk failed
+        and snapshot.layout
+        and snapshot.layout.history_stats is not None
+    ):
         vector_anchors = anchor_history_vectors(
             payload,
             snapshot.header,

@@ -462,3 +462,67 @@ full-name check kept as fallback). Result: `event_vtables.json` went from
   eras 2 (names match: "Age of Hydra and Desert Titan" / "Desert-titan Age").
   `scripts/walk_world_history_full.py` + `scripts/diag_legends_xml_counts.py`.
 
+#### 2026-07-02 Persistence + explorer + de-Namushul (continued)
+
+- See AGENTS.md §5 for DB persistence, explorer routes, collection year-order
+  fix, and de-Namushul site/figure defaults.
+- **Waterlures locate:** `scan_back=16M` missed the events start; dynamic
+  scan + forward-verify longest chain fixes location (433,727 events, 46,662
+  figures @ `0x4832dfe`). Full import-db validated end-to-end: 433,727 events /
+  46,662 figures / 24,943 collections / 2 eras all `deterministic=1`; explorer
+  smoke 12/12 routes 200 on `minbazkar`. (First import attempt hung with ~0 CPU
+  — env flakiness again; kill + rerun completed in ~10 min.)
+
+#### 2026-07-02 Ironhand .sav probing (open)
+
+- **Base link tag -1 handled:** active saves serialize base-class links
+  (`histfig_*_linkst`, `get_type()=-1`). Writer emits tag -1 + base body:
+  site = 3×i32 (`FUN_1406fbb40`), entity/histfig = i32 target + i16 strength.
+  Added `_BASE_LINK_FIELDS` to `skip_figure_links` (load factories return
+  nullptr for -1 — layouts never covered it).
+- **.sav header max_ids is wrong/shifted:** header says `max_ids[8]=977`
+  figures / `max_ids[9]=89` events, but event vectors found in the payload
+  carry monotonic ids up to ~299,740 (years 176–317) — the real world_history
+  is much larger. Candidate "978 figures" anchors (`0x44f184b` etc.) walk only
+  5–9 bodies then desync (units/nemesis copies, not the history figures
+  vector). Several 89-count "event vectors" walk cleanly but are unit-embedded
+  event-id lists, not the events layer (`diag_ironhand_events_scan.py`,
+  `diag_ironhand_events_verify.py`).
+- **Conclusion:** locating world_history in active `.sav` needs the .sav
+  world-header/max_ids layout re-derived from the .sav reader path (different
+  preamble; do NOT trust the .dat header hypothesis), or a sequential
+  section walk from the .sav preamble. Retired-save pipeline is unaffected.
+
+- **DB persistence:** `stream_world_history` in `db/store.py` drives the
+  deterministic walk with per-layer callbacks into `history_event`,
+  `historical_figure`, `event_collection`, `history_era` (typed rows +
+  `record_json`/`fields_json` full-fidelity blobs). region2 import lands all
+  four layers with `deterministic=1` LayerStatus. Legacy anchor streaming and
+  `anchor_history_vectors` now run only when the deterministic walk fails.
+- **Collection fixes found via region2 legends.xml diff:** base block scalar
+  order is `start_year, end_year, start_seconds, end_seconds` (df.history.xml
+  order — previous read swapped end_year/start_seconds: war 18 showed
+  end_year 58800 instead of 5). Worldgen collection names have empty literal
+  strings; resolve `name_words` through string-table section 8 (e.g.
+  "SQUEEZE WAR" ↔ XML "the squeezing war").
+- **Explorer:** new routes + templates for events (list w/ type+year filters,
+  pagination, detail w/ named fields + figure/site links), collections (list,
+  detail w/ member events + child collections), eras, and per-figure event
+  timelines (hfid column + `json_each` scan over `fields_json` for any *hf*
+  key). All smoke-tested 200 on region2 (`scripts/diag_explorer_smoke.py`).
+- **De-Namushul in library code:** `infer_name_table_layout` now clusters by
+  densest marker run instead of the hard `0x1190000..0x11A0000` band;
+  `_discover_cluster_band_layout` derives its band from marker cluster ±64
+  strides; `discover_world_sites` raises instead of defaulting max_site_id to
+  349 (caller in `legends_extract` treats it as a skip note);
+  `walk_figure_id_chain` max_figures default 12747 → unbounded (None).
+- **Test suite:** added `tests/test_world_history_walk.py` (full deterministic
+  walk on Namushul, 900s timeout). Relaxed the legacy `events_death` assertion
+  in `test_cross_fixture_reliability.py` (heuristic anchor superseded by the
+  deterministic walk; still asserted when it locates). NOTE: intermittent
+  hard crashes (0xC0000005 access violations) in long pytest runs on this
+  machine — appear in unmodified baseline code too (`locate_figures_vector`,
+  `_name_fingerprint_at`, `struct.unpack_from` hot loops over the 36MB
+  payload; Python 3.13.3/Win). Same file passes when run alone. Suspect
+  environment (memory pressure), not the parser: reruns pass.
+

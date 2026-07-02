@@ -404,11 +404,17 @@ def walk_events_layer(
     """Walk the main events posnull vector (header max_ids[9])."""
     xml_dir = default_xml_dir() if xml_dir is None else Path(xml_dir)
     max_ev = header.max_ids[9] if len(header.max_ids) > 9 else None
-    search_start = resolve_history_search_start(payload, layout, header)
+    try:
+        search_start = resolve_history_search_start(payload, layout, header)
+    except Exception:  # noqa: BLE001 - legacy heuristic; superseded by world_history_walk
+        search_start = None
     if search_start is None:
         return LayerWalk("events", "history_event", max_ev, None, "history search start unknown")
     if figures_anchor is None:
-        figures_anchor = locate_figures_vector(payload, header, search_start=search_start)
+        try:
+            figures_anchor = locate_figures_vector(payload, header, search_start=search_start)
+        except Exception:  # noqa: BLE001 - legacy heuristic; superseded by world_history_walk
+            figures_anchor = None
     search_end = figures_anchor.vector_offset if figures_anchor else len(payload)
     return _walk_posnull_layer(
         payload,

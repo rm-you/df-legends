@@ -1,11 +1,16 @@
-"""Fixed-stride site title table discovery (Namushul cluster ~354 bytes)."""
+"""Fixed-stride site title table discovery (stride ~354 bytes, save-agnostic)."""
 
 from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
 
-from .site_catalog import WorldSiteBinaryRecord, WorldSiteCatalog, infer_name_table_layout
+from .site_catalog import (
+    WorldSiteBinaryRecord,
+    WorldSiteCatalog,
+    densest_marker_cluster,
+    infer_name_table_layout,
+)
 from .site_id_catalog import _name_fingerprint_at
 from .site_names import SiteNameMarker
 from .string_tables import StringTableBlock
@@ -130,14 +135,20 @@ def _discover_cluster_band_layout(
     max_site_id: int,
     words: list[str],
     stride: int = 354,
+    markers: list[SiteNameMarker] | None = None,
 ) -> StrideTableLayout | None:
     """
-    Locate the late-id fixed-stride title cluster (Namushul: ~0x1194000, stride 354).
+    Locate the late-id fixed-stride title cluster around the densest marker run.
 
-    Scans a narrow band where clustered site titles are stored, independent of id-field hits.
+    The band is derived from where clustered title markers actually sit in this
+    save (no absolute offsets), then scanned in stride slots.
     """
-    lo = max(search_start, 0x1190000)
-    hi = min(search_end, 0x11B0000)
+    cluster = densest_marker_cluster(markers or [])
+    if not cluster:
+        return None
+    band_pad = stride * 64
+    lo = max(search_start, cluster[0].payload_offset - band_pad)
+    hi = min(search_end, cluster[-1].payload_offset + band_pad)
     if lo >= hi:
         return None
 
@@ -200,14 +211,7 @@ def discover_stride_table_layout(
     Uses marker clustering first, then marker-anchored alignment (fast; no full-range scan).
     """
     if not markers:
-        band = _discover_cluster_band_layout(
-            payload,
-            search_start=search_start,
-            search_end=search_end,
-            max_site_id=max_site_id,
-            words=words,
-        )
-        return band
+        return None
 
     aligned = _layout_from_marker_alignment(markers, stride=354)
     if aligned is not None and aligned.score >= 6:
@@ -219,6 +223,7 @@ def discover_stride_table_layout(
         search_end=search_end,
         max_site_id=max_site_id,
         words=words,
+        markers=markers,
     )
     if band is not None:
         return band

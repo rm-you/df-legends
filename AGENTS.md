@@ -194,12 +194,48 @@ versions.
  Figure bodies: header (`historical_figures.py`) + link vectors via
  `SAVE_LAYOUTS` + info/vague. Eras + gated tail vectors transcribed in
  `world_history_walk.py` (`read_era_record`, `skip_history_tail`).
-- **Remaining to-dos:** (1) events-read: typed event records (map layout
- mem_offsets → df-structures field names); (2) persist events/figures/
- collections/eras via `StreamWriter` into the DB; (3) explorer routes for those
- layers; (4) finish de-Namushul sweep of older library paths (site-name scan
- bands, count defaults; the `0x15BEB17` fallback is already gone); (5) validate
- Waterlures (46,661 figures) then Ironhand `.sav`.
+- **Typed event records:** `read_event_record` emits named fields —
+ `scripts/build_event_field_names.py` models the MSVC x64 in-memory layout of
+ every `history_event_*st` class (inheritance padding, enum widths, unions,
+ extern compounds) and maps decompile `mem_offset`s to df-structures names;
+ folded into `SAVE_LAYOUTS` by `build_layout_spec.py`.
+- **Persistence:** `stream_world_history` (`db/store.py`) streams the walk into
+ `history_event` / `historical_figure` / `event_collection` / `history_era`
+ with `record_json` blobs; legacy anchor paths only run if location fails.
+ Collection base scalars are `start_year, end_year, start_seconds, end_seconds`
+ (df.history.xml order) and worldgen collection names resolve via `name_words`.
+- **Explorer:** routes + templates for events (filter/paginate/detail),
+ collections (detail w/ member events), eras, per-figure timelines
+ (hfid + `json_each` over `fields_json`). Smoke: `scripts/diag_explorer_smoke.py`.
+- **De-Namushul:** site-name cluster bands now derive from densest marker run;
+ `discover_world_sites` requires a real site ceiling (no 349 default);
+ `walk_figure_id_chain` default unbounded. The `0x15BEB17` fallback is gone.
+- **Waterlures validated end-to-end:** import-db lands 433,727 events /
+ 46,662 figures / 24,943 collections / 2 eras (all `deterministic=1`, world
+ `minbazkar`); explorer smoke 12/12 routes 200.
+- **Ironhand `.sav` still open:** its header `max_ids` (977 figures / 89
+ events) contradicts on-disk data (event ids to ~299k); the .sav header
+ layout needs re-derivation before the walk can anchor. Base link tag `-1`
+ (active-save base-class links) is now handled in `skip_figure_links`.
+- **Known env issue:** long pytest runs intermittently die with 0xC0000005
+ access violations in hot byte-scan loops (also on unmodified baseline);
+ same tests pass on rerun/isolated. See ATTEMPTS.md 2026-07-02.
+
+#### 2026-07-02 Waterlures locate fix + de-Namushul sweep
+
+- **Locate on large worlds:** default `scan_back` was 16 MiB — too small for
+  Waterlures (~531k header event ceiling, ~21 MiB events→figures gap). Now
+  derived from `max_ids[9] * 512` capped at payload size. Backward-chain hits
+  false-positive count prefixes on large saves; `_verify_events_landmark`
+  forward-walks each candidate and picks the longest verified chain (433,727
+  events on Waterlures lands exactly on the figures count @ `0x4832dfe`; header
+  `max_ids[9]=531,051` is not the main events-layer count — same pattern as
+  Namushul 113,118 vs 87,666).
+- **De-Namushul:** site stride table band from densest marker cluster (not
+  `0x1190000..0x11A0000`); no default `max_site_id=349`; unbounded figure chain;
+  skip legacy `anchor_history_vectors` when deterministic walk succeeds.
+- **Explorer + persistence:** events/collections/eras routes; region2 validated
+  end-to-end (88,210 / 8,496 / 10,315 / 2).
 
 ---
 

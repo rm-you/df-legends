@@ -215,19 +215,23 @@ def extract_legends_snapshot(
     if layout.first_region_block is not None:
         gap = layout.region("entity_gap")
         if gap is not None:
-            site_discovery = discover_world_sites(
-                payload,
-                block=block,
-                search_start=gap.start,
-                search_end=len(payload),
-                entities=catalog,
-                header=header,
-                max_site_id=max_site_id,
-                civ_ids=None,
-            )
-            world_site_catalog = site_discovery.catalog
-            for line in site_discovery.notes:
-                notes.append(f"sites: {line}")
+            try:
+                site_discovery = discover_world_sites(
+                    payload,
+                    block=block,
+                    search_start=gap.start,
+                    search_end=len(payload),
+                    entities=catalog,
+                    header=header,
+                    max_site_id=max_site_id,
+                    civ_ids=None,
+                )
+            except ValueError as exc:
+                notes.append(f"sites: skipped — {exc}")
+            else:
+                world_site_catalog = site_discovery.catalog
+                for line in site_discovery.notes:
+                    notes.append(f"sites: {line}")
     if layout.first_region_block is not None:
         tail = layout.history_tail_start
         notes.append(

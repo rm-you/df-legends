@@ -111,12 +111,30 @@ def _try_header_at_marker(
     return None
 
 
+def densest_marker_cluster(
+    markers: list[SiteNameMarker],
+    *,
+    max_gap: int = 8192,
+    min_size: int = 4,
+) -> list[SiteNameMarker]:
+    """Largest run of markers with no offset gap above ``max_gap`` (save-agnostic)."""
+    ordered = sorted(markers, key=lambda m: m.payload_offset)
+    best: list[SiteNameMarker] = []
+    current: list[SiteNameMarker] = []
+    for marker in ordered:
+        if current and marker.payload_offset - current[-1].payload_offset > max_gap:
+            if len(current) > len(best):
+                best = current
+            current = []
+        current.append(marker)
+    if len(current) > len(best):
+        best = current
+    return best if len(best) >= min_size else []
+
+
 def infer_name_table_layout(markers: list[SiteNameMarker]) -> tuple[int | None, int | None]:
-    """Infer fixed-stride name-table layout from the 0x1194xxx cluster (Namushul)."""
-    cluster = sorted(
-        (m for m in markers if 0x1190000 <= m.payload_offset <= 0x11A0000),
-        key=lambda m: m.site_id,
-    )
+    """Infer fixed-stride name-table layout from the densest marker cluster."""
+    cluster = sorted(densest_marker_cluster(markers), key=lambda m: m.site_id)
     if len(cluster) < 4:
         return None, None
     gaps = [cluster[i + 1].payload_offset - cluster[i].payload_offset for i in range(len(cluster) - 1)]

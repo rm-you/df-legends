@@ -74,16 +74,24 @@ def test_core_layers_smoke(resolved_fixture):
     assert snap.history_events_catalog is not None
     assert snap.history_events_catalog.event_count == snap.header.max_ids[9]
 
-    assert snap.world_site_catalog is not None
     ceiling = resolve_site_ceiling(snap.header)
     if ceiling is not None:
+        assert snap.world_site_catalog is not None
         assert snap.world_site_catalog.site_count <= ceiling
         assert snap.world_site_catalog.site_count > ceiling // 2
     else:
-        assert snap.world_site_catalog.site_count > 0
+        # No site ceiling in the header (e.g. Ironhand .sav): site discovery is
+        # skipped rather than guessing a foreign world's bound.
+        assert snap.world_site_catalog is None
+        assert any("sites: skipped" in n for n in snap.notes)
 
     # Engine layer walks must be wired with authoritative counts on every fixture.
     walks = {w.layer: w for w in snap.engine_walks}
     assert "figures" in walks and "events_death" in walks
     assert walks["figures"].authoritative_count == walks["figures"].present_count
-    assert walks["events_death"].authoritative_count == walks["events_death"].present_count
+    # events_death is a legacy heuristic anchor superseded by the deterministic
+    # world_history walk (see test_world_history_walk.py); when its scan does
+    # locate the vector the counts must agree, but not locating it is not fatal.
+    death = walks["events_death"]
+    if death.present_count is not None:
+        assert death.authoritative_count == death.present_count
