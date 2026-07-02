@@ -3,39 +3,243 @@
   "reader_root": "140330310",
   "writer_root": "1405f3a60",
   "stream_order": [
-    {"seq": 1, "reader": "1403158a0", "writer": "140315930", "note": "preamble / header block"},
-    {"seq": 2, "reader": "14031aa30", "writer": "14031a9b0", "note": "world header extension"},
-    {"seq": 3, "reader": "14031c5d0", "writer": "14031c540", "note": "world block"},
-    {"seq": 4, "reader": "14031db90", "writer": "14031db20", "note": "world block"},
-    {"seq": 5, "reader": "140a62e80", "writer": "140a61f90", "note": "historical_entity vector (DAT_141d6cfd0)"},
-    {"seq": 6, "reader": null, "writer": null, "note": "scalar tail ints (4×int32 + int16 + int32 loop)"},
-    {"seq": 7, "reader": "1407099a0", "writer": "140709410", "note": "world_history (events→figures→collections→eras→tail)"},
-    {"seq": 8, "reader": "14030b9e0", "writer": "1405d7850", "note": "post-world_history block"},
-    {"seq": 9, "reader": "140309da0", "writer": "1405d7040", "note": "conditional block"},
-    {"seq": 10, "reader": "14030bd50", "writer": "1405d7a60", "note": "conditional block"},
-    {"seq": 11, "reader": "140305a20", "writer": "1405d3150", "note": "world_data sub-block"},
-    {"seq": 12, "reader": "140323f70", "writer": "140323f00", "note": "world block"},
-    {"seq": 13, "reader": "140323e70", "writer": "140323e00", "note": "world block"},
-    {"seq": 14, "reader": "140304680", "writer": "140304610", "note": "world_region-related (DAT_141d64d38)"},
-    {"seq": 15, "reader": "1403047a0", "writer": "140304710", "note": "world_region-related (DAT_141d64d68)"},
-    {"seq": 16, "reader": "140304c40", "writer": "140304bd0", "note": "world_region-related (DAT_141d64d98)"},
-    {"seq": 17, "reader": "140301fe0", "writer": "140301f70", "note": "geo_biome / region_map family (DAT_141d69118)"},
-    {"seq": 18, "reader": "140301a00", "writer": "140301990", "note": "DAT_141d69148"},
-    {"seq": 19, "reader": "140302a40", "writer": "1403029d0", "note": "DAT_141d69178"},
-    {"seq": 20, "reader": "140304590", "writer": "140304520", "note": "DAT_141d691a8"},
-    {"seq": 21, "reader": "1403049e0", "writer": "140304970", "note": "DAT_141d691d8"},
-    {"seq": 22, "reader": "140304390", "writer": "140304320", "note": "DAT_141d69208"},
-    {"seq": 23, "reader": "140302fb0", "writer": "140302f40", "note": "DAT_141d69250"},
-    {"seq": 24, "reader": "140302e90", "writer": "140302e20", "note": "DAT_141d69280"},
-    {"seq": 25, "reader": "140302b90", "writer": "140302b20", "note": "DAT_141d692b0"},
-    {"seq": 26, "reader": "140305510", "writer": "1403054a0", "note": "DAT_141d692e0"},
-    {"seq": 27, "reader": "140302150", "writer": "1403020e0", "note": "DAT_141d69310"},
-    {"seq": 28, "reader": "140301680", "writer": "140301610", "note": "version-gated pair (DAT_141d69340/70/a0)"},
-    {"seq": 29, "reader": "140301400", "writer": "140301390", "note": "version-gated pair (DAT_141d693d0/400)"},
-    {"seq": 30, "reader": "1403048c0", "writer": "140304850", "note": "version-gated (DAT_141d69430)"},
-    {"seq": 31, "reader": "1403026c0", "writer": "140302650", "note": "version-gated (DAT_141d69460)"},
-    {"seq": 32, "reader": "140302470", "writer": "140302400", "note": "version-gated (DAT_141d69490)"},
-    {"seq": 33, "reader": "140302590", "writer": "140302520", "note": "version-gated (DAT_141d694c0)"},
-    {"seq": 34, "reader": null, "writer": null, "note": "final scalar tail + flush (FUN_1405bbd50)"}
+    {
+      "seq": 1,
+      "reader": "1403158a0",
+      "writer": "140315930",
+      "note": "preamble / header block",
+      "struct": "world_preamble"
+    },
+    {
+      "seq": 2,
+      "reader": "14031aa30",
+      "writer": "14031a9b0",
+      "note": "world header extension",
+      "struct": "world_header_extension"
+    },
+    {
+      "seq": 3,
+      "reader": "14031c5d0",
+      "writer": "14031c540",
+      "note": "world block",
+      "struct": "world_block"
+    },
+    {
+      "seq": 4,
+      "reader": "14031db90",
+      "writer": "14031db20",
+      "note": "world block",
+      "struct": "world_block"
+    },
+    {
+      "seq": 5,
+      "reader": "140a62e80",
+      "writer": "140a61f90",
+      "note": "historical_entity vector (DAT_141d6cfd0)",
+      "struct": "historical_entityst"
+    },
+    {
+      "seq": 6,
+      "reader": null,
+      "writer": null,
+      "note": "scalar tail ints (4\u00d7int32 + int16 + int32 loop)",
+      "struct": "world_scalar_tail"
+    },
+    {
+      "seq": 7,
+      "reader": "1407099a0",
+      "writer": "140709410",
+      "note": "world_history (events\u2192figures\u2192collections\u2192eras\u2192tail)",
+      "struct": "world_history"
+    },
+    {
+      "seq": 8,
+      "reader": "14030b9e0",
+      "writer": "1405d7850",
+      "note": "post-world_history block",
+      "struct": "post_world_history_block"
+    },
+    {
+      "seq": 9,
+      "reader": "140309da0",
+      "writer": "1405d7040",
+      "note": "conditional block",
+      "struct": "world_conditional_block"
+    },
+    {
+      "seq": 10,
+      "reader": "14030bd50",
+      "writer": "1405d7a60",
+      "note": "conditional block",
+      "struct": "world_conditional_block"
+    },
+    {
+      "seq": 11,
+      "reader": "140305a20",
+      "writer": "1405d3150",
+      "note": "world_data sub-block",
+      "struct": "world_data_sub_block"
+    },
+    {
+      "seq": 12,
+      "reader": "140323f70",
+      "writer": "140323f00",
+      "note": "world block",
+      "struct": "world_block"
+    },
+    {
+      "seq": 13,
+      "reader": "140323e70",
+      "writer": "140323e00",
+      "note": "world block",
+      "struct": "world_block"
+    },
+    {
+      "seq": 14,
+      "reader": "140304680",
+      "writer": "140304610",
+      "note": "world_region-related (DAT_141d64d38)",
+      "struct": "world_regionst"
+    },
+    {
+      "seq": 15,
+      "reader": "1403047a0",
+      "writer": "140304710",
+      "note": "world_region-related (DAT_141d64d68)",
+      "struct": "world_regionst"
+    },
+    {
+      "seq": 16,
+      "reader": "140304c40",
+      "writer": "140304bd0",
+      "note": "world_region-related (DAT_141d64d98)",
+      "struct": "world_regionst"
+    },
+    {
+      "seq": 17,
+      "reader": "140301fe0",
+      "writer": "140301f70",
+      "note": "geo_biome / region_map family (DAT_141d69118)",
+      "struct": "geo_biome_map"
+    },
+    {
+      "seq": 18,
+      "reader": "140301a00",
+      "writer": "140301990",
+      "note": "DAT_141d69148",
+      "struct": "world_region_map"
+    },
+    {
+      "seq": 19,
+      "reader": "140302a40",
+      "writer": "1403029d0",
+      "note": "DAT_141d69178",
+      "struct": "world_region_map"
+    },
+    {
+      "seq": 20,
+      "reader": "140304590",
+      "writer": "140304520",
+      "note": "DAT_141d691a8",
+      "struct": "world_region_map"
+    },
+    {
+      "seq": 21,
+      "reader": "1403049e0",
+      "writer": "140304970",
+      "note": "DAT_141d691d8",
+      "struct": "world_region_map"
+    },
+    {
+      "seq": 22,
+      "reader": "140304390",
+      "writer": "140304320",
+      "note": "DAT_141d69208",
+      "struct": "world_region_map"
+    },
+    {
+      "seq": 23,
+      "reader": "140302fb0",
+      "writer": "140302f40",
+      "note": "DAT_141d69250",
+      "struct": "world_region_map"
+    },
+    {
+      "seq": 24,
+      "reader": "140302e90",
+      "writer": "140302e20",
+      "note": "DAT_141d69280",
+      "struct": "world_region_map"
+    },
+    {
+      "seq": 25,
+      "reader": "140302b90",
+      "writer": "140302b20",
+      "note": "DAT_141d692b0",
+      "struct": "world_region_map"
+    },
+    {
+      "seq": 26,
+      "reader": "140305510",
+      "writer": "1403054a0",
+      "note": "DAT_141d692e0",
+      "struct": "world_region_map"
+    },
+    {
+      "seq": 27,
+      "reader": "140302150",
+      "writer": "1403020e0",
+      "note": "DAT_141d69310",
+      "struct": "world_region_map"
+    },
+    {
+      "seq": 28,
+      "reader": "140301680",
+      "writer": "140301610",
+      "note": "version-gated pair (DAT_141d69340/70/a0)",
+      "struct": "world_constructionst"
+    },
+    {
+      "seq": 29,
+      "reader": "140301400",
+      "writer": "140301390",
+      "note": "version-gated pair (DAT_141d693d0/400)",
+      "struct": "world_constructionst"
+    },
+    {
+      "seq": 30,
+      "reader": "1403048c0",
+      "writer": "140304850",
+      "note": "version-gated (DAT_141d69430)",
+      "struct": "world_constructionst"
+    },
+    {
+      "seq": 31,
+      "reader": "1403026c0",
+      "writer": "140302650",
+      "note": "version-gated (DAT_141d69460)",
+      "struct": "world_constructionst"
+    },
+    {
+      "seq": 32,
+      "reader": "140302470",
+      "writer": "140302400",
+      "note": "version-gated (DAT_141d69490)",
+      "struct": "world_constructionst"
+    },
+    {
+      "seq": 33,
+      "reader": "140302590",
+      "writer": "140302520",
+      "note": "version-gated (DAT_141d694c0)",
+      "struct": "world_constructionst"
+    },
+    {
+      "seq": 34,
+      "reader": null,
+      "writer": null,
+      "note": "final scalar tail + flush (FUN_1405bbd50)",
+      "struct": "world_file_tail"
+    }
   ]
 }

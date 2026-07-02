@@ -66,9 +66,7 @@ SAVE_POLY_VECTOR_DENSE: set[tuple[str, str]] = {
     ("historical_figure", "histfig_links"),
 }
 
-SAVE_POLYMORPH_BODY_BYTES: dict[tuple[str, int], int] = {
-    ("histfig_site_link", 12): 50,
-}
+SAVE_POLYMORPH_BODY_BYTES: dict[tuple[str, int], int] = {}
 
 SAVE_STRICT_POLYMORPHIC_TAGS: set[str] = {
     "histfig_entity_link",

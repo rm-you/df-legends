@@ -57,9 +57,9 @@ desync record + offset.
 
 | Layer | Authoritative count | Body walk |
 |-------|---------------------|-----------|
-| figures | 12,747 index / 4,595 present | pending — tail fields after header |
-| events | 113,118 (`max_ids[9]`) | pending — pre-stats region blocks |
-| collections | stream count | pending — layouts 18/18; walk not landing |
+| figures | 12,747 index / 4,595 present | **FAIL** — first body ok; slot 1+ desync (write-path tails) |
+| events | 113,118 (`max_ids[9]`) | **FAIL** — count not located before figures index |
+| collections | stream count | **FAIL** — blocked on figures landing |
 | eras | stream count | pending |
 | sites | 350 (`max_ids[26]+4`) | pending |
 | entities | 7,949 capacity (`max_ids[4]`) | pending |

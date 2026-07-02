@@ -415,5 +415,19 @@ full-name check kept as fallback). Result: `event_vtables.json` went from
 - Rewrote `extract_histfig_info_layouts.py` → slot-keyed JSON (13 slots from `14070b110.c`).
 - Added `histfig_info.py` + wired into `save_profiles.py` / `record_reader.py`.
 - Added `vague_layout.json` + `read_vague_relationships_save` (i32 count + N×(i32,i16)).
-- `SAVE_LAYOUTS["histfig_info"]` has 13 slots; fast tests green.
+- `histfig_info.py` + `SAVE_LAYOUTS["histfig_info"]` has 13 slots; fast tests green.
+
+#### 2026-07-01 Extraction landing — figure walk blockers
+
+- **Write vs load path:** compressed saves serialize histfig tails via write
+  helpers in `FUN_14070a090`: info=`FUN_14070a5d0`, vague=`FUN_1406fb080`. Load
+  readers `14070b110`/`1406fb120` differ — current info layout keyed from load
+  reader needs re-derive from `14070a5d0.c`.
+- **Figure body stream:** `FUN_1407099a0` reads `i32 count` then `count` bodies
+  (12747 on Namushul). Posnull index at `0x2131BB0` is separate; `flags_end=
+  0x2134D80`, first parseable body at `0x2134DD9` (110 B), slot 1+ desync without
+  stub handling. Collections probe tags appear near `0x2134F01` after partial walk.
+- Added walk scripts: `find_events_start.py`, `walk_events.py`, `walk_figures_read.py`,
+  `label_world_reader_sections.py`. Events count `113118` not found as vector prefix
+  before figures index (only in header `max_ids`).
 

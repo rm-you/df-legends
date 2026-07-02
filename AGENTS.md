@@ -149,8 +149,8 @@ save_version > 0x6a0 so all version-gated fields present):
 12. `int32 count` + `count` entity_links  (factory `FUN_140707820`, dense polymorphic: `int16 type_tag` + body)
 13. `int32 count` + `count` site_links    (factory `FUN_140707c90`)
 14. `int32 count` + `count` histfig_links (factory `FUN_140708160`)
-15. `uint8 has_info` — if set, `info` body via `FUN_14070b110` (owned, inline)
-16. `uint8 has_vague` — **version-gated: only if save_version > 0x6a0**; if set, `vague_relationships` via `FUN_1406fb120`
+15. `uint8 has_info` — if set, info body via **`FUN_14070a5d0` on the save/write path** (13 slot flags; load/read uses `FUN_14070b110` — same slots, different helper addresses)
+16. `uint8 has_vague` — **version-gated: only if save_version > 0x6a0**; if set, vague body via **`FUN_1406fb080` on save/write** (`FUN_1406fb120` on load)
 
 The three link vectors are dense polymorphic: `int16 type_tag` then the
 subtype's `read_file` (vtable +0x18). Active tags are mapped in `FUNCTIONS.md`
@@ -177,19 +177,25 @@ versions.
 
 ## 5. Where we are right now
 
-- Infrastructure (engine, harness, DB, explorer) is done — see
-  `tools/df-save-re/README.md` (module map + status).
+- **Layout-mapping phase complete** at commits `f6ab89b` + `643b8dd` + `5b7d396`:
+  `event_layouts.json` 128/128, `collection_layouts.json` 18/18, `link_layouts.json`
+  39/39, slot-keyed `histfig_info_layouts.json` (13 slots), `vague_layout.json`,
+  `SAVE_LAYOUTS` folded via `build_layout_spec.py`, Ghidra index **343** functions.
 - **Counts and top-level identity extract correctly** on all fixtures.
-- **Per-record bodies do not yet land.** Root cause is now precisely known
-  (above): the parser assumed a sex pad + fabricated `figure_id`/`art_count` +
-  a posnull figures vector. All three are wrong per the decompiles.
-- The immediate, concrete next step: fix `historical_figures.py` to the
-  definitive no-pad layout above, then walk the figures vector as DENSE from
-  the real `world_history` start (locate it by the events count from `max_ids`
-  followed by a valid event tag — see `scripts/diag_find_worldhistory_start.py`).
-- Two plausible fig0 candidates were found at stream offsets `0x36af86` and
-  `0x5eb921` under the no-pad layout; confirm by walking the full vector to
-  12,747 bodies landing on the next anchor.
+- **Exact-landing body walks remain open** (extraction landing phase):
+  - **Figures:** first body parses at `0x2134DD9` (present index 4); slot 1+ desync —
+    on-disk bodies follow **`FUN_14070a090` write order** (12747 slots per
+    `FUN_1407099a0`), not the posnull present-flag iterator alone. Info/vague tails
+    must use **write helpers** (`14070a5d0`, `1406fb080`), not load readers
+    (`14070b110`, `1406fb120`). See `ATTEMPTS.md` 2026-07-01 extraction landing.
+  - **Events:** `113118` count does not appear as a vector prefix before
+    `0x2131BB0`; locate `world_history` events start via `scripts/find_events_start.py`
+    (may require anchoring from `world_history` base, not figures index alone).
+  - **Collections/eras/tail:** layouts ready; walk blocked on figures landing offset.
+- **Next concrete steps:** (1) re-key info skip from `14070a5d0` write decompile,
+  (2) walk 12747 figure bodies from corrected `bodies_start`, (3) events walk with
+  i32 tags landing on figures layer, (4) `walk_world_history_tail.py` for
+  collections→eras→tail, (5) persist landed records to DB/explorer.
 
 ---
 
@@ -220,7 +226,8 @@ preserved as blobs, and the dataset browsable in the explorer UI.
 - Empirically validated serialization quirks: `coord2d` = 2×int32 (not
   int16), `coord` = 3×int32, `df-flagarray` = count×int32, posnull pointer
   vectors (count + presence bytes + bodies) DO exist for some layers — but
-  NOT for the figures vector (it is dense).
+  NOT for the figures vector as a posnull-only walk: save path writes/reads
+  `i32 count` + dense bodies for all slots (`FUN_1407099a0` / `FUN_14070a090`).
 - Ghidra headless: always pass `-noanalysis` on an existing project and
   remove stale `*.lock`/`*.lock~` files first, or it re-runs full analysis.
 - PowerShell: splat arrays (`@ADDRS`) when passing many args to a Ghidra
