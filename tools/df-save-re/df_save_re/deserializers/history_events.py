@@ -47,7 +47,7 @@ def locate_death_events_vector(
     search_end: int,
     expected_count: int = 151,
 ) -> DeathEventsVectorAnchor | None:
-    """Find ``events_death`` by count echo + posnull prefix."""
+    """Find ``events_death`` by count echo + clean posnull prefix."""
     best_score = -1
     best_offset: int | None = None
     best_present = 0
@@ -64,6 +64,44 @@ def locate_death_events_vector(
         quality = score / expected_count
         if quality < 0.95:
             continue
+        if score > best_score:
+            best_score = score
+            best_offset = offset
+            best_present = present
+    if best_offset is None:
+        return None
+    return DeathEventsVectorAnchor(
+        vector_offset=best_offset,
+        vector_count=expected_count,
+        posnull_score=best_score,
+        present_count=best_present,
+    )
+
+
+def locate_death_events_count_echo(
+    payload: bytes,
+    *,
+    search_start: int,
+    search_end: int,
+    expected_count: int = 151,
+) -> DeathEventsVectorAnchor | None:
+    """
+    Weaker ``events_death`` anchor: count echo with best partial posnull score.
+
+    Namushul @ ``0x226009C`` matches ``field_151=151`` but is not a clean posnull
+    prefix; use only for catalog metadata, not figure body stopping.
+    """
+    best_score = -1
+    best_offset: int | None = None
+    best_present = 0
+    for offset in range(search_start, search_end - 4, 4):
+        if struct.unpack_from("<i", payload, offset)[0] != expected_count:
+            continue
+        sample = payload[offset + 4 : offset + 4 + expected_count]
+        if len(sample) < expected_count:
+            continue
+        score = sum(1 for byte in sample if byte in (0, 1))
+        present = sum(1 for byte in sample if byte == 1)
         if score > best_score:
             best_score = score
             best_offset = offset
@@ -151,35 +189,32 @@ def build_history_events_catalog(
 
     death_events: DeathEventsVectorAnchor | None = None
     death_count = stats.fields.field_151 if stats.fields.field_151 > 0 else 151
-    if figures is not None and figures.death_events_offset is not None:
+    if figures is not None:
+        death_search_end = min(len(payload), figures.bodies_start + 2_000_000)
         death_events = locate_death_events_vector(
             payload,
             search_start=figures.bodies_start,
-            search_end=min(len(payload), figures.death_events_offset + 256),
+            search_end=death_search_end,
             expected_count=death_count,
         )
         if death_events is None:
-            death_events = DeathEventsVectorAnchor(
-                vector_offset=figures.death_events_offset,
-                vector_count=stats.fields.field_151,
-                posnull_score=score_posnull_prefix(
-                    payload,
-                    figures.death_events_offset,
-                    sample=stats.fields.field_151,
-                ),
-                present_count=sum(
-                    1
-                    for b in payload[
-                        figures.death_events_offset + 4 : figures.death_events_offset
-                        + 4
-                        + death_count
-                    ]
-                    if b == 1
-                ),
+            # Skip early count-echo false positives in the figure-body prefix.
+            weak_start = figures.bodies_start + 1_000_000
+            death_events = locate_death_events_count_echo(
+                payload,
+                search_start=weak_start,
+                search_end=death_search_end,
+                expected_count=death_count,
             )
-        notes.append(
-            f"events_death present={death_events.present_count}/{death_events.vector_count}"
-        )
+            if death_events is not None:
+                notes.append(
+                    f"events_death count-echo anchor @ 0x{death_events.vector_offset:x} "
+                    f"(partial posnull {death_events.posnull_score}/{death_count})"
+                )
+        if death_events is not None:
+            notes.append(
+                f"events_death present={death_events.present_count}/{death_events.vector_count}"
+            )
 
     events_off, events_score = _probe_events_vector(
         payload,

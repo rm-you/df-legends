@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from ..binary_reader import BinaryReader
 from .entity_def import HistoricalEntityHeader
-from .language_name import LanguageName, read_language_name
+from .language_name import LanguageName, read_entity_language_name
 from .string_tables import StringTableBlock
 
 
@@ -57,7 +57,7 @@ def resolve_entity_name(
 
     reader = BinaryReader(BytesIO(payload))
     reader.seek(header.payload_offset + header.header_bytes)
-    language_name = read_language_name(reader)
+    language_name = read_entity_language_name(reader, has_name=header.has_name)
     resolved, source = resolve_language_name_display(language_name, words=words)
     return ResolvedEntityName(
         entity_id=header.entity_id,

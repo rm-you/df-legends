@@ -20,62 +20,63 @@ See [`../../AGENTS.md`](../../AGENTS.md) §5 for status and the next step.
 | Site populations | sites | — | open (needs `world_site` body walk) |
 | Ruler count (71) | history | — | open (binary positions) |
 | Event count (113118) | header echo | via header `max_ids[9]` | PASS (count) |
-| Event records | — | engine walk wired | pending — bodies not landing |
+| Event records | — | layout dispatch wired | pending — per-layer walk not landing |
 | Histfig count (12747) | header echo | via header `max_ids[8]` | PASS (count) |
-| Histfig records | — | engine walk wired | pending — bodies not landing |
+| Histfig records | — | header fixed; tail open | pending — link/info/vague tail |
 | Artifacts | — | — | open |
 
 Status key: **PASS** = binary matches export today; **partial** = count or
 subset; **open** = not yet from binary.
 
+## Layout RE (2026-07-01)
+
+| Artifact | Entries | Parser |
+|----------|---------|--------|
+| `event_layouts.json` | 128 tags | `SAVE_LAYOUTS["history_event:N"]` |
+| `collection_layouts.json` | 14 tags | `SAVE_LAYOUTS["historical_event_collection:N"]` |
+| `link_layouts.json` | 39 tags | `SAVE_LAYOUTS["link:{factory}:N"]` |
+| `histfig_info_layouts.json` | 14 readers | keyed by subprofile |
+| `era_layout.json` | 1 struct + tail notes | `SAVE_LAYOUTS["world_history_era"]` |
+| `ghidra_decompiles/index.json` | 320 functions | world section readers labeled |
+
+Fast test suite: **106 passed**, 4 skipped (`pytest -m "not slow"`).
+
 ## Engine status (the keystone)
 
 The deterministic engine (`structures/xml_fields.py` +
 `deserializers/body_skipper.py`) parses the full vendored df-structures
-(0.47.05-r8) and reads/skips any struct — inheritance, version gating, unions,
-and polymorphic pointer dispatch (`structures/polymorph.py` maps the
-`history_event` / `histfig_entity_link` / `history_event_collection` /
-`abstract_building` subtypes).
+(0.47.05-r8). Polymorphic bodies now prefer decompile-derived layouts in
+`structures/save_layouts.py` via `structures/layout_dispatch.py` before
+falling back to XML walking.
 
 The self-validating harness (`deserializers/engine_walk.py`) walks a record
 vector and asserts exact landing on the next anchor, or reports the first
-desync record + offset. `deserializers/engine_layers.py` runs it per layer;
-results are on `LegendsSnapshot.engine_walks` and surfaced in the explorer.
+desync record + offset.
 
 ### Measured (Namushul)
 
 | Layer | Authoritative count | Body walk |
 |-------|---------------------|-----------|
-| figures | 12,747 (`max_ids[8]`) | pending — see root cause below |
-| events | 113,118 (`max_ids[9]`) | pending |
-| sites | 350 (`max_ids[26]+4`) | pending — canonical `world_data.sites` vector walk |
-| entities | 7,949 capacity (`max_ids[4]`) | pending — reference vector in entity body |
+| figures | 12,747 index / 4,595 present | pending — tail fields after header |
+| events | 113,118 (`max_ids[9]`) | pending — pre-stats region blocks |
+| collections | stream count | pending — 14/18 layouts |
+| eras | stream count | pending |
+| sites | 350 (`max_ids[26]+4`) | pending |
+| entities | 7,949 capacity (`max_ids[4]`) | pending |
 
-**Counts are authoritative.** Bodies are the gap.
+**Counts are authoritative.** Exact-landing body walks remain the gap.
 
-## Root cause (known, mechanical)
+## Root cause (histfig bodies)
 
-The body-walk failure is **not** mysterious save-specific pointer
-serialization. Decompilation (`AGENTS.md` §4) showed the parser made three
-wrong assumptions:
+Header layout is fixed (no sex pad; no on-disk `figure_id`/`art_count`). Remaining
+walk failures are in post-header tail: dense polymorphic link vectors, optional
+`info` subprofiles, optional `vague_relationships`. Layout JSON for links and
+partial info profiles is in place; full tail skip still needs integration testing
+via `engine_walk.walk_pointer_vector` on present figure bodies @ `0x2134DD9`.
 
-1. A 1-byte **sex pad** after `uint8 sex` — there is none.
-2. Stored **`figure_id`/`art_count`** fields — neither exists (id = vector index).
-3. A **posnull** figures vector — it is **DENSE** (count + bodies).
-
-Fixing the histfig parser to the definitive layout and walking the dense
-figures vector from the real `world_history` start is the single
-highest-leverage next step. The decompiles in `ghidra_decompiles/` give the
-exact field order for every function in the pipeline.
+Figures **index** is posnull (`int32 count` + presence bytes); present bodies are
+packed densely after the index gap (~89 bytes on Namushul).
 
 ## Reliability (0.47.05)
 
-Cross-fixture smoke tests (`tests/test_cross_fixture_reliability.py`) cover
-Namushul DAT, Waterlures DAT, and Ironhand SAV. Extraction locates string
-tables, entities, region blocks, histfig/event vector anchors, and sites on all
-three without text exports.
-
-Not yet world-agnostic: site id ceiling is header-derived (`max_ids[26]+4`,
-validated on Namushul + Waterlures); history stats echo uses Namushul's 12-byte
-paired layout (Waterlures falls back to header counters + region anchor); SAV
-string tables anchor on common plant names.
+Cross-fixture smoke tests cover Namushul DAT, Waterlures DAT, and Ironhand SAV.

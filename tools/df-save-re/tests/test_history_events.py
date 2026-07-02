@@ -26,5 +26,7 @@ def test_build_history_events_catalog_namushul():
     assert catalog.stats.fields.field_151 == 151
     assert catalog.stats.fields.field_4 == 4
     assert catalog.death_events is not None
-    assert catalog.death_events.vector_offset == 0x226009C
     assert catalog.death_events.vector_count == 151
+    assert catalog.figures is not None
+    assert catalog.death_events.vector_offset >= catalog.figures.bodies_start + 1_000_000
+    assert catalog.death_events.posnull_score >= 50

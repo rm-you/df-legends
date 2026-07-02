@@ -26,9 +26,7 @@ class LanguageName:
         return " ".join(parts) if parts else ""
 
 
-def read_language_name(reader: BinaryReader) -> LanguageName:
-    start = reader.tell()
-    has_name = reader.read_bool()
+def _read_language_name_body(reader: BinaryReader, *, start: int, has_name: bool) -> LanguageName:
     if not has_name:
         end = reader.tell()
         return LanguageName(
@@ -61,6 +59,24 @@ def read_language_name(reader: BinaryReader) -> LanguageName:
         payload_offset=start,
         bytes_consumed=end - start,
     )
+
+
+def read_language_name(reader: BinaryReader) -> LanguageName:
+    """Read a standalone ``language_name`` (leading ``has_name`` byte on disk)."""
+    start = reader.tell()
+    has_name = reader.read_bool()
+    return _read_language_name_body(reader, start=start, has_name=has_name)
+
+
+def read_entity_language_name(reader: BinaryReader, *, has_name: bool) -> LanguageName:
+    """
+    Read ``language_name`` embedded in ``historical_entity``.
+
+    The entity header already stores ``has_name``; the on-disk body omits the
+    redundant leading flag byte (``FUN_140315ac0`` only when ``+0x72`` is set).
+    """
+    start = reader.tell()
+    return _read_language_name_body(reader, start=start, has_name=has_name)
 
 
 _MAX_NAME_STRING = 64

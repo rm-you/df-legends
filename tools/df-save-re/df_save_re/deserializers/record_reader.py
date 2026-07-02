@@ -7,6 +7,8 @@ from typing import Any
 
 from ..binary_reader import BinaryReader
 from ..structures.polymorph import build_registry, is_polymorphic
+from ..structures.layout_dispatch import has_layout, layout_key, skip_layout_body
+from ..structures.save_layouts import SAVE_LAYOUTS
 from ..structures.xml_fields import FieldDef, enum_storage_width, enum_type_width, load_struct, resolve_fields
 from .body_skipper import (
     SkipError,
@@ -40,9 +42,19 @@ _MAX_VECTOR = 5_000_000
 RecordValue = int | float | str | bool | None | list[Any] | dict[str, Any]
 
 
-def _read_polymorphic(reader: BinaryReader, base_type: str, *, xml_dir) -> dict[str, Any]:
-    registry = build_registry(base_type, xml_dir)
+def _read_polymorphic(reader: BinaryReader, base_type: str, *, xml_dir, save_version: int = 1716) -> dict[str, Any]:
     tag = reader.read_int16()
+    key = layout_key(base_type, tag)
+    if key and key in SAVE_LAYOUTS and SAVE_LAYOUTS[key].get("fields"):
+        start = reader.tell()
+        skip_layout_body(reader, SAVE_LAYOUTS[key]["fields"], save_version=save_version)
+        return {
+            "__type__": SAVE_LAYOUTS[key].get("struct") or base_type,
+            "__tag__": tag,
+            "__layout_key__": key,
+            "__bytes__": reader.tell() - start,
+        }
+    registry = build_registry(base_type, xml_dir)
     fixed = SAVE_POLYMORPH_BODY_BYTES.get((base_type, tag))
     if fixed is not None:
         raw = reader.read_bytes(fixed)

@@ -8,7 +8,7 @@ from io import BytesIO
 from ..binary_reader import BinaryReader
 from .body_skipper import skip_struct, default_xml_dir
 from .entity_def import HistoricalEntityHeader
-from .language_name import read_language_name
+from .language_name import read_entity_language_name
 
 
 @dataclass(frozen=True)
@@ -33,7 +33,7 @@ def _body_start(payload: bytes, header: HistoricalEntityHeader) -> int:
     if header.has_name:
         reader = BinaryReader(BytesIO(payload))
         reader.seek(start)
-        read_language_name(reader)
+        read_entity_language_name(reader, has_name=header.has_name)
         return reader.tell()
     return start
 

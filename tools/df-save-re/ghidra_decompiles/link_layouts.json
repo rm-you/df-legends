@@ -1,0 +1,1038 @@
+{
+ "factories": [
+  [
+   "entity",
+   "link_entity_vtables.json",
+   "140707820"
+  ],
+  [
+   "site",
+   "link_site_vtables.json",
+   "140707c90"
+  ],
+  [
+   "histfig",
+   "link_histfig_vtables.json",
+   "140708160"
+  ]
+ ],
+ "links": {
+  "entity": [
+   {
+    "tag": 0,
+    "symbol": "histfig_entity_link_memberst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 1,
+    "symbol": "histfig_entity_link_former_memberst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 2,
+    "symbol": "histfig_entity_link_mercenaryst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 3,
+    "symbol": "histfig_entity_link_former_mercenaryst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 4,
+    "symbol": "histfig_entity_link_slavest",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 5,
+    "symbol": "histfig_entity_link_former_slavest",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 6,
+    "symbol": "histfig_entity_link_prisonerst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 7,
+    "symbol": "histfig_entity_link_former_prisonerst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 8,
+    "symbol": "histfig_entity_link_enemyst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 9,
+    "symbol": "histfig_entity_link_criminalst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 10,
+    "symbol": "histfig_entity_link_positionst",
+    "inst_size": 24,
+    "read_file": "1406fb950",
+    "write_file": "1406fb8c0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 20,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 12,
+    "symbol": "histfig_entity_link_position_claimst",
+    "inst_size": 24,
+    "read_file": "1406fb950",
+    "write_file": "1406fb8c0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 20,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 15,
+    "symbol": "histfig_entity_link_occupationst",
+    "inst_size": 24,
+    "read_file": "1406fb950",
+    "write_file": "1406fb8c0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 20,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   }
+  ],
+  "site": [
+   {
+    "tag": 0,
+    "symbol": "histfig_site_link_occupationst",
+    "inst_size": 32,
+    "read_file": "1406fbc70",
+    "write_file": "1406fbc30",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 24,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707c90",
+    "factory_name": "site"
+   },
+   {
+    "tag": 1,
+    "symbol": "histfig_site_link_seat_of_powerst",
+    "inst_size": 24,
+    "read_file": "1406fbbb0",
+    "write_file": "1406fbb40",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707c90",
+    "factory_name": "site"
+   },
+   {
+    "tag": 2,
+    "symbol": "histfig_site_link_hangoutst",
+    "inst_size": 24,
+    "read_file": "1406fbbb0",
+    "write_file": "1406fbb40",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707c90",
+    "factory_name": "site"
+   },
+   {
+    "tag": 3,
+    "symbol": "histfig_site_link_home_site_abstract_buildingst",
+    "inst_size": 24,
+    "read_file": "1406fbbb0",
+    "write_file": "1406fbb40",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707c90",
+    "factory_name": "site"
+   },
+   {
+    "tag": 4,
+    "symbol": "histfig_site_link_home_site_realization_buildingst",
+    "inst_size": 24,
+    "read_file": "1406fbbb0",
+    "write_file": "1406fbb40",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707c90",
+    "factory_name": "site"
+   },
+   {
+    "tag": 5,
+    "symbol": "histfig_site_link_lairst",
+    "inst_size": 24,
+    "read_file": "1406fbbb0",
+    "write_file": "1406fbb40",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707c90",
+    "factory_name": "site"
+   },
+   {
+    "tag": 6,
+    "symbol": "histfig_site_link_home_site_realization_sulst",
+    "inst_size": 24,
+    "read_file": "1406fbbb0",
+    "write_file": "1406fbb40",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707c90",
+    "factory_name": "site"
+   },
+   {
+    "tag": 7,
+    "symbol": "histfig_site_link_home_site_saved_civzonest",
+    "inst_size": 24,
+    "read_file": "1406fbbb0",
+    "write_file": "1406fbb40",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707c90",
+    "factory_name": "site"
+   },
+   {
+    "tag": 8,
+    "symbol": "histfig_site_link_prison_abstract_buildingst",
+    "inst_size": 24,
+    "read_file": "1406fbbb0",
+    "write_file": "1406fbb40",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707c90",
+    "factory_name": "site"
+   },
+   {
+    "tag": 9,
+    "symbol": "histfig_site_link_prison_site_building_profilest",
+    "inst_size": 24,
+    "read_file": "1406fbbb0",
+    "write_file": "1406fbb40",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707c90",
+    "factory_name": "site"
+   }
+  ],
+  "histfig": [
+   {
+    "tag": 0,
+    "symbol": "histfig_hf_link_motherst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 1,
+    "symbol": "histfig_hf_link_fatherst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 2,
+    "symbol": "histfig_hf_link_spousest",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 3,
+    "symbol": "histfig_hf_link_childst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 4,
+    "symbol": "histfig_hf_link_deityst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 5,
+    "symbol": "histfig_hf_link_loverst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 6,
+    "symbol": "histfig_hf_link_prisonerst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 7,
+    "symbol": "histfig_hf_link_imprisonerst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 8,
+    "symbol": "histfig_hf_link_masterst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 9,
+    "symbol": "histfig_hf_link_apprenticest",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 10,
+    "symbol": "histfig_hf_link_companionst",
+    "inst_size": 24,
+    "read_file": "1406fb950",
+    "write_file": "1406fb8c0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 20,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 11,
+    "symbol": "histfig_hf_link_former_masterst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 12,
+    "symbol": "histfig_hf_link_former_apprenticest",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 13,
+    "symbol": "histfig_hf_link_pet_ownerst",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 14,
+    "symbol": "histfig_hf_link_former_spousest",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   },
+   {
+    "tag": 15,
+    "symbol": "histfig_hf_link_deceased_spousest",
+    "inst_size": 16,
+    "read_file": "1406fb850",
+    "write_file": "1406fb7f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     }
+    ],
+    "factory": "140708160",
+    "factory_name": "histfig"
+   }
+  ]
+ }
+}

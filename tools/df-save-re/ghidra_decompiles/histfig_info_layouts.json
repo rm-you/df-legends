@@ -1,0 +1,742 @@
+{
+ "140002140": {
+  "info_field": "likes",
+  "reader": "140002140",
+  "note": "likes i16 vector only",
+  "fields": []
+ },
+ "1406f8600": {
+  "info_field": "skills",
+  "reader": "1406f8600",
+  "note": "skills subprofile",
+  "fields": [
+   {
+    "mem_offset": 24,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 48,
+    "kind": "i16_vector",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 72,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 96,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 100,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x614"
+   },
+   {
+    "mem_offset": 104,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x65d"
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 1,
+    "version_gt": "0x663"
+   }
+  ],
+  "unknown_calls": [
+   "FUN_1406f83c0"
+  ]
+ },
+ "1406f68a0": {
+  "info_field": "personality",
+  "reader": "1406f68a0",
+  "note": "personality values",
+  "fields": [
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 29,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 12,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 36,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 38,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 37,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 42,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 48,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 1,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 44,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 1,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 46,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 47,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   }
+  ],
+  "unknown_calls": [
+   "FUN_1406f5da0",
+   "FUN_1406f6020"
+  ]
+ },
+ "1406f7f00": {
+  "info_field": "preferences",
+  "reader": "1406f7f00",
+  "note": "food prefs / kills",
+  "fields": [
+   {
+    "mem_offset": 4,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 8,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 12,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 16,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 20,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 24,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 28,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 32,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 36,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 40,
+    "kind": "u8",
+    "size": 1,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 44,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 48,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 52,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x5e8"
+   },
+   {
+    "mem_offset": 56,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x5e8"
+   }
+  ]
+ },
+ "1406f8040": {
+  "info_field": "goals",
+  "reader": "1406f8040",
+  "note": "goal vectors + FUN_1406f5460",
+  "fields": [],
+  "unknown_calls": [
+   "FUN_140071520"
+  ]
+ },
+ "1407ab630": {
+  "info_field": "masterpieces",
+  "reader": "1407ab630",
+  "note": "masterpiece list",
+  "fields": [
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 3,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "call",
+    "target": "140002020",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 22,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 25,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": "0x5cb"
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": "0x5cb"
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": "0x5cb"
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 1,
+    "version_gt": "0x5cf"
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 1,
+    "version_gt": "0x621"
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 1,
+    "version_gt": "0x5f9"
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": "0x6ac"
+   }
+  ],
+  "unknown_calls": [
+   "FUN_140002a30",
+   "FUN_14000cd80",
+   "FUN_140050b50",
+   "FUN_140141fe0",
+   "FUN_1406f7be0",
+   "FUN_1406f9750"
+  ]
+ },
+ "1407ac1c0": {
+  "info_field": "entity_reputation",
+  "reader": "1407ac1c0",
+  "note": "entity reputation",
+  "fields": [
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 9,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 10,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 11,
+    "kind": "u8",
+    "size": 1,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 12,
+    "kind": "stl_string",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 16,
+    "kind": "stl_string",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 20,
+    "kind": "stl_string",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 24,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 34,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 35,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 36,
+    "kind": "stl_string",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 40,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 1,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 1,
+    "version_gt": null
+   }
+  ]
+ },
+ "1407aae80": {
+  "info_field": "reputation",
+  "reader": "1407aae80",
+  "note": "general reputation",
+  "fields": [
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 3,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x62c"
+   },
+   {
+    "mem_offset": 17,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x649"
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 1,
+    "version_gt": null
+   }
+  ],
+  "unknown_calls": [
+   "FUN_1407ab160"
+  ]
+ },
+ "1406f9200": {
+  "info_field": "wounds",
+  "reader": "1406f9200",
+  "note": "wound records",
+  "fields": [
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 6,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 10,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 1,
+    "version_gt": null
+   }
+  ],
+  "unknown_calls": [
+   "FUN_1406f8900",
+   "FUN_1406f8d00"
+  ]
+ },
+ "1407b4ee0": {
+  "info_field": "secret",
+  "reader": "1407b4ee0",
+  "note": "secret identity",
+  "fields": [
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": "0x628"
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": "0x628"
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 4,
+    "version_gt": "0x617"
+   },
+   {
+    "mem_offset": 15,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x65b"
+   },
+   {
+    "mem_offset": null,
+    "kind": "temp",
+    "size": 1,
+    "version_gt": "0x65b"
+   }
+  ],
+  "unknown_calls": [
+   "FUN_1401b8820",
+   "FUN_1406fa5a0",
+   "FUN_1406fa880",
+   "FUN_1406fa940",
+   "FUN_1407b4650"
+  ]
+ },
+ "140010740": {
+  "info_field": "books",
+  "reader": "140010740",
+  "note": "book authorship init only",
+  "fields": []
+ },
+ "1406f9d70": {
+  "info_field": "curse",
+  "reader": "1406f9d70",
+  "note": "curse init only",
+  "fields": []
+ },
+ "1406f5460": {
+  "info_field": "relationships",
+  "reader": "1406f5460",
+  "note": "nested under goals reader",
+  "fields": [],
+  "unknown_calls": [
+   "FUN_140428600"
+  ]
+ },
+ "1401b7c10": {
+  "info_field": "personality_vectors",
+  "reader": "1401b7c10",
+  "note": "personality init helper",
+  "fields": []
+ }
+}

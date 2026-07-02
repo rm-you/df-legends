@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from df_save_re.compression import decompress_file
 from df_save_re.deserializers.site_names import (
     decompose_display_name_to_word_indices,
@@ -12,6 +14,13 @@ from df_save_re.deserializers.world_layout import discover_layout_landmarks
 
 FIXTURE = Path(__file__).resolve().parents[1] / "tests/fixtures/small-retired/world.dat"
 UPLOADS = Path("/home/ubuntu/.cursor/projects/workspace/uploads")
+
+
+def _upload_sites_path() -> Path | None:
+    if not UPLOADS.is_dir():
+        return None
+    matches = sorted(UPLOADS.glob("*world_sites_and_pops*"))
+    return matches[0] if matches else None
 
 
 def test_decompose_birthshadows():
@@ -31,10 +40,12 @@ def test_decompose_incensecross():
 
 
 def test_scan_namushul_site_markers_from_upload():
+    sites_path = _upload_sites_path()
+    if sites_path is None:
+        pytest.skip("uploads fixture missing (world_sites_and_pops export)")
     payload = decompress_file(FIXTURE).payload
     preamble = parse_dat_preamble(payload)
     layout = discover_layout_landmarks(payload, preamble)
-    sites_path = next(UPLOADS.glob("*world_sites_and_pops*"))
     site_names = parse_site_names_from_text(
         sites_path.read_bytes().decode("latin-1")
     )

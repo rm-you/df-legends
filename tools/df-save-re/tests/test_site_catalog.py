@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from df_save_re.compression import decompress_file
 from df_save_re.deserializers.site_catalog import build_world_site_catalog
 from df_save_re.deserializers.site_names import parse_site_names_from_text, scan_site_name_markers
@@ -14,12 +16,21 @@ FIXTURE = Path(__file__).resolve().parents[1] / "tests/fixtures/small-retired/wo
 UPLOADS = Path("/home/ubuntu/.cursor/projects/workspace/uploads")
 
 
+def _upload_sites_path() -> Path | None:
+    if not UPLOADS.is_dir():
+        return None
+    matches = sorted(UPLOADS.glob("*world_sites_and_pops*"))
+    return matches[0] if matches else None
+
+
 def test_world_site_catalog_namushul():
+    sites_path = _upload_sites_path()
+    if sites_path is None:
+        pytest.skip("uploads fixture missing (world_sites_and_pops export)")
     payload = decompress_file(FIXTURE).payload
     preamble = parse_dat_preamble(payload)
     layout = discover_layout_landmarks(payload, preamble)
     block = parse_string_table_block(payload)
-    sites_path = next(UPLOADS.glob("*world_sites_and_pops*"))
     text = sites_path.read_bytes().decode("latin-1")
     site_names = parse_site_names_from_text(text)
     text_catalog = parse_site_text_catalog(text)

@@ -67,14 +67,15 @@ The save fixtures are gitignored; fetch with
   header comment naming the function and listing direct callees), plus
   `index.json` (`[{addr,name,entry,callees,decompile_file}]`). This is what
   we committed to git so other agents can read the decompiles without
-  re-running Ghidra. Currently 51 functions. **Regenerate** the decompiles
+  re-running Ghidra. Currently **320** functions. **Regenerate** the decompiles
   with `ghidra_scripts\DecompileWithCallees.java`; rebuild just `index.json`
   from the existing `.c` headers (no Ghidra needed) with
   `scripts\rebuild_index_from_decompiles.py`.
 - **`tools\df-save-re\ghidra_scripts\`** — the Ghidra postScripts that produce
   the above (`DecompileWithCallees.java`, `FindCallers.java`,
   `EnumerateEventVtables.java`). Keep these; they are the repeatable RE
-  pipeline.
+  pipeline (`EnumerateFactoryVtables.java` generalizes vtable enum for
+  collections/links).
 - **`tools\df-save-re\scripts\diag_*.py`** — throwaway exploratory diagnostics.
   These accumulate fast (100+). Treat them as scratch; do not rely on them as
   source of truth. Periodically archived out of the working tree (see cleanup
@@ -109,13 +110,15 @@ FUN_1405f3a60  world writer            FUN_140330310  world reader
   `has_name` flag first; if set, first string, nickname string, 7×int32 words,
   7×int16 parts-of-speech, int32 language, int16 name type.
 
-### The figures vector is DENSE, not posnull
+### Figures vector: posnull index + dense present bodies
 
-`FUN_140709410` (writer) and `FUN_1407099a0` (reader) confirm the figures
-vector is **`int32 count` then `count` bodies back-to-back** — NO presence-flag
-array. The earlier posnull-figures-vector claim (with an `~0x50` gap) is
-WRONG. `locate_figures_vector()`'s posnull heuristic is also
-wrong and must be replaced with a definitive walk from `world_history` start.
+`FUN_1407099a0` reads **`int32 count` then `count` presence bytes** for the
+figures index, then writes/reads **only present figure bodies back-to-back**
+via `FUN_14070a9d0` (Namushul: index @ `0x2131BB0`, 12,747 slots / 4,595
+present, first body @ `0x2134DD9`). This is **not** a fully dense
+`count`-bodies vector with no index. `locate_figures_vector()` finds the
+posnull index by count echo + flag scoring, then scans the post-index prefix
+for the first plausible `id=0` header.
 
 ### Historical figure header has NO sex pad byte
 

@@ -31,7 +31,9 @@ from io import BytesIO
 from pathlib import Path
 
 from ..binary_reader import BinaryReader
+from ..structures.layout_dispatch import layout_key, skip_layout_body
 from ..structures.polymorph import build_registry, is_polymorphic
+from ..structures.save_layouts import SAVE_LAYOUTS
 from ..structures.xml_fields import FieldDef, StructDef, enum_storage_width, enum_type_width, load_struct, resolve_fields
 from .language_name import read_language_name
 from .primitives import DfString
@@ -251,10 +253,14 @@ def _skip_pointer_vector(
     return count
 
 
-def _read_polymorphic(reader: BinaryReader, base_type: str, *, xml_dir: Path) -> str:
+def _read_polymorphic(reader: BinaryReader, base_type: str, *, xml_dir: Path, save_version: int = 1716) -> str:
     """Read an int16 type tag, then the resolved subclass body."""
-    registry = build_registry(base_type, xml_dir)
     tag = reader.read_int16()
+    key = layout_key(base_type, tag)
+    if key and key in SAVE_LAYOUTS and SAVE_LAYOUTS[key].get("fields"):
+        skip_layout_body(reader, SAVE_LAYOUTS[key]["fields"], save_version=save_version)
+        return SAVE_LAYOUTS[key].get("struct") or base_type
+    registry = build_registry(base_type, xml_dir)
     fixed = SAVE_POLYMORPH_BODY_BYTES.get((base_type, tag))
     if fixed is not None:
         reader.read_bytes(fixed)

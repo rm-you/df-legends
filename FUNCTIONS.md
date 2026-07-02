@@ -48,9 +48,12 @@ FUN_1405f3a60  world writer            FUN_140330310  world reader
   7. Version-gated (`> 0x65c`): two vectors — `int32 id`-quad records (`operator_new(0x14)`) and large `operator_new(0x4808)` records via `FUN_1406fedd0`.
   8. Version-gated (`> 0x68f`): vector of `operator_new(0x20)` records via `FUN_1406fefc0`.
   Confirms the figures vector is DENSE.
-- `FUN_140763aa0`: `history_event_collection` reader factory (polymorphic). Reads a tag, allocates the matching `history_event_collection_*` subclass, returns it; caller invokes `read_file` at vtable +0x18. Subclass layouts not yet mapped (Phase 2 of the plan).
-- `FUN_14075cd70`: `history_era` reader. `FUN_1406ff0e0` is the paired in-memory era initializer.
-- `FUN_1406fedd0`, `FUN_1406fefc0`: version-gated `world_history` tail-vector element readers (`> 0x65c` and `> 0x68f` respectively); exact structs not yet mapped.
+- `FUN_140763aa0`: `history_event_collection` factory (18 tags 0–17). Vtables in `collection_vtables.json`; on-disk bodies share base prefix via `FUN_140083d80` (see `collection_layouts.json`). Tags 0/1/4/5 delegate to helper allocators without inline vtable lines in the factory decompile — layouts pending vtable enum for war/battle/abduction/theft.
+- `FUN_140083d80`: shared `history_event_collection` base reader (two i32 vectors, four i32 scalars, byte flags vector, trailing i32). Called from most collection subclass `read_file` implementations.
+- `FUN_14075cd70`: `history_era` reader — `i32 id`, `i16 type`, four `i32` scalars, `stl_string` @ +0x18 (`FUN_1405bb6d0`), nested details @ +0x40 via `FUN_14075ccb0`. Layout in `era_layout.json`.
+- `FUN_14075ccb0`: era nested details — six `i32` scalars + `i32_vector` + two trailing `i32`.
+- `FUN_1406fedd0`: version-gated (`>0x65c`) intrigue-update element reader — count @ +0x4800, per-entry five parallel arrays (i32, i16, i32×3) indexed by count.
+- `FUN_1406fefc0`: version-gated (`>0x68f`) relationship-update element reader — leading `i32`, optional nested struct, four trailing `i32`.
 - `FUN_14070a090`: `historical_figure` writer. **Definitive save order (matches reader exactly, NO sex pad, NO figure_id, NO art_count):**
   - `int16 profession`, `int16 race`, `int16 caste`, `uint8 sex`
   - `int32 orientation_flags` (immediately after sex — **no pad byte**)
@@ -68,6 +71,19 @@ FUN_1405f3a60  world writer            FUN_140330310  world reader
 - `FUN_1406fb080`: `relationship_quick_infost` writer candidate. Writes count, then `count` pairs of `int32 hfid` and `int16 relationship`.
 - `FUN_1406f8520`: one `historical_figure_info` subprofile writer. Writes int16/int32 vector pairs plus scalar fields and an optional nested pointer.
 - `FUN_1406f61a0`, `FUN_1406f7d60`, `FUN_1406f5380`, `FUN_1407ab230`, `FUN_1407abe00`, `FUN_1407aacf0`, `FUN_1406f9080`, `FUN_1407b4c50`: additional `historical_figure_info` subprofile writers called by `FUN_14070a5d0`; precise field names still in progress.
+
+## Layout artifacts (machine-readable)
+
+| File | Coverage |
+|------|----------|
+| `event_layouts.json` | 128/128 `history_event` tags |
+| `collection_layouts.json` | 14/18 collection tags (war/battle/abduction/theft pending) |
+| `link_layouts.json` | 39 link subtypes (entity/site/histfig factories) |
+| `histfig_info_layouts.json` | 14 info subprofile readers |
+| `era_layout.json` | `history_era` + tail-vector notes |
+| `save_layouts.py` | Generated `SAVE_LAYOUTS` dict (192 keys); parser dispatches via `layout_dispatch.py` |
+
+Link factories: `FUN_140707820` (entity, tags 0–16), `FUN_140707c90` (site, -1..9), `FUN_140708160` (histfig, -1..15). Most link bodies are `i32` target id + `i16` strength; site links add assignment ids; position variants use `FUN_1406fb950`.
 
 ## Historical Figure Link Writers
 

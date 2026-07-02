@@ -218,7 +218,7 @@ def _count_present_flags(payload: bytes, vector_offset: int, count: int) -> tupl
 
 
 def _find_death_events_vector(payload: bytes, *, search_start: int, search_end: int) -> int | None:
-    """Locate ``events_death`` posnull vector after the figures body region."""
+    """Locate a strict ``events_death`` posnull vector (for body-region stopping)."""
     from .history_events import locate_death_events_vector
 
     death = locate_death_events_vector(
@@ -349,12 +349,10 @@ def locate_figures_vector(
     death_offset = None
     tail_bytes = len(payload) - bodies_start
     if tail_bytes > 0:
-        if len(payload) < 80_000_000:
-            d_start = bodies_start + 1_150_000
-            d_end = min(len(payload), bodies_start + 1_280_000)
-        else:
-            d_start = bodies_start + max(90_000_000, tail_bytes // 2)
-            d_end = min(len(payload), bodies_start + tail_bytes)
+        # events_death posnull index sits ~1.2–1.3 MiB after first figure body
+        # on Namushul (0x226009C); do not skip the prefix with a fixed +1.15M floor.
+        d_start = bodies_start
+        d_end = min(len(payload), bodies_start + max(1_500_000, tail_bytes // 2))
         death_offset = _find_death_events_vector(
             payload,
             search_start=d_start,

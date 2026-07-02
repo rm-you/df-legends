@@ -1,0 +1,42 @@
+{
+  "struct": "world_history_era",
+  "reader": "14075cd70",
+  "init": "1406ff0e0",
+  "fields": [
+    {"mem_offset": 0, "kind": "i32", "size": 4, "name": "id"},
+    {"mem_offset": 8, "kind": "i16", "size": 2, "name": "type"},
+    {"mem_offset": 12, "kind": "i32", "size": 4, "name": "start_year"},
+    {"mem_offset": 16, "kind": "i32", "size": 4, "name": "end_year"},
+    {"mem_offset": 20, "kind": "i32", "size": 4, "name": "start_tick"},
+    {"mem_offset": 24, "kind": "stl_string", "size": null, "name": "name", "reader": "1405bb6d0"},
+    {
+      "mem_offset": 64,
+      "kind": "nested",
+      "name": "details",
+      "reader": "14075ccb0",
+      "fields": [
+        {"mem_offset": 0, "kind": "i32", "size": 4},
+        {"mem_offset": 4, "kind": "i32", "size": 4},
+        {"mem_offset": 8, "kind": "i32", "size": 4},
+        {"mem_offset": 12, "kind": "i32", "size": 4},
+        {"mem_offset": 16, "kind": "i32", "size": 4},
+        {"mem_offset": 20, "kind": "i32", "size": 4},
+        {"mem_offset": 24, "kind": "i32_vector", "size": null},
+        {"mem_offset": 48, "kind": "i32", "size": 4},
+        {"mem_offset": 52, "kind": "i32", "size": 4}
+      ]
+    }
+  ],
+  "tail_vectors": {
+    "intrigue_updates": {
+      "reader": "1406fedd0",
+      "version_gt": "0x65c",
+      "note": "count @ +0x4800 then per-entry 5×scalar arrays indexed by count"
+    },
+    "relationship_updates": {
+      "reader": "1406fefc0",
+      "version_gt": "0x68f",
+      "note": "i32 + optional nested struct via FUN_1406feab0 + 4×i32 tail"
+    }
+  }
+}

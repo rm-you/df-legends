@@ -376,3 +376,28 @@ full-name check kept as fallback). Result: `event_vtables.json` went from
 - Not yet folded into `save_layouts.py` / the parser (plan Step 7), and the
   events-layer walk (Step 8) still needs the world_history events start.
 
+#### 2026-07-01 Follow-up: Steps 1 + 4–8 (layout pipeline completion)
+
+- **Step 1 (tests):** Fixed 10 pre-existing failures — `read_entity_language_name()`
+  (entity header already stores `has_name`; body omits redundant flag byte),
+  death-events catalog search widened + count-echo fallback (deprecated hardcoded
+  `0x226009C` anchor), upload-dir tests skip when absent, stride-table sites get
+  `header_offset`, language_name roundtrip payload aligned to 58 bytes.
+  Fast suite: **106 passed**, 4 skipped (`pytest -m "not slow"`).
+- **Step 4 (eras/collections/tail):** `era_layout.json` from `FUN_14075cd70` +
+  `FUN_14075ccb0`; `EnumerateFactoryVtables.java` → `collection_vtables.json`
+  (14 inline vtable tags); `extract_polymorph_layouts.py` →
+  `collection_layouts.json` (14/18 — war/battle/abduction/theft still need vtable
+  enum from helper allocators). Tail vectors documented in `era_layout.json`.
+- **Step 5 (links/info):** Link factory vtables (39 subtypes) → `link_layouts.json`;
+  `histfig_info_layouts.json` (14 subprofile readers, 8 with field lists).
+- **Step 6 (world sections):** `DecompileCallTree` depth-1 from `FUN_1405f3a60`
+  added 70 writer-side functions; `index.json` now **320** entries;
+  `missing_decompile` empty after `list_world_section_addrs.py`.
+- **Step 7 (fold):** `build_layout_spec.py` regenerates `save_layouts.py` (192
+  keys); `layout_dispatch.py` wired into `body_skipper` / `record_reader`
+  polymorphic dispatch; `tests/test_save_layouts.py` added.
+- **Step 8 (validate/docs):** `coverage-matrix.md`, `FUNCTIONS.md`, `AGENTS.md`
+  updated (figures index = posnull + dense present bodies). Per-layer exact-landing
+  walks still pending for figures/events/collections.
+

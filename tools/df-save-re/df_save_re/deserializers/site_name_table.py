@@ -317,6 +317,7 @@ def expand_catalog_from_stride_table(
                 display_name=display,
                 word_indices=indices,
                 name_marker_offset=marker_off,
+                header_offset=rec_start,
             )
         )
 
