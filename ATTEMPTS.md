@@ -409,3 +409,11 @@ full-name check kept as fallback). Result: `event_vtables.json` went from
   (tag 0 still has unknown helper `FUN_1406fc080` in field list as opaque call).
 - `SAVE_LAYOUTS["historical_event_collection:*"]` = 18 after `build_layout_spec.py`.
 
+#### 2026-07-01 Extraction landing — histfig info + vague layouts
+
+- Decompiled 19 histfig info helper functions; rebuilt index to **343** entries.
+- Rewrote `extract_histfig_info_layouts.py` → slot-keyed JSON (13 slots from `14070b110.c`).
+- Added `histfig_info.py` + wired into `save_profiles.py` / `record_reader.py`.
+- Added `vague_layout.json` + `read_vague_relationships_save` (i32 count + N×(i32,i16)).
+- `SAVE_LAYOUTS["histfig_info"]` has 13 slots; fast tests green.
+

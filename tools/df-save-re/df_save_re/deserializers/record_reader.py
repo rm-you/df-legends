@@ -199,6 +199,7 @@ def read_field(
     xml_dir,
     struct_name: str | None = None,
     payload: bytes | None = None,
+    save_version: int = 1716,
 ) -> RecordValue:
     profile = get_profile(struct_name) if struct_name else None
     if profile and field.name in profile.before_field:
@@ -206,7 +207,11 @@ def read_field(
             raise SkipError(f"before_field hook for {field.name!r} requires payload")
         profile.before_field[field.name](reader, payload)
     if profile and field.name in profile.field_readers:
-        return profile.field_readers[field.name](reader)
+        hook = profile.field_readers[field.name]
+        try:
+            return hook(reader, save_version=save_version)
+        except TypeError:
+            return hook(reader)
 
     kind = field.kind
     if kind in _SCALAR_WIDTH:
@@ -486,7 +491,12 @@ def read_historical_figure_record(
             field_start = reader.tell()
             try:
                 record[fd.name] = read_field(
-                    reader, fd, xml_dir=xml_dir, struct_name="historical_figure", payload=payload
+                    reader,
+                    fd,
+                    xml_dir=xml_dir,
+                    struct_name="historical_figure",
+                    payload=payload,
+                    save_version=save_version,
                 )
                 value = record[fd.name]
                 if isinstance(value, dict) and value.get("__partial__"):

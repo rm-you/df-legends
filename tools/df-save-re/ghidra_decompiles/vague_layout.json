@@ -1,0 +1,9 @@
+{
+  "struct": "vague_relationships",
+  "source": "FUN_1406fb120",
+  "note": "i32 count then count x (i32 hf_id, i16 relationship_type)",
+  "fields": [
+    {"kind": "i32", "size": 4, "name": "count"},
+    {"kind": "vague_entry_repeat", "size": null}
+  ]
+}

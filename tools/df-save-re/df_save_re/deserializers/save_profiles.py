@@ -251,30 +251,34 @@ def read_figure_post_tail_save(reader: BinaryReader, art_count: int) -> dict[str
     return {"art_images": images}
 
 
-def read_historical_figure_info_save(reader: BinaryReader) -> dict[str, Any] | int | None:
-    """Partial ``historical_figure_info`` save reader from FUN_14070a5d0.
-
-    The outer histfig writer appears to enter this body directly; the first byte
-    is the first optional subprofile flag. We parse the first writer-confirmed
-    subprofile and let the caller preserve the rest as opaque until the remaining
-    profile writers are mapped.
-    """
+def read_historical_figure_info_save(reader: BinaryReader, *, save_version: int = 1716) -> dict[str, Any] | None:
+    """Read optional histfig info via FUN_14070b110 slot sequence."""
     flag = reader.read_uint8()
     if flag == 0:
         return None
-    if flag != 1:
-        return flag
+    from .histfig_info import read_histfig_info
 
-    # A byte flag immediately followed by a 4-byte vector count is padded to the
-    # next local dword boundary in observed saves.
-    reader.read_bytes(3)
-    return {
-        "__partial__": True,
-        "metaphysical": {
-            "unk_int16_vector": _read_int16_vector(reader),
-            "unk_int32_vector": _read_int32_vector(reader),
-        },
-    }
+    # Outer has_info flag already consumed; FUN_14070b110 reads 13 slot flags next.
+    try:
+        return read_histfig_info(reader, save_version=save_version)
+    except (ValueError, EOFError) as exc:
+        return {"__partial__": True, "error": str(exc)}
+
+
+def read_vague_relationships_save(reader: BinaryReader, *, save_version: int = 1716) -> dict[str, Any] | None:
+    """Read optional vague_relationships (save_version > 0x6a0)."""
+    if save_version <= 0x6A0:
+        return None
+    flag = reader.read_uint8()
+    if flag == 0:
+        return None
+    from .histfig_info import read_vague_relationships
+
+    try:
+        body = read_vague_relationships(reader)
+        return {"present": True, **body}
+    except (ValueError, EOFError) as exc:
+        return {"__partial__": True, "error": str(exc)}
 
 
 def read_byte_flagged_struct(reader: BinaryReader, type_name: str) -> dict[str, Any] | int | None:
@@ -320,9 +324,7 @@ def _register_defaults() -> None:
             field_readers={
                 "worldgen_relationships": read_worldgen_relationships,
                 "info": read_historical_figure_info_save,
-                "vague_relationships": lambda reader: read_byte_flagged_struct(
-                    reader, "relationship_quick_infost"
-                ),
+                "vague_relationships": read_vague_relationships_save,
             },
             tail_field_names=HISTFIG_TAIL_FIELDS,
         )

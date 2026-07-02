@@ -115,6 +115,14 @@ def _info_layouts() -> dict[str, dict]:
     raw = _load("histfig_info_layouts.json")
     if not raw:
         return {}
+    if isinstance(raw, dict) and raw.get("slots"):
+        return {
+            "histfig_info": {
+                "source": raw.get("source", "FUN_14070b110"),
+                "slot_count": raw.get("slot_count", len(raw["slots"])),
+                "slots": raw["slots"],
+            }
+        }
     layouts: dict[str, dict] = {}
     for addr, e in raw.items():
         if not e.get("fields"):
@@ -126,6 +134,13 @@ def _info_layouts() -> dict[str, dict]:
             "fields": e["fields"],
         }
     return layouts
+
+
+def _vague_layout() -> dict[str, dict]:
+    raw = _load("vague_layout.json")
+    if not raw:
+        return {}
+    return {"vague_relationships": raw}
 
 
 def main() -> None:
@@ -150,6 +165,7 @@ def main() -> None:
     layouts.update(_collection_layouts())
     layouts.update(_link_layouts())
     layouts.update(_info_layouts())
+    layouts.update(_vague_layout())
 
     print("build_layout_spec summary:")
     print(f"  total SAVE_LAYOUTS keys: {len(layouts)}")

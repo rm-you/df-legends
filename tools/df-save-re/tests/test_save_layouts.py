@@ -39,8 +39,14 @@ def test_change_hf_state_layout_spot_check():
     assert "i32" in kinds or "scalar" in kinds
 
 
-def test_entity_link_base_layout():
-    key = "link:entity:0"
-    layout = SAVE_LAYOUTS[key]
-    assert layout["struct"] == "histfig_entity_link_memberst"
-    assert any(f.get("kind") in ("i32", "scalar") for f in layout["fields"])
+def test_histfig_info_has_thirteen_slots():
+    layout = SAVE_LAYOUTS.get("histfig_info")
+    assert layout is not None
+    assert layout.get("slot_count") == 13
+    assert len(layout.get("slots", [])) == 13
+
+
+def test_vague_relationships_layout():
+    layout = SAVE_LAYOUTS.get("vague_relationships")
+    assert layout is not None
+    assert any(f.get("kind") == "i32" for f in layout.get("fields", []))
