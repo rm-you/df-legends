@@ -175,27 +175,31 @@ versions.
 
 ---
 
-## 5. Where we are right now
+## 5. Where we are right now (2026-07-02)
 
-- **Layout-mapping phase complete** at commits `f6ab89b` + `643b8dd` + `5b7d396`:
-  `event_layouts.json` 128/128, `collection_layouts.json` 18/18, `link_layouts.json`
-  39/39, slot-keyed `histfig_info_layouts.json` (13 slots), `vague_layout.json`,
-  `SAVE_LAYOUTS` folded via `build_layout_spec.py`, Ghidra index **343** functions.
-- **Counts and top-level identity extract correctly** on all fixtures.
-- **Exact-landing body walks remain open** (extraction landing phase):
-  - **Figures:** first body parses at `0x2134DD9` (present index 4); slot 1+ desync —
-    on-disk bodies follow **`FUN_14070a090` write order** (12747 slots per
-    `FUN_1407099a0`), not the posnull present-flag iterator alone. Info/vague tails
-    must use **write helpers** (`14070a5d0`, `1406fb080`), not load readers
-    (`14070b110`, `1406fb120`). See `ATTEMPTS.md` 2026-07-01 extraction landing.
-  - **Events:** `113118` count does not appear as a vector prefix before
-    `0x2131BB0`; locate `world_history` events start via `scripts/find_events_start.py`
-    (may require anchoring from `world_history` base, not figures index alone).
-  - **Collections/eras/tail:** layouts ready; walk blocked on figures landing offset.
-- **Next concrete steps:** (1) re-key info skip from `14070a5d0` write decompile,
-  (2) walk 12747 figure bodies from corrected `bodies_start`, (3) events walk with
-  i32 tags landing on figures layer, (4) `walk_world_history_tail.py` for
-  collections→eras→tail, (5) persist landed records to DB/explorer.
+- **The full `world_history` section walks exact-landing on two worlds** —
+ Namushul (events 87,666 / figures 12,748 / collections 8,201 / eras 2) and the
+ user-provided `data\saves\region2` (events 88,210 / figures 8,496 / collections
+ 10,315 / eras 2 — **all exactly matching its reference legends XML export**).
+- Canonical library entry points in
+ `df_save_re/deserializers/world_history_walk.py`:
+ `locate_world_history(payload, header, save_version)` (fixture-independent:
+ figures-count echo anchor + backward event chain, no hardcoded offsets) and
+ `walk_world_history(...)` with per-record callbacks (events/figures/collections/
+ eras). Validation driver: `scripts/walk_world_history_full.py <save>`;
+ XML cross-check: `scripts/diag_legends_xml_counts.py <legends.xml>`.
+- Hand-transcribed readers (decompile-faithful; auto layout extractor missed
+ nested calls) live in `df_save_re/deserializers/histfig_info.py` (13 slots +
+ vague) and `df_save_re/deserializers/event_collections.py` (18 collection tags).
+ Figure bodies: header (`historical_figures.py`) + link vectors via
+ `SAVE_LAYOUTS` + info/vague. Eras + gated tail vectors transcribed in
+ `world_history_walk.py` (`read_era_record`, `skip_history_tail`).
+- **Remaining to-dos:** (1) events-read: typed event records (map layout
+ mem_offsets → df-structures field names); (2) persist events/figures/
+ collections/eras via `StreamWriter` into the DB; (3) explorer routes for those
+ layers; (4) finish de-Namushul sweep of older library paths (site-name scan
+ bands, count defaults; the `0x15BEB17` fallback is already gone); (5) validate
+ Waterlures (46,661 figures) then Ironhand `.sav`.
 
 ---
 

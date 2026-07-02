@@ -431,3 +431,34 @@ full-name check kept as fallback). Result: `event_vtables.json` went from
   `label_world_reader_sections.py`. Events count `113118` not found as vector prefix
   before figures index (only in header `max_ids`).
 
+#### 2026-07-02 Full world_history walk lands on two worlds (Namushul + region2)
+
+- **Figures solved:** hand-transcribed all 13 `histfig_info` slot readers from the
+  decompiles into `df_save_re/deserializers/histfig_info.py` (regex layout extractor
+  missed loops/nested calls/version gates). Fixed missing `link:entity` tags
+  11/13/14/16 via `LookupVtableSlots.java` + re-extracted `link_layouts.json`.
+  All 12,748 Namushul figures walk cleanly: `0x15beb44 → 0x2131e53`.
+- **Events solved:** disproved the "history_stats block" theory — the last event body
+  (tag 32) extends exactly to the figures count at `0x15beb40`; the counter echoes
+  were inside its body. Backward-chaining (`diag_events_backchain_v2.py`) found the
+  true events vector: count `87666` @ `0x11b494a`. Forward walk lands exactly.
+- **Collections solved:** auto layouts dropped nested calls (`language_name` in
+  war/battle, war tally helper `FUN_1406fc080`, purge adjective string). Hand-
+  transcribed all 18 collection readers into
+  `df_save_re/deserializers/event_collections.py` (12 unique body readers; base
+  block `FUN_140083d80` = events vec + collections vec + 4 scalars + byte flagarray
+  + id). All 8,201 Namushul collections walk.
+- **Eras + tail solved:** era = `FUN_14075cd70` (i32, i16, 3×i32, string, appearance
+  `FUN_14075ccb0` = 6×i32 + i32 vec + 2×i32). Tail per `FUN_1407099a0`: i32 vec,
+  i16 vec, 4×i32, i32 vec, 14×i32 (>0x5D7), 5×i32-vec + relationship blocks
+  `FUN_1406fedd0` (>0x65C), gated intrigue vec `FUN_1406fefc0`/`FUN_1406feab0`
+  (>0x68F). Namushul history ends `0x2902519`.
+- **Generic location:** rewrote `world_history_walk.py`: `locate_world_history`
+  anchors on figures-count echo (`max_ids[8]+1` needle + 3-figure parse check),
+  backward-chains events to the count prefix, verifies forward. No hardcoded
+  offsets; removed the `0x15BEB17` Namushul fallback and the stats-block logic.
+- **region2 validation (new user-provided world):** full walk exact-matches its
+  reference legends export: events 88,210, figures 8,496, collections 10,315,
+  eras 2 (names match: "Age of Hydra and Desert Titan" / "Desert-titan Age").
+  `scripts/walk_world_history_full.py` + `scripts/diag_legends_xml_counts.py`.
+

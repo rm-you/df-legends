@@ -225,6 +225,151 @@
   ]
  },
  {
+  "tag": 3,
+  "symbol": "history_event_hist_figure_diedst",
+  "inst_size": null,
+  "read_file": "1400c49e0",
+  "write_file": "1400c47f0",
+  "fields": [
+   {
+    "mem_offset": 8,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 12,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 16,
+    "kind": "byte_vector",
+    "size": null,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 32,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 40,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 44,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 48,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 52,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 56,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 60,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 62,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 64,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 68,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 72,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 76,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 78,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 80,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 84,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 88,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 92,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 96,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 100,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   }
+  ]
+ },
+ {
   "tag": 4,
   "symbol": "history_event_add_hf_entity_linkst",
   "inst_size": 64,
@@ -3282,6 +3427,127 @@
   ]
  },
  {
+  "tag": 52,
+  "symbol": "history_event_body_abusedst",
+  "inst_size": null,
+  "read_file": "140082140",
+  "write_file": "140081fc0",
+  "fields": [
+   {
+    "mem_offset": 8,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 12,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 16,
+    "kind": "byte_vector",
+    "size": null,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 32,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 40,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 64,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 68,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 72,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 76,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 80,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 84,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 88,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 90,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 92,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 96,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 100,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 104,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 108,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   }
+  ]
+ },
+ {
   "tag": 53,
   "symbol": "history_event_hist_figure_abductedst",
   "inst_size": 64,
@@ -3345,6 +3611,157 @@
     "kind": "i32",
     "size": 4,
     "version_gt": null
+   }
+  ]
+ },
+ {
+  "tag": 54,
+  "symbol": "history_event_item_stolenst",
+  "inst_size": null,
+  "read_file": "140082890",
+  "write_file": "140082690",
+  "fields": [
+   {
+    "mem_offset": 8,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 12,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 16,
+    "kind": "byte_vector",
+    "size": null,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 32,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 40,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 42,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 44,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 48,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 52,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 56,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 60,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 64,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 68,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 72,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 76,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 80,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 82,
+    "kind": "i16",
+    "size": 2,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 84,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 88,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x61b"
+   },
+   {
+    "mem_offset": 92,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x61b"
+   },
+   {
+    "mem_offset": 96,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x61b"
+   },
+   {
+    "mem_offset": 100,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x61b"
+   },
+   {
+    "mem_offset": 104,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x61b"
    }
   ]
  },
@@ -7364,6 +7781,175 @@
   ]
  },
  {
+  "tag": 110,
+  "symbol": "history_event_squad_vs_squadst",
+  "inst_size": null,
+  "read_file": "140083910",
+  "write_file": "1400836c0",
+  "fields": [
+   {
+    "mem_offset": 8,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 12,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 16,
+    "kind": "byte_vector",
+    "size": null,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 32,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 48,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 72,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 76,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 80,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 84,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 88,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 92,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 104,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 128,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 132,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 136,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 140,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 144,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 148,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 40,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 44,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 96,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 100,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 152,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 156,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 160,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 164,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   }
+  ]
+ },
+ {
   "tag": 111,
   "symbol": "history_event_site_surrenderedst",
   "inst_size": 56,
@@ -8077,6 +8663,109 @@
   ]
  },
  {
+  "tag": 122,
+  "symbol": "history_event_entity_persecutedst",
+  "inst_size": null,
+  "read_file": "14048fe80",
+  "write_file": "14048fd80",
+  "fields": [
+   {
+    "mem_offset": 8,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 12,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 16,
+    "kind": "byte_vector",
+    "size": null,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 32,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 40,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 44,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 48,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 52,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 56,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 80,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 104,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 112,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 136,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 160,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 184,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": null
+   }
+  ]
+ },
+ {
   "tag": 123,
   "symbol": "history_event_entity_breach_feature_layerst",
   "inst_size": 56,
@@ -8618,6 +9307,145 @@
    },
    {
     "mem_offset": 64,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   }
+  ]
+ },
+ {
+  "tag": 131,
+  "symbol": "history_event_hf_convictedst",
+  "inst_size": null,
+  "read_file": "1400f2290",
+  "write_file": "1400f2110",
+  "fields": [
+   {
+    "mem_offset": 8,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 12,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 16,
+    "kind": "byte_vector",
+    "size": null,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 32,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null,
+    "base": true
+   },
+   {
+    "mem_offset": 40,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 44,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 48,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x6a6"
+   },
+   {
+    "mem_offset": 52,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": "0x6a6"
+   },
+   {
+    "mem_offset": 56,
+    "kind": "i32_vector",
+    "size": null,
+    "version_gt": "0x6a6"
+   },
+   {
+    "mem_offset": 80,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 84,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 88,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 92,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 96,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 100,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 104,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 108,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 112,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 116,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 120,
+    "kind": "i32",
+    "size": 4,
+    "version_gt": null
+   },
+   {
+    "mem_offset": 124,
     "kind": "i32",
     "size": 4,
     "version_gt": null

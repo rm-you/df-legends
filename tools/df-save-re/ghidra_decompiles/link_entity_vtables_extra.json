@@ -1,0 +1,6 @@
+[
+  {"tag":11,"symbol":"histfig_entity_link_former_positionst","inst_size":null,"vtable_addr":"140f00448","slot_0x0":"140003af0","slot_0x0_name":"FUN_140003af0","slot_0x100":"1400035c0","slot_0x100_name":"FUN_1400035c0","slot_0x18":"1406fba90","slot_0x18_name":"FUN_1406fba90","slot_0x10":"1406fb9f0","slot_0x10_name":"FUN_1406fb9f0"},
+  {"tag":13,"symbol":"histfig_entity_link_squadst","inst_size":null,"vtable_addr":"140efee18","slot_0x0":"140015f30","slot_0x0_name":"FUN_140015f30","slot_0x100":"1400037f0","slot_0x100_name":"FUN_1400037f0","slot_0x18":"1406fba90","slot_0x18_name":"FUN_1406fba90","slot_0x10":"1406fb9f0","slot_0x10_name":"FUN_1406fb9f0"},
+  {"tag":14,"symbol":"histfig_entity_link_former_squadst","inst_size":null,"vtable_addr":"140efead8","slot_0x0":"140017b90","slot_0x0_name":"FUN_140017b90","slot_0x100":"1400037f0","slot_0x100_name":"FUN_1400037f0","slot_0x18":"1406fba90","slot_0x18_name":"FUN_1406fba90","slot_0x10":"1406fb9f0","slot_0x10_name":"FUN_1406fb9f0"},
+  {"tag":16,"symbol":"histfig_entity_link_former_occupationst","inst_size":null,"vtable_addr":"140effec8","slot_0x0":"1400164f0","slot_0x0_name":"FUN_1400164f0","slot_0x100":"1406fb7f0","slot_0x100_name":"FUN_1406fb7f0","slot_0x18":"1406fba90","slot_0x18_name":"FUN_1406fba90","slot_0x10":"1406fb9f0","slot_0x10_name":"FUN_1406fb9f0"}
+]

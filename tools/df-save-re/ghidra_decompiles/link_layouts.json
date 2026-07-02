@@ -284,6 +284,47 @@
     "factory_name": "entity"
    },
    {
+    "tag": 11,
+    "symbol": "histfig_entity_link_former_positionst",
+    "inst_size": null,
+    "read_file": "1406fba90",
+    "write_file": "1406fb9f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 20,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 24,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
     "tag": 12,
     "symbol": "histfig_entity_link_position_claimst",
     "inst_size": 24,
@@ -319,6 +360,88 @@
     "factory_name": "entity"
    },
    {
+    "tag": 13,
+    "symbol": "histfig_entity_link_squadst",
+    "inst_size": null,
+    "read_file": "1406fba90",
+    "write_file": "1406fb9f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 20,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 24,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 14,
+    "symbol": "histfig_entity_link_former_squadst",
+    "inst_size": null,
+    "read_file": "1406fba90",
+    "write_file": "1406fb9f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 20,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 24,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
     "tag": 15,
     "symbol": "histfig_entity_link_occupationst",
     "inst_size": 24,
@@ -345,6 +468,47 @@
      },
      {
       "mem_offset": 20,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     }
+    ],
+    "factory": "140707820",
+    "factory_name": "entity"
+   },
+   {
+    "tag": 16,
+    "symbol": "histfig_entity_link_former_occupationst",
+    "inst_size": null,
+    "read_file": "1406fba90",
+    "write_file": "1406fb9f0",
+    "fields": [
+     {
+      "mem_offset": 8,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 12,
+      "kind": "i16",
+      "size": 2,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 16,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 20,
+      "kind": "i32",
+      "size": 4,
+      "version_gt": null
+     },
+     {
+      "mem_offset": 24,
       "kind": "i32",
       "size": 4,
       "version_gt": null

@@ -120,6 +120,7 @@ def read_historical_figure_header(
     family_head_id = -1
     if save_version > 0x618:
         family_head_id = reader.read_int32()
+    # On-disk order from FUN_14070a9d0 (+0xe4, +0xd8, +0xdc) then byte flags (+0xc8) then +0xe0.
     unit_id = reader.read_int32()
     nemesis_id = reader.read_int32()
     field_dc = reader.read_int32()
