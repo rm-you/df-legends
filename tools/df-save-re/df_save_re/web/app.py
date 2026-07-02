@@ -213,6 +213,7 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             nemesis = (
                 store.get_figure(session, figure.nemesis_id) if figure.nemesis_id else None
             )
+            timeline = store.get_events_for_figure(session, figure_id)
         return render(
             request,
             "figure_detail.html",
@@ -225,7 +226,148 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             family_head_name=store.figure_display(family_head) if family_head else None,
             nemesis=nemesis,
             nemesis_name=store.figure_display(nemesis) if nemesis else None,
+            timeline=timeline,
         )
+
+    @app.get("/world/{slug}/events", response_class=HTMLResponse)
+    def events(
+        request: Request,
+        slug: str,
+        event_type: str | None = Query(default=None),
+        year: int | None = Query(default=None),
+        page: int = Query(default=1, ge=1),
+    ):
+        if store.entry_for_slug(slug) is None:
+            raise HTTPException(status_code=404, detail="World not found in registry")
+        per_page = 100
+        with store.session(slug) as session:
+            event_rows, total = store.get_events(
+                session,
+                event_type=event_type or None,
+                year=year,
+                page=page,
+                per_page=per_page,
+            )
+            types = store.get_event_types(session)
+            hf_ids = [e.hfid for e in event_rows if e.hfid is not None and e.hfid >= 0]
+            figure_names = store.figure_name_map(session, hf_ids)
+        return render(
+            request,
+            "events.html",
+            slug=slug,
+            events=event_rows,
+            total=total,
+            types=types,
+            selected_type=event_type or "",
+            year=year,
+            page=page,
+            pages=max(1, -(-total // per_page)),
+            figure_names=figure_names,
+        )
+
+    @app.get("/world/{slug}/events/{event_id}", response_class=HTMLResponse)
+    def event_detail(request: Request, slug: str, event_id: int):
+        if store.entry_for_slug(slug) is None:
+            raise HTTPException(status_code=404, detail="World not found in registry")
+        with store.session(slug) as session:
+            event = store.get_event(session, event_id)
+            if event is None:
+                raise HTTPException(status_code=404, detail="Event not found")
+            fields = store.event_fields(event)
+            hf_ids = [
+                v
+                for k, v in fields.items()
+                if isinstance(v, int) and v >= 0 and ("hf" in k or "histfig" in k)
+            ]
+            if event.hfid is not None and event.hfid >= 0:
+                hf_ids.append(event.hfid)
+            figure_names = store.figure_name_map(session, hf_ids)
+            site = store.get_site(session, event.site_id) if event.site_id and event.site_id >= 0 else None
+            civ = store.get_entity(session, event.civ_id) if event.civ_id and event.civ_id >= 0 else None
+        return render(
+            request,
+            "event_detail.html",
+            slug=slug,
+            event=event,
+            fields=fields,
+            figure_names=figure_names,
+            site=site,
+            civ=civ,
+            civ_name=store.entity_display(civ) if civ else None,
+        )
+
+    @app.get("/world/{slug}/collections", response_class=HTMLResponse)
+    def collections(
+        request: Request,
+        slug: str,
+        collection_type: str | None = Query(default=None),
+        q: str | None = Query(default=None),
+        named_only: bool = Query(default=False),
+        page: int = Query(default=1, ge=1),
+    ):
+        if store.entry_for_slug(slug) is None:
+            raise HTTPException(status_code=404, detail="World not found in registry")
+        per_page = 100
+        with store.session(slug) as session:
+            collection_rows, total = store.get_collections(
+                session,
+                collection_type=collection_type or None,
+                search=q,
+                named_only=named_only,
+                page=page,
+                per_page=per_page,
+            )
+            types = store.get_collection_types(session)
+        return render(
+            request,
+            "collections.html",
+            slug=slug,
+            collections=collection_rows,
+            total=total,
+            types=types,
+            selected_type=collection_type or "",
+            search=q or "",
+            named_only=named_only,
+            page=page,
+            pages=max(1, -(-total // per_page)),
+        )
+
+    @app.get("/world/{slug}/collections/{collection_id}", response_class=HTMLResponse)
+    def collection_detail(request: Request, slug: str, collection_id: int):
+        if store.entry_for_slug(slug) is None:
+            raise HTTPException(status_code=404, detail="World not found in registry")
+        with store.session(slug) as session:
+            collection = store.get_collection(session, collection_id)
+            if collection is None:
+                raise HTTPException(status_code=404, detail="Collection not found")
+            record = store.collection_record(collection)
+            event_rows = store.get_events_by_ids(
+                session, record.get("events") or [], limit=500
+            )
+            children = store.get_collections_by_ids(
+                session, record.get("collections") or []
+            )
+            hf_ids = [e.hfid for e in event_rows if e.hfid is not None and e.hfid >= 0]
+            figure_names = store.figure_name_map(session, hf_ids)
+        return render(
+            request,
+            "collection_detail.html",
+            slug=slug,
+            collection=collection,
+            display_name=store.collection_display(collection),
+            record=record,
+            events=event_rows,
+            children=children,
+            figure_names=figure_names,
+        )
+
+    @app.get("/world/{slug}/eras", response_class=HTMLResponse)
+    def eras(request: Request, slug: str):
+        if store.entry_for_slug(slug) is None:
+            raise HTTPException(status_code=404, detail="World not found in registry")
+        with store.session(slug) as session:
+            era_rows = store.get_eras(session)
+        return render(request, "eras.html", slug=slug, eras=era_rows)
 
     @app.get("/world/{slug}/history", response_class=HTMLResponse)
     def history(request: Request, slug: str):

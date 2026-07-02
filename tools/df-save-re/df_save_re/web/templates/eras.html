@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Eras — {{ slug }}{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / Eras</div>
+<h1>Eras</h1>
+
+<table class="data">
+  <thead><tr><th>#</th><th>Name</th><th>Start year</th></tr></thead>
+  <tbody>
+    {% for era in eras %}
+    <tr>
+      <td class="mono">{{ era.id }}</td>
+      <td>{{ era.name or "—" }}</td>
+      <td class="mono">{{ era.start_year }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if not eras %}
+<p>No eras extracted for this world.</p>
+{% endif %}
+{% endblock %}

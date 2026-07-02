@@ -2,19 +2,22 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 
 from ..db.migrate import make_engine
 from ..db.models import (
+    EventCollection,
     ExtractionNote,
     ExtractionRun,
     HistoricalEntity,
     HistoricalFigure,
     HistoricalFigureCatalogMeta,
+    HistoryEra,
     HistoryEvent,
     HistoryEventsMeta,
     HistoryStatsBlock,
@@ -312,6 +315,189 @@ class LegendsStore:
             )
             or 0,
         }
+
+    # ------------------------------------------------------------------
+    # events / collections / eras (deterministic world_history walk)
+
+    def get_event_types(self, session: Session) -> list[tuple[str, int]]:
+        rows = session.execute(
+            select(HistoryEvent.event_type, func.count())
+            .group_by(HistoryEvent.event_type)
+            .order_by(func.count().desc())
+        ).all()
+        return [(t or "?", n) for t, n in rows]
+
+    def get_events(
+        self,
+        session: Session,
+        *,
+        event_type: str | None = None,
+        year: int | None = None,
+        page: int = 1,
+        per_page: int = 100,
+    ) -> tuple[list[HistoryEvent], int]:
+        """Return (page of events ordered by id, total matching count)."""
+        stmt = select(HistoryEvent)
+        count_stmt = select(func.count()).select_from(HistoryEvent)
+        if event_type:
+            stmt = stmt.where(HistoryEvent.event_type == event_type)
+            count_stmt = count_stmt.where(HistoryEvent.event_type == event_type)
+        if year is not None:
+            stmt = stmt.where(HistoryEvent.year == year)
+            count_stmt = count_stmt.where(HistoryEvent.year == year)
+        total = session.scalar(count_stmt) or 0
+        events = session.scalars(
+            stmt.order_by(HistoryEvent.event_id)
+            .offset(max(page - 1, 0) * per_page)
+            .limit(per_page)
+        ).all()
+        return list(events), total
+
+    def get_event(self, session: Session, event_id: int) -> HistoryEvent | None:
+        return session.get(HistoryEvent, event_id)
+
+    @staticmethod
+    def event_fields(event: HistoryEvent) -> dict:
+        """Parsed fields_json minus walk metadata, for detail rendering."""
+        if not event.fields_json:
+            return {}
+        try:
+            fields = json.loads(event.fields_json)
+        except ValueError:
+            return {}
+        return {k: v for k, v in fields.items() if not k.startswith("_")}
+
+    def get_events_for_figure(
+        self, session: Session, figure_id: int, *, limit: int = 500
+    ) -> list[HistoryEvent]:
+        """Chronological events referencing the figure via any *hf* field."""
+        rows = session.execute(
+            text(
+                """
+                SELECT event_id FROM history_event
+                WHERE hfid = :fid
+                   OR EXISTS (
+                        SELECT 1 FROM json_each(history_event.fields_json)
+                        WHERE json_each.value = :fid
+                          AND (json_each.key LIKE '%hf%' OR json_each.key LIKE '%histfig%')
+                      )
+                ORDER BY year, seconds, event_id
+                LIMIT :lim
+                """
+            ),
+            {"fid": figure_id, "lim": limit},
+        ).all()
+        ids = [r[0] for r in rows]
+        if not ids:
+            return []
+        events = session.scalars(
+            select(HistoryEvent).where(HistoryEvent.event_id.in_(ids))
+        ).all()
+        by_id = {e.event_id: e for e in events}
+        return [by_id[i] for i in ids if i in by_id]
+
+    def get_collection_types(self, session: Session) -> list[tuple[str, int]]:
+        rows = session.execute(
+            select(EventCollection.collection_type, func.count())
+            .group_by(EventCollection.collection_type)
+            .order_by(func.count().desc())
+        ).all()
+        return [(t or "?", n) for t, n in rows]
+
+    def get_collections(
+        self,
+        session: Session,
+        *,
+        collection_type: str | None = None,
+        search: str | None = None,
+        named_only: bool = False,
+        page: int = 1,
+        per_page: int = 100,
+    ) -> tuple[list[EventCollection], int]:
+        stmt = select(EventCollection)
+        count_stmt = select(func.count()).select_from(EventCollection)
+        if collection_type:
+            stmt = stmt.where(EventCollection.collection_type == collection_type)
+            count_stmt = count_stmt.where(
+                EventCollection.collection_type == collection_type
+            )
+        if search:
+            stmt = stmt.where(EventCollection.name_display.ilike(f"%{search}%"))
+            count_stmt = count_stmt.where(
+                EventCollection.name_display.ilike(f"%{search}%")
+            )
+        if named_only:
+            stmt = stmt.where(EventCollection.name_display.is_not(None))
+            count_stmt = count_stmt.where(EventCollection.name_display.is_not(None))
+        total = session.scalar(count_stmt) or 0
+        collections = session.scalars(
+            stmt.order_by(EventCollection.collection_id)
+            .offset(max(page - 1, 0) * per_page)
+            .limit(per_page)
+        ).all()
+        return list(collections), total
+
+    def get_collection(
+        self, session: Session, collection_id: int
+    ) -> EventCollection | None:
+        return session.get(EventCollection, collection_id)
+
+    @staticmethod
+    def collection_display(collection: EventCollection | None) -> str:
+        if collection is None:
+            return "—"
+        if collection.name_display:
+            return collection.name_display.title()
+        return f"{collection.collection_type or 'collection'} #{collection.collection_id}"
+
+    @staticmethod
+    def collection_record(collection: EventCollection) -> dict:
+        if not collection.record_json:
+            return {}
+        try:
+            return json.loads(collection.record_json)
+        except ValueError:
+            return {}
+
+    def get_events_by_ids(
+        self, session: Session, event_ids: list[int], *, limit: int = 500
+    ) -> list[HistoryEvent]:
+        if not event_ids:
+            return []
+        events = session.scalars(
+            select(HistoryEvent)
+            .where(HistoryEvent.event_id.in_(event_ids[:limit]))
+            .order_by(HistoryEvent.year, HistoryEvent.seconds, HistoryEvent.event_id)
+        ).all()
+        return list(events)
+
+    def get_collections_by_ids(
+        self, session: Session, collection_ids: list[int]
+    ) -> list[EventCollection]:
+        if not collection_ids:
+            return []
+        return list(
+            session.scalars(
+                select(EventCollection)
+                .where(EventCollection.collection_id.in_(collection_ids))
+                .order_by(EventCollection.collection_id)
+            ).all()
+        )
+
+    def get_eras(self, session: Session) -> list[HistoryEra]:
+        return list(
+            session.scalars(select(HistoryEra).order_by(HistoryEra.id)).all()
+        )
+
+    def figure_name_map(
+        self, session: Session, figure_ids: list[int]
+    ) -> dict[int, str]:
+        if not figure_ids:
+            return {}
+        figures = session.scalars(
+            select(HistoricalFigure).where(HistoricalFigure.figure_id.in_(figure_ids))
+        ).all()
+        return {f.figure_id: self.figure_display(f) for f in figures}
 
     def get_latest_extraction_notes(
         self, session: Session, *, limit: int = 20

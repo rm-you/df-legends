@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Event {{ event.event_id }} — {{ slug }}{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / <a href="/world/{{ slug }}/events">Events</a> / {{ event.event_id }}</div>
+<h1>Event {{ event.event_id }} <span class="tag">{{ event.event_type }}</span></h1>
+
+<dl class="detail">
+  <dt>Year</dt><dd class="mono">{{ event.year }}</dd>
+  <dt>Seconds</dt><dd class="mono">{{ event.seconds }}</dd>
+  {% if civ %}
+  <dt>Civilization</dt><dd><a href="/world/{{ slug }}/entities/{{ civ.entity_id }}">{{ civ_name }}</a></dd>
+  {% endif %}
+  {% if site %}
+  <dt>Site</dt><dd><a href="/world/{{ slug }}/sites/{{ site.site_id }}">{{ site.display_name }}</a></dd>
+  {% endif %}
+</dl>
+
+<h2>Fields</h2>
+<table class="data">
+  <thead><tr><th>Field</th><th>Value</th></tr></thead>
+  <tbody>
+    {% for key, value in fields.items() %}
+    <tr>
+      <td>{{ key }}</td>
+      <td class="mono">
+        {% if value is number and value >= 0 and ("hf" in key or "histfig" in key) and value in figure_names %}
+        <a href="/world/{{ slug }}/figures/{{ value }}">{{ figure_names[value] }}</a> ({{ value }})
+        {% elif value is number and value >= 0 and key in ("site", "site_id") %}
+        <a href="/world/{{ slug }}/sites/{{ value }}">site {{ value }}</a>
+        {% else %}
+        {{ value }}
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

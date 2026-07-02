@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Collections — {{ slug }}{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / Collections</div>
+<h1>Event collections</h1>
+<p class="subtitle">{{ "{:,}".format(total) }} collections{% if selected_type %} of type <strong>{{ selected_type }}</strong>{% endif %}</p>
+
+<form method="get" class="filters">
+  <label>
+    Type
+    <select name="collection_type">
+      <option value="">all</option>
+      {% for t, n in types %}
+      <option value="{{ t }}" {% if t == selected_type %}selected{% endif %}>{{ t }} ({{ "{:,}".format(n) }})</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    Name
+    <input type="text" name="q" value="{{ search }}">
+  </label>
+  <label>
+    <input type="checkbox" name="named_only" value="true" {% if named_only %}checked{% endif %}> named only
+  </label>
+  <button type="submit">Filter</button>
+</form>
+
+<table class="data">
+  <thead>
+    <tr><th>ID</th><th>Type</th><th>Name</th><th>Years</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for c in collections %}
+    <tr>
+      <td class="mono">{{ c.collection_id }}</td>
+      <td>{{ c.collection_type }}</td>
+      <td>{% if c.name_display %}{{ c.name_display.title() }}{% else %}—{% endif %}</td>
+      <td class="mono">{{ c.start_year }}–{{ c.end_year }}</td>
+      <td><a href="/world/{{ slug }}/collections/{{ c.collection_id }}">detail</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+  <a href="?collection_type={{ selected_type }}&q={{ search }}&named_only={{ 'true' if named_only else '' }}&page={{ page - 1 }}">&laquo; prev</a>
+  {% endif %}
+  <span>page {{ page }} / {{ "{:,}".format(pages) }}</span>
+  {% if page < pages %}
+  <a href="?collection_type={{ selected_type }}&q={{ search }}&named_only={{ 'true' if named_only else '' }}&page={{ page + 1 }}">next &raquo;</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

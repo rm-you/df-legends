@@ -50,6 +50,22 @@
   <dt>Population ID</dt><dd class="mono">{{ figure.population_id or '—' }}</dd>
 </dl>
 
+{% if timeline %}
+<h2>Timeline ({{ "{:,}".format(timeline | length) }} events)</h2>
+<table class="data">
+  <thead><tr><th>Year</th><th>Type</th><th>Event</th></tr></thead>
+  <tbody>
+    {% for e in timeline %}
+    <tr>
+      <td class="mono">{{ e.year }}</td>
+      <td>{{ e.event_type }}</td>
+      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">event {{ e.event_id }}</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 {% if civ %}
 <p><a href="/world/{{ slug }}/figures?civ_id={{ civ.entity_id }}">More figures from {{ civ_name }} →</a></p>
 {% endif %}
