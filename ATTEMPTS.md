@@ -526,3 +526,38 @@ full-name check kept as fallback). Result: `event_vtables.json` went from
   payload; Python 3.13.3/Win). Same file passes when run alone. Suspect
   environment (memory pressure), not the parser: reruns pass.
 
+#### 2026-07-02 region3 (Kar Minbaz) — no-export validation + CP437 fix
+
+- **Deterministic walk lands exactly** on the user's fresh `region3` save
+  (`data\saves\region3\world.dat`, 24.6MB payload, sv 1716): events 110,225
+  (declared count echo @ `0x6850d5`, walk ends exactly at the figures count
+  echo), figures 10,591 (all named), collections 16,483 (= header
+  `max_ids[10]+1`), eras 2 ("Age of Dragon and Hill Titan" / "Hill-titan
+  Age"). No legends XML this time — validation is exact-landing +
+  count-echo agreement + the DF text exports.
+- **Encoding bug found & fixed: DF strings are CP437, not latin-1.**
+  Cross-checking ruler names from `region3-...-world_history.txt` exposed it:
+  byte `0x95` decoded latin-1 gives `•`-class garbage, CP437 gives `ò` (e.g.
+  ruler "Lòr Wrunggilt"). Switched `BinaryReader.read_fixed_string`,
+  `world_history_walk` string fields (event/era names), and
+  `record_reader` static-strings to `cp437`. After the fix all **74/74**
+  ruler (first-name, born-year, died-year) triples from the region3
+  world_history text export match `historical_figure` rows exactly
+  (`scripts/diag_region3_names.py`).
+- **Header site-slot hypothesis DISPROVEN:** `max_ids[26]+4` matched
+  Namushul (346→350) by coincidence. region2: slot 26 = 127 → 131, but its
+  legends.xml has **194** sites; region3: 105 → 109 vs **262** sites in
+  `world_sites_and_pops.txt`. No max_ids slot consistently equals the site
+  count across region1/2/3 (region3's `max_ids[3]=258` → +4 = 262 matches,
+  but region2's slot 3 = 379 ≠ 194 — coincidence again). Raising the ceiling
+  manually (`--expected-sites 266`) recovers 249/262 region3 sites via the
+  heuristic scan, but with a generous ceiling (2000) the header scan floods
+  with false positives (region3: 1,297 "sites"). Conclusion: the site
+  catalog needs the real `world_site` vector walk (count + dense bodies,
+  seq 11-ish in `world_reader_sections.json`) instead of marker heuristics —
+  same as the known "full world_site body walk still open" note. Site
+  display names from the heuristic stride table are also wrong on
+  region2/region3 (word-index garbage like "ABBEY ABBEY..."), so the
+  legacy site layer should be treated as Namushul-only until the real
+  walk exists.
+

@@ -105,7 +105,7 @@ def read_event_record(
             rec[name] = [reader.read_int16() for _ in range(n)]
         elif kind in ("string", "stl_string"):
             length = reader.read_int16()
-            rec[name] = reader.read_bytes(length).decode("latin-1") if length > 0 else ""
+            rec[name] = reader.read_bytes(length).decode("cp437") if length > 0 else ""
         elif kind == "temp":
             reader.read_bytes(fd.get("size") or 4)
         elif kind == "scalar":
@@ -298,7 +298,7 @@ def read_era_record(reader: BinaryReader) -> EraRecord:
     name_len = reader.read_int16()
     if name_len < 0 or name_len > 4096:
         raise ValueError(f"implausible era name length {name_len} at 0x{reader.tell() - 2:x}")
-    name = reader.read_bytes(name_len).decode("latin-1")
+    name = reader.read_bytes(name_len).decode("cp437")
     # FUN_14075ccb0: 6x i32, i32 vector, 2x i32
     head = [reader.read_int32() for _ in range(6)]
     vec_n = reader.read_int32()

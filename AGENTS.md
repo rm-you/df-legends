@@ -217,6 +217,17 @@ versions.
  events) contradicts on-disk data (event ids to ~299k); the .sav header
  layout needs re-derivation before the walk can anchor. Base link tag `-1`
  (active-save base-class links) is now handled in `skip_figure_links`.
+- **region3 (Kar Minbaz) validated with NO reference export:** walk lands
+ exactly (110,225 events / 10,591 figures / 16,483 collections / 2 eras);
+ 74/74 ruler (name, born, died) triples from the world_history text export
+ match the DB. **Strings are CP437** (not latin-1) — fixed in
+ `BinaryReader.read_fixed_string` + walk string fields.
+- **`max_ids[26]+4` site ceiling is DISPROVEN** (Namushul coincidence):
+ region2 header says 131 but has 194 sites; region3 says 109 but has 262.
+ No max_ids slot tracks sites consistently. The heuristic site catalog
+ (markers + stride table) undercounts and mis-names sites on non-Namushul
+ worlds — the real `world_site` vector walk (post-world_history sections)
+ is required. See ATTEMPTS.md 2026-07-02 region3 entry.
 - **Known env issue:** long pytest runs intermittently die with 0xC0000005
  access violations in hot byte-scan loops (also on unmodified baseline);
  same tests pass on rerun/isolated. See ATTEMPTS.md 2026-07-02.

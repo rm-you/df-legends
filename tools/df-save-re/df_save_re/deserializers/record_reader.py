@@ -220,7 +220,7 @@ def read_field(
         return DfString.read(reader).value
     if kind == "static-string":
         if field.array_count:
-            return reader.read_bytes(field.array_count).decode("latin-1", errors="replace")
+            return reader.read_bytes(field.array_count).decode("cp437", errors="replace")
         return DfString.read(reader).value
     if kind == "enum":
         width = enum_storage_width(field, xml_dir)

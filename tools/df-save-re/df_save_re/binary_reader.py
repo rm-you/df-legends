@@ -55,12 +55,16 @@ class BinaryReader:
         return self.read_int8() != 0
 
     def read_fixed_string(self) -> str:
-        """String: int16 length + bytes (no explicit null in file)."""
+        """String: int16 length + bytes (no explicit null in file).
+
+        DF stores text in code page 437 (e.g. 0x95 = U+00F2 LATIN SMALL O
+        WITH GRAVE), not latin-1.
+        """
         length = self.read_int16()
         if length <= 0:
             return ""
         raw = self.read_bytes(length)
-        return raw.decode("latin-1", errors="replace")
+        return raw.decode("cp437", errors="replace")
 
     def peek_bytes(self, size: int) -> bytes:
         pos = self.stream.tell()

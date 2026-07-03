@@ -375,7 +375,7 @@ def verify_snapshot_against_text(
 
         from .deserializers.site_text import parse_site_text_catalog
 
-        sites_text = Path(text.sites.path).read_bytes().decode("latin-1")
+        sites_text = Path(text.sites.path).read_bytes().decode("cp437")
         site_text_catalog = parse_site_text_catalog(sites_text)
 
         binary_site_count = (

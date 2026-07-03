@@ -13,7 +13,7 @@ T = TypeVar("T")
 
 @dataclass
 class DfString:
-    """Length-prefixed string (int16 len + bytes). Stored as Latin-1."""
+    """Length-prefixed string (int16 len + bytes). Stored as code page 437."""
 
     value: str
 
