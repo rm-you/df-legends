@@ -1,30 +1,39 @@
 {% extends "base.html" %}
-{% block title %}{{ display_name }} — {{ slug }}{% endblock %}
+{% block title %}{{ display_name }} — {{ world_name | default(slug) }}{% endblock %}
 {% block content %}
-<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / <a href="/world/{{ slug }}/collections">Collections</a> / {{ collection.collection_id }}</div>
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / <a href="/world/{{ slug }}/collections">Collections</a> / {{ collection.collection_id }}</div>
 <h1>{{ display_name }} <span class="tag">{{ collection.collection_type }}</span></h1>
 
 <dl class="detail">
   <dt>Years</dt><dd class="mono">{{ collection.start_year }}–{{ collection.end_year }}</dd>
   <dt>Events</dt><dd class="mono">{{ "{:,}".format((record.get("events") or []) | length) }}</dd>
-  <dt>Child collections</dt><dd class="mono">{{ (record.get("collections") or []) | length }}</dd>
-  {% for key, value in record.items() %}
-  {% if key not in ("events", "collections", "id", "type", "name", "name_words", "name_parts_of_speech", "start_year", "end_year", "start_seconds", "end_seconds") and value is not none %}
-  <dt>{{ key }}</dt><dd class="mono">{{ value if value is not iterable or value is string else value | join(", ") }}</dd>
+  {% if record.get("attacker_civs") %}
+  <dt>Attackers</dt>
+  <dd>
+    {% for cid in record.attacker_civs %}
+    <a href="/world/{{ slug }}/entities/{{ cid }}">{{ resolve_ctx.entity_name(cid) }}</a>{% if not loop.last %}, {% endif %}
+    {% endfor %}
+  </dd>
   {% endif %}
-  {% endfor %}
+  {% if record.get("defender_civs") %}
+  <dt>Defenders</dt>
+  <dd>
+    {% for cid in record.defender_civs %}
+    <a href="/world/{{ slug }}/entities/{{ cid }}">{{ resolve_ctx.entity_name(cid) }}</a>{% if not loop.last %}, {% endif %}
+    {% endfor %}
+  </dd>
+  {% endif %}
 </dl>
 
 {% if children %}
 <h2>Child collections</h2>
 <table class="data">
-  <thead><tr><th>ID</th><th>Type</th><th>Name</th><th>Years</th></tr></thead>
+  <thead><tr><th>Name</th><th>Type</th><th>Years</th></tr></thead>
   <tbody>
     {% for c in children %}
     <tr>
-      <td class="mono">{{ c.collection_id }}</td>
-      <td>{{ c.collection_type }}</td>
       <td><a href="/world/{{ slug }}/collections/{{ c.collection_id }}">{% if c.name_display %}{{ c.name_display.title() }}{% else %}#{{ c.collection_id }}{% endif %}</a></td>
+      <td>{{ c.collection_type }}</td>
       <td class="mono">{{ c.start_year }}–{{ c.end_year }}</td>
     </tr>
     {% endfor %}
@@ -33,20 +42,14 @@
 {% endif %}
 
 {% if events %}
-<h2>Events ({{ "{:,}".format(events | length) }}{% if (record.get("events") or []) | length > events | length %} of {{ "{:,}".format((record.get("events") or []) | length) }}{% endif %})</h2>
-<table class="data">
-  <thead><tr><th>ID</th><th>Year</th><th>Type</th><th>Figure</th></tr></thead>
+<h2>Chronicle ({{ "{:,}".format(events | length) }} events)</h2>
+<table class="data timeline-table">
+  <thead><tr><th>Year</th><th>Event</th></tr></thead>
   <tbody>
     {% for e in events %}
     <tr>
-      <td class="mono"><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ e.event_id }}</a></td>
       <td class="mono">{{ e.year }}</td>
-      <td>{{ e.event_type }}</td>
-      <td>
-        {% if e.hfid is not none and e.hfid >= 0 %}
-        <a href="/world/{{ slug }}/figures/{{ e.hfid }}">{{ figure_names.get(e.hfid, "Figure #%d" % e.hfid) }}</a>
-        {% else %}—{% endif %}
-      </td>
+      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ event_summaries.get(e.event_id, e.event_type) }}</a></td>
     </tr>
     {% endfor %}
   </tbody>

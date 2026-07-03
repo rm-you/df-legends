@@ -1,0 +1,10 @@
+research/
+data/saves/
+.git/
+.venv/
+**/__pycache__/
+**/.pytest_cache/
+tools/df-save-re/ghidra/
+tools/df-save-re/tests/fixtures/
+tools/df-save-re/data/legends/
+**/*.log

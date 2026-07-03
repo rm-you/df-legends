@@ -1,10 +1,80 @@
 {% extends "base.html" %}
 {% block title %}Worlds — DF Legends Explorer{% endblock %}
 {% block content %}
-<h1>Imported worlds</h1>
-<p class="subtitle">Fortress databases registered under <span class="mono">{{ data_dir }}</span></p>
+<h1>DF Legends Explorer</h1>
 
-{% if entries %}
+{% if saves_dir %}
+<p class="subtitle">
+  Saves: <span class="mono">{{ saves_dir }}</span> ·
+  Data: <span class="mono">{{ data_dir }}</span>
+</p>
+
+<h2>Save regions</h2>
+{% if regions %}
+<table class="data-table region-table" id="region-table">
+  <thead>
+    <tr>
+      <th>Region</th>
+      <th>World</th>
+      <th>Type</th>
+      <th>DB status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in regions %}
+    <tr data-region="{{ row.region_name }}" data-status="{{ row.status.value }}">
+      <td class="mono">{{ row.region_name }}</td>
+      <td>{{ row.world_name or "—" }}</td>
+      <td>
+        {% if row.is_active %}active{% elif row.is_retired %}retired{% else %}—{% endif %}
+        {% if row.parse_target %}
+        <span class="meta">({{ row.parse_target }})</span>
+        {% endif %}
+      </td>
+      <td class="status-cell">
+        {% if row.status.value == "ready" %}
+          <span class="badge badge-ready">Ready</span>
+          {% if row.event_count is not none %}
+          <span class="meta">{{ "{:,}".format(row.event_count) }} events</span>
+          {% endif %}
+        {% elif row.status.value == "importable" %}
+          <span class="badge badge-pending">Not imported</span>
+        {% elif row.status.value == "importing" %}
+          <span class="badge badge-running">Importing…</span>
+        {% elif row.status.value == "error" %}
+          <span class="badge badge-error">{{ row.error or "Error" }}</span>
+        {% else %}
+          <span class="badge badge-invalid">Invalid</span>
+          {% if row.error %}<span class="meta">{{ row.error }}</span>{% endif %}
+        {% endif %}
+      </td>
+      <td class="actions-cell">
+        {% if row.status.value == "ready" and row.slug %}
+          <a href="/world/{{ row.slug }}" class="btn btn-primary">Browse</a>
+          <button type="button" class="btn btn-secondary import-btn" data-region="{{ row.region_name }}">Re-import</button>
+        {% elif row.status.value == "importable" %}
+          <button type="button" class="btn btn-primary import-btn" data-region="{{ row.region_name }}">Import</button>
+        {% elif row.status.value == "error" %}
+          <button type="button" class="btn btn-primary import-btn" data-region="{{ row.region_name }}">Retry</button>
+        {% elif row.status.value == "importing" %}
+          <span class="meta">Please wait…</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">No region folders with world.dat or world.sav found under the saves mount.</div>
+{% endif %}
+
+{% else %}
+<p class="subtitle">Fortress databases registered under <span class="mono">{{ data_dir }}</span></p>
+{% endif %}
+
+{% if entries and not saves_dir %}
+<h2>Imported worlds</h2>
 <div class="card-grid">
   {% for entry in entries %}
   <a href="/world/{{ entry.slug }}" class="card" style="display:block;text-decoration:none;color:inherit;">
@@ -23,11 +93,99 @@
   </a>
   {% endfor %}
 </div>
-{% else %}
+{% elif not entries and not saves_dir %}
 <div class="empty">
   No worlds imported yet. Run:
   <pre class="mono" style="margin-top:0.75rem;background:var(--surface);padding:0.75rem;border-radius:4px;">python3 -m df_save_re.cli import-db path/to/world.dat
-python3 -m df_save_re.cli serve</pre>
+python3 -m df_save_re.cli serve --saves-dir path/to/data/save</pre>
 </div>
+{% elif entries and saves_dir %}
+<h2>Imported worlds</h2>
+<p class="meta">Browse via the table above when a region shows <strong>Ready</strong>, or open directly:</p>
+<div class="card-grid">
+  {% for entry in entries %}
+  <a href="/world/{{ entry.slug }}" class="card" style="display:block;text-decoration:none;color:inherit;">
+    <h3>{{ entry.world_name }}</h3>
+    <div class="meta">
+      slug: <span class="mono">{{ entry.slug }}</span>
+      {% if entry.event_count is not none %}
+      · {{ "{:,}".format(entry.event_count) }} events
+      {% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if saves_dir %}
+<script>
+(function () {
+  const pollIntervalMs = 2000;
+
+  function setRowImporting(region) {
+    const row = document.querySelector(`tr[data-region="${region}"]`);
+    if (!row) return;
+    row.dataset.status = "importing";
+    const statusCell = row.querySelector(".status-cell");
+    if (statusCell) {
+      statusCell.innerHTML = '<span class="badge badge-running">Importing…</span>';
+    }
+    const actionsCell = row.querySelector(".actions-cell");
+    if (actionsCell) {
+      actionsCell.innerHTML = '<span class="meta">Please wait…</span>';
+    }
+  }
+
+  function pollImport(region) {
+    return fetch(`/api/regions/${encodeURIComponent(region)}/import`)
+      .then((r) => r.json())
+      .then((job) => {
+        if (job.state === "running") {
+          return new Promise((resolve) => {
+            setTimeout(() => resolve(pollImport(region)), pollIntervalMs);
+          });
+        }
+        if (job.state === "done") {
+          window.location.reload();
+          return;
+        }
+        window.location.reload();
+      });
+  }
+
+  function startImport(region) {
+    setRowImporting(region);
+    fetch(`/api/regions/${encodeURIComponent(region)}/import`, { method: "POST" })
+      .then((r) => {
+        if (!r.ok && r.status !== 202) {
+          return r.json().then((body) => {
+            throw new Error(body.detail || r.statusText);
+          });
+        }
+        return r.json();
+      })
+      .then(() => pollImport(region))
+      .catch((err) => {
+        alert("Import failed to start: " + err.message);
+        window.location.reload();
+      });
+  }
+
+  document.querySelectorAll(".import-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const region = btn.dataset.region;
+      if (btn.classList.contains("btn-secondary") && !confirm(`Re-import ${region}? This replaces the existing database.`)) {
+        return;
+      }
+      btn.disabled = true;
+      startImport(region);
+    });
+  });
+
+  document.querySelectorAll('tr[data-status="importing"]').forEach((row) => {
+    pollImport(row.dataset.region);
+  });
+})();
+</script>
 {% endif %}
 {% endblock %}

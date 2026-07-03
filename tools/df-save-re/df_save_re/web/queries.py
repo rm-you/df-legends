@@ -70,6 +70,8 @@ class FigureSummary:
     display_name: str
     civ_id: int | None
     civ_name: str | None
+    profession: int | None
+    race: int | None
     appeared_year: int | None
     died_year: int | None
 
@@ -89,6 +91,10 @@ class LegendsStore:
             if row.slug == slug:
                 return row
         return None
+
+    def clear_engine(self, slug: str) -> None:
+        """Drop cached SQLAlchemy engine after re-import."""
+        self._engines.pop(slug, None)
 
     def _engine_for_slug(self, slug: str):
         if slug not in self._engines:
@@ -252,6 +258,8 @@ class LegendsStore:
                 display_name=self.figure_display(fig),
                 civ_id=fig.civ_id,
                 civ_name=names.get(fig.civ_id) if fig.civ_id is not None else None,
+                profession=fig.profession,
+                race=fig.race,
                 appeared_year=fig.appeared_year,
                 died_year=fig.died_year,
             )
@@ -369,35 +377,6 @@ class LegendsStore:
         except ValueError:
             return {}
         return {k: v for k, v in fields.items() if not k.startswith("_")}
-
-    def get_events_for_figure(
-        self, session: Session, figure_id: int, *, limit: int = 500
-    ) -> list[HistoryEvent]:
-        """Chronological events referencing the figure via any *hf* field."""
-        rows = session.execute(
-            text(
-                """
-                SELECT event_id FROM history_event
-                WHERE hfid = :fid
-                   OR EXISTS (
-                        SELECT 1 FROM json_each(history_event.fields_json)
-                        WHERE json_each.value = :fid
-                          AND (json_each.key LIKE '%hf%' OR json_each.key LIKE '%histfig%')
-                      )
-                ORDER BY year, seconds, event_id
-                LIMIT :lim
-                """
-            ),
-            {"fid": figure_id, "lim": limit},
-        ).all()
-        ids = [r[0] for r in rows]
-        if not ids:
-            return []
-        events = session.scalars(
-            select(HistoryEvent).where(HistoryEvent.event_id.in_(ids))
-        ).all()
-        by_id = {e.event_id: e for e in events}
-        return [by_id[i] for i in ids if i in by_id]
 
     def get_collection_types(self, session: Session) -> list[tuple[str, int]]:
         rows = session.execute(
@@ -603,3 +582,208 @@ class LegendsStore:
             .limit(limit)
         ).all()
         return [note.text for note in notes]
+
+
+    def site_name_map(self, session: Session) -> dict[int, str]:
+        sites = session.scalars(select(WorldSite)).all()
+        return {s.site_id: s.display_name or f"Site #{s.site_id}" for s in sites}
+
+    def get_events_for_figure(
+        self,
+        session: Session,
+        figure_id: int,
+        *,
+        limit: int = 500,
+        offset: int = 0,
+    ) -> tuple[list[HistoryEvent], int]:
+        """Chronological events referencing the figure; returns (page, total)."""
+        count_row = session.execute(
+            text(
+                """
+                SELECT COUNT(*) FROM history_event
+                WHERE hfid = :fid
+                   OR EXISTS (
+                        SELECT 1 FROM json_each(history_event.fields_json)
+                        WHERE json_each.value = :fid
+                          AND (json_each.key LIKE '%hf%' OR json_each.key LIKE '%histfig%')
+                      )
+                """
+            ),
+            {"fid": figure_id},
+        ).scalar()
+        total = int(count_row or 0)
+        rows = session.execute(
+            text(
+                """
+                SELECT event_id FROM history_event
+                WHERE hfid = :fid
+                   OR EXISTS (
+                        SELECT 1 FROM json_each(history_event.fields_json)
+                        WHERE json_each.value = :fid
+                          AND (json_each.key LIKE '%hf%' OR json_each.key LIKE '%histfig%')
+                      )
+                ORDER BY year, seconds, event_id
+                LIMIT :lim OFFSET :off
+                """
+            ),
+            {"fid": figure_id, "lim": limit, "off": offset},
+        ).all()
+        ids = [r[0] for r in rows]
+        if not ids:
+            return [], total
+        events = session.scalars(
+            select(HistoryEvent).where(HistoryEvent.event_id.in_(ids))
+        ).all()
+        by_id = {e.event_id: e for e in events}
+        return [by_id[i] for i in ids if i in by_id], total
+
+    def get_events_for_site(
+        self, session: Session, site_id: int, *, limit: int = 100
+    ) -> list[HistoryEvent]:
+        rows = session.execute(
+            text(
+                """
+                SELECT event_id FROM history_event
+                WHERE site_id = :sid
+                   OR EXISTS (
+                        SELECT 1 FROM json_each(history_event.fields_json)
+                        WHERE json_each.value = :sid
+                          AND (json_each.key = 'site' OR json_each.key = 'site_id'
+                               OR json_each.key LIKE '%_site')
+                      )
+                ORDER BY year, seconds, event_id
+                LIMIT :lim
+                """
+            ),
+            {"sid": site_id, "lim": limit},
+        ).all()
+        ids = [r[0] for r in rows]
+        if not ids:
+            return []
+        events = session.scalars(
+            select(HistoryEvent).where(HistoryEvent.event_id.in_(ids))
+        ).all()
+        by_id = {e.event_id: e for e in events}
+        return [by_id[i] for i in ids if i in by_id]
+
+    def get_events_for_entity(
+        self, session: Session, entity_id: int, *, limit: int = 100
+    ) -> list[HistoryEvent]:
+        rows = session.execute(
+            text(
+                """
+                SELECT event_id FROM history_event
+                WHERE civ_id = :eid
+                   OR EXISTS (
+                        SELECT 1 FROM json_each(history_event.fields_json)
+                        WHERE json_each.value = :eid
+                          AND (json_each.key LIKE '%civ%' OR json_each.key = 'entity')
+                      )
+                ORDER BY year, seconds, event_id
+                LIMIT :lim
+                """
+            ),
+            {"eid": entity_id, "lim": limit},
+        ).all()
+        ids = [r[0] for r in rows]
+        if not ids:
+            return []
+        events = session.scalars(
+            select(HistoryEvent).where(HistoryEvent.event_id.in_(ids))
+        ).all()
+        by_id = {e.event_id: e for e in events}
+        return [by_id[i] for i in ids if i in by_id]
+
+    def get_collections_for_event(
+        self, session: Session, event_id: int, *, limit: int = 20
+    ) -> list[EventCollection]:
+        rows = session.execute(
+            text(
+                """
+                SELECT collection_id FROM event_collection
+                WHERE EXISTS (
+                    SELECT 1 FROM json_each(event_collection.record_json, '$.events')
+                    WHERE json_each.value = :eid
+                )
+                LIMIT :lim
+                """
+            ),
+            {"eid": event_id, "lim": limit},
+        ).all()
+        ids = [r[0] for r in rows]
+        if not ids:
+            return []
+        return list(
+            session.scalars(
+                select(EventCollection)
+                .where(EventCollection.collection_id.in_(ids))
+                .order_by(EventCollection.collection_id)
+            ).all()
+        )
+
+    def get_chronicle_events(
+        self,
+        session: Session,
+        *,
+        event_type: str | None = None,
+        year: int | None = None,
+        page: int = 1,
+        per_page: int = 100,
+        min_year: int = 0,
+        narrative_only: bool = True,
+    ) -> tuple[list[HistoryEvent], int]:
+        from .presentation import CHRONICLE_NOISE_TYPES
+
+        stmt = select(HistoryEvent)
+        count_stmt = select(func.count()).select_from(HistoryEvent)
+        if min_year is not None:
+            stmt = stmt.where(HistoryEvent.year >= min_year)
+            count_stmt = count_stmt.where(HistoryEvent.year >= min_year)
+        if narrative_only:
+            stmt = stmt.where(HistoryEvent.event_type.not_in(tuple(CHRONICLE_NOISE_TYPES)))
+            count_stmt = count_stmt.where(
+                HistoryEvent.event_type.not_in(tuple(CHRONICLE_NOISE_TYPES))
+            )
+        if event_type:
+            stmt = stmt.where(HistoryEvent.event_type == event_type)
+            count_stmt = count_stmt.where(HistoryEvent.event_type == event_type)
+        if year is not None:
+            stmt = stmt.where(HistoryEvent.year == year)
+            count_stmt = count_stmt.where(HistoryEvent.year == year)
+        total = session.scalar(count_stmt) or 0
+        events = session.scalars(
+            stmt.order_by(HistoryEvent.year, HistoryEvent.seconds, HistoryEvent.event_id)
+            .offset(max(page - 1, 0) * per_page)
+            .limit(per_page)
+        ).all()
+        return list(events), total
+
+    def search_world(
+        self,
+        session: Session,
+        query: str,
+        *,
+        limit: int = 50,
+    ) -> dict[str, list]:
+        q = f"%{query.strip()}%"
+        if not query.strip():
+            return {"figures": [], "sites": [], "entities": []}
+        figures = session.scalars(
+            select(HistoricalFigure)
+            .where(HistoricalFigure.name_display.ilike(q))
+            .order_by(HistoricalFigure.name_display)
+            .limit(limit)
+        ).all()
+        sites = session.scalars(
+            select(WorldSite)
+            .where(WorldSite.display_name.ilike(q))
+            .order_by(WorldSite.display_name)
+            .limit(limit)
+        ).all()
+        entities = session.scalars(
+            select(HistoricalEntity)
+            .where(HistoricalEntity.resolved_name.ilike(q))
+            .order_by(HistoricalEntity.resolved_name)
+            .limit(limit)
+        ).all()
+        return {"figures": list(figures), "sites": list(sites), "entities": list(entities)}

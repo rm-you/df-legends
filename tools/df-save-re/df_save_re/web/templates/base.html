@@ -12,13 +12,15 @@
     {% if slug is defined %}
     <nav>
       <a href="/world/{{ slug }}">Overview</a>
+      <a href="/world/{{ slug }}/chronicle">Chronicle</a>
       <a href="/world/{{ slug }}/entities">Civilizations</a>
       <a href="/world/{{ slug }}/sites">Sites</a>
       <a href="/world/{{ slug }}/figures">Figures</a>
       <a href="/world/{{ slug }}/events">Events</a>
       <a href="/world/{{ slug }}/collections">Collections</a>
       <a href="/world/{{ slug }}/eras">Eras</a>
-      <a href="/world/{{ slug }}/history">History layer</a>
+      <a href="/world/{{ slug }}/search">Search</a>
+      <a href="/world/{{ slug }}/history" class="nav-debug">Extraction</a>
     </nav>
     {% endif %}
   </header>
@@ -26,7 +28,7 @@
     {% block content %}{% endblock %}
   </main>
   <footer class="site-footer">
-    Proof-of-concept browser for extracted Dwarf Fortress world history (df-save-re)
+    DF Legends Explorer — browse extracted Dwarf Fortress world history
   </footer>
 </body>
 </html>

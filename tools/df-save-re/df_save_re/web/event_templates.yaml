@@ -1,0 +1,65 @@
+# Event summary template coverage (DF 0.47.05)
+#
+# Types with dedicated formatters in presentation.py.
+# Oracle fixtures: paths under data/saves/regionNN/*-world_history.txt when available.
+
+version: 1
+templates:
+  hist_figure_died:
+    status: implemented
+    oracle_fixture: small-retired
+  hist_figure_born:
+    status: implemented
+    oracle_fixture: small-retired
+  entity_created:
+    status: implemented
+  war_attacked_site:
+    status: implemented
+  artifact_created:
+    status: implemented
+  site_conquered:
+    status: implemented
+  field_battle:
+    status: implemented
+  agreement_formed:
+    status: implemented
+  agreement_concluded:
+    status: implemented
+  hist_figure_travel:
+    status: implemented
+  change_hf_state:
+    status: implemented
+  entity_location:
+    status: implemented
+  create_entity_position:
+    status: implemented
+  artifact_lost:
+    status: implemented
+  artifact_found:
+    status: implemented
+  change_hf_job:
+    status: implemented
+  hist_figure_simple_battle_event:
+    status: implemented
+  add_hf_entity_link:
+    status: implemented
+  add_hf_hf_link:
+    status: implemented
+  written_content_composed:
+    status: implemented
+  creature_devoured:
+    status: implemented
+  hist_figure_revived:
+    status: implemented
+  remove_hf_entity_link:
+    status: implemented
+  remove_hf_hf_link:
+    status: implemented
+fallback:
+  status: implemented
+  note: Type name plus resolved actors/sites for unhandled event types
+
+parity_notes: |
+  Phase 4: compare template output against legends text exports via legends_verify.py.
+  Tune articles and phrasing per event type when oracle text is available.
+  Item/weapon names deferred until artifact/item resolution exists in the DB.

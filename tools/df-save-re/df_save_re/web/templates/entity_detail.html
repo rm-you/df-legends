@@ -1,36 +1,24 @@
 {% extends "base.html" %}
-{% block title %}{{ display_name }} — {{ slug }}{% endblock %}
+{% block title %}{{ display_name }} — {{ world_name | default(slug) }}{% endblock %}
 {% block content %}
 <div class="breadcrumb">
   <a href="/">Worlds</a> /
-  <a href="/world/{{ slug }}">{{ slug }}</a> /
+  <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> /
   <a href="/world/{{ slug }}/entities">Civilizations</a> /
   {{ display_name }}
 </div>
 <h1>{{ display_name }}</h1>
-<p class="subtitle"><span class="badge">{{ entity.entity_class }}</span> · entity #{{ entity.entity_id }}</p>
-
-<h2>Details</h2>
-<dl class="detail">
-  <dt>Entity ID</dt><dd class="mono">{{ entity.entity_id }}</dd>
-  <dt>Type</dt><dd class="mono">{{ entity.entity_type }}</dd>
-  <dt>Class</dt><dd>{{ entity.entity_class }}</dd>
-  <dt>Resolved name</dt><dd>{{ entity.resolved_name or '—' }}</dd>
-  <dt>Name source</dt><dd>{{ entity.name_source or '—' }}</dd>
-  <dt>Has name flag</dt><dd>{{ entity.has_name }}</dd>
-  <dt>Payload offset</dt><dd class="mono">{% if entity.payload_offset is not none %}0x{{ "%x" | format(entity.payload_offset) }}{% else %}—{% endif %}</dd>
-</dl>
+<p class="subtitle"><span class="badge">{{ entity.entity_class }}</span></p>
 
 <h2>Sites ({{ sites | length }})</h2>
 {% if sites %}
 <table class="data">
   <thead>
-    <tr><th>ID</th><th>Name</th><th>Type</th><th>Coords</th><th>Owner</th></tr>
+    <tr><th>Name</th><th>Type</th><th>Coords</th><th>Owner</th></tr>
   </thead>
   <tbody>
     {% for site in sites %}
     <tr>
-      <td class="mono"><a href="/world/{{ slug }}/sites/{{ site.site_id }}">{{ site.site_id }}</a></td>
       <td><a href="/world/{{ slug }}/sites/{{ site.site_id }}">{{ site.display_name }}</a></td>
       <td>{{ site.site_type_name or site.site_type or '—' }}</td>
       <td class="mono">
@@ -48,19 +36,33 @@
   </tbody>
 </table>
 {% else %}
-<p class="empty">No sites linked to this entity as civ or owner.</p>
+<p class="empty">No sites linked to this entity.</p>
 {% endif %}
 
-<h2>Historical figures (sample, {{ figures | length }})</h2>
+{% if civ_events %}
+<h2>History ({{ civ_events | length }} recent events)</h2>
+<table class="data timeline-table">
+  <thead><tr><th>Year</th><th>Event</th></tr></thead>
+  <tbody>
+    {% for e in civ_events %}
+    <tr>
+      <td class="mono">{{ e.year }}</td>
+      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ event_summaries.get(e.event_id, e.event_type) }}</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<h2>Notable figures ({{ figures | length }})</h2>
 {% if figures %}
 <table class="data">
   <thead>
-    <tr><th>ID</th><th>Name</th><th>Appeared</th><th>Died</th></tr>
+    <tr><th>Name</th><th>Appeared</th><th>Died</th></tr>
   </thead>
   <tbody>
     {% for fig in figures %}
     <tr>
-      <td class="mono"><a href="/world/{{ slug }}/figures/{{ fig.figure_id }}">{{ fig.figure_id }}</a></td>
       <td><a href="/world/{{ slug }}/figures/{{ fig.figure_id }}">{{ store.figure_display(fig) }}</a></td>
       <td class="mono">{{ fig.appeared_year or '—' }}</td>
       <td class="mono">{{ fig.died_year or '—' }}</td>
@@ -70,6 +72,6 @@
 </table>
 <p class="meta"><a href="/world/{{ slug }}/figures?civ_id={{ entity.entity_id }}">View all figures for this civ →</a></p>
 {% else %}
-<p class="empty">No parsed figure headers for this civ yet.</p>
+<p class="empty">No figures for this civ yet.</p>
 {% endif %}
 {% endblock %}

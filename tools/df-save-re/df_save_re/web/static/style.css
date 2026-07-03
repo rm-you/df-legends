@@ -239,6 +239,101 @@ dl.detail dd {
   color: var(--muted);
 }
 
+.badge-ready {
+  border-color: #4a7c59;
+  color: #8fd4a0;
+}
+
+.badge-pending {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+.badge-running {
+  border-color: #5a7a9a;
+  color: #9ec8f0;
+}
+
+.badge-error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.badge-invalid {
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0 1.5rem;
+  font-size: 0.92rem;
+}
+
+table.data-table th,
+table.data-table td {
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+table.data-table th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+table.data-table tr:hover td {
+  background: var(--surface-2);
+}
+
+.btn {
+  display: inline-block;
+  border-radius: 4px;
+  padding: 0.35rem 0.75rem;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  margin-right: 0.35rem;
+}
+
+.btn-primary {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.btn-primary:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-secondary {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.btn-secondary:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.region-table .actions-cell {
+  white-space: nowrap;
+}
+
+
 .empty {
   color: var(--muted);
   font-style: italic;
@@ -280,3 +375,58 @@ footer.site-footer {
 .breadcrumb a:hover {
   color: var(--link);
 }
+
+.lead-summary {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  margin: 1rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  background: var(--surface);
+  border-left: 3px solid var(--accent-dim);
+}
+
+.timeline-table tr.timeline-highlight td {
+  background: rgba(201, 162, 39, 0.08);
+}
+
+.decade-row td {
+  background: var(--surface-2);
+  color: var(--accent);
+  font-size: 0.85rem;
+  padding-top: 0.75rem;
+}
+
+.debug-panel {
+  margin-top: 2rem;
+  color: var(--muted);
+}
+
+.debug-panel summary {
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+}
+
+.nav-debug {
+  color: var(--muted) !important;
+  font-size: 0.85rem;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
+.pagination {
+  margin: 1rem 0;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  color: var(--muted);
+}
+

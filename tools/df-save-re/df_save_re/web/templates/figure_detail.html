@@ -1,35 +1,29 @@
 {% extends "base.html" %}
-{% block title %}{{ display_name }} — {{ slug }}{% endblock %}
+{% block title %}{{ display_name }} — {{ world_name | default(slug) }}{% endblock %}
 {% block content %}
 <div class="breadcrumb">
   <a href="/">Worlds</a> /
-  <a href="/world/{{ slug }}">{{ slug }}</a> /
+  <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> /
   <a href="/world/{{ slug }}/figures">Figures</a> /
   {{ display_name }}
 </div>
 <h1>{{ display_name }}</h1>
-<p class="subtitle">Figure #{{ figure.figure_id }}</p>
 
 <h2>Identity</h2>
 <dl class="detail">
-  <dt>Figure ID</dt><dd class="mono">{{ figure.figure_id }}</dd>
   <dt>Civilization</dt>
   <dd>
     {% if civ %}
     <a href="/world/{{ slug }}/entities/{{ civ.entity_id }}">{{ civ_name }}</a>
     {% else %}—{% endif %}
   </dd>
-  <dt>Race / caste</dt><dd class="mono">{{ figure.race or '—' }} / {{ figure.caste or '—' }}</dd>
-  <dt>Profession</dt><dd class="mono">{{ figure.profession or '—' }}</dd>
-  <dt>Sex</dt><dd class="mono">{{ figure.sex or '—' }}</dd>
-</dl>
-
-<h2>Life dates</h2>
-<dl class="detail">
-  <dt>Appeared</dt><dd class="mono">{{ figure.appeared_year or '—' }}</dd>
-  <dt>Born</dt><dd class="mono">{{ figure.born_year or '—' }}{% if figure.born_seconds %} ({{ figure.born_seconds }}s){% endif %}</dd>
-  <dt>Died</dt><dd class="mono">{{ figure.died_year or '—' }}{% if figure.died_seconds %} ({{ figure.died_seconds }}s){% endif %}</dd>
-  <dt>Curse</dt><dd class="mono">{{ figure.curse_year or '—' }}</dd>
+  <dt>Profession</dt><dd>{{ profession_label or figure.profession or '—' }}</dd>
+  <dt>Life</dt>
+  <dd>
+    {% if figure.born_year %}born {{ figure.born_year }}{% endif %}
+    {% if figure.died_year %}{% if figure.born_year %} · {% endif %}died {{ figure.died_year }}{% endif %}
+    {% if not figure.born_year and not figure.died_year %}—{% endif %}
+  </dd>
 </dl>
 
 <h2>Relations</h2>
@@ -46,15 +40,38 @@
     <a href="/world/{{ slug }}/figures/{{ nemesis.figure_id }}">{{ nemesis_name }}</a>
     {% else %}—{% endif %}
   </dd>
-  <dt>Unit ID</dt><dd class="mono">{{ figure.unit_id or '—' }}</dd>
-  <dt>Global ID</dt><dd class="mono">{{ record.get('global_id') or '—' }}</dd>
-  <dt>Population ID</dt><dd class="mono">{{ figure.population_id or '—' }}</dd>
 </dl>
 
+{% if timeline %}
+<h2>Life chronicle ({{ "{:,}".format(timeline_total) }} events)</h2>
+<table class="data timeline-table">
+  <thead><tr><th>Year</th><th>Event</th></tr></thead>
+  <tbody>
+    {% for e in timeline %}
+    <tr class="{% if timeline_highlight(e.event_type) %}timeline-highlight{% endif %}">
+      <td class="mono">{{ e.year }}</td>
+      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ event_summaries.get(e.event_id, e.event_type) }}</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if timeline_pages > 1 %}
+<div class="pagination">
+  {% if timeline_page > 1 %}
+  <a href="?page={{ timeline_page - 1 }}">&laquo; prev</a>
+  {% endif %}
+  <span>page {{ timeline_page }} / {{ timeline_pages }}</span>
+  {% if timeline_page < timeline_pages %}
+  <a href="?page={{ timeline_page + 1 }}">next &raquo;</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endif %}
+
 {% if links %}
-<h2>Links ({{ "{:,}".format(links | length) }})</h2>
+<h2>Positions &amp; links</h2>
 <table class="data">
-  <thead><tr><th>Category</th><th>Type</th><th>Target</th><th>Extra</th></tr></thead>
+  <thead><tr><th>Category</th><th>Type</th><th>Target</th></tr></thead>
   <tbody>
     {% for link in links %}
     <tr>
@@ -62,14 +79,13 @@
       <td>{{ link.link_type }}</td>
       <td>
         {% if link.category == 'site' and link.target_id is not none %}
-        <a href="/world/{{ slug }}/sites/{{ link.target_id }}">{{ link.target_id }}</a>
+        <a href="/world/{{ slug }}/sites/{{ link.target_id }}">{{ site_names.get(link.target_id, link.target_id) }}</a>
         {% elif link.category == 'entity' and link.target_id is not none %}
-        <a href="/world/{{ slug }}/entities/{{ link.target_id }}">{{ link.target_id }}</a>
+        <a href="/world/{{ slug }}/entities/{{ link.target_id }}">{{ entity_names.get(link.target_id, link.target_id) }}</a>
         {% elif link.category == 'histfig' and link.target_id is not none %}
         <a href="/world/{{ slug }}/figures/{{ link.target_id }}">{{ figure_names.get(link.target_id, link.target_id) }}</a>
         {% else %}—{% endif %}
       </td>
-      <td class="mono">{{ link.extra_json or '—' }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -77,15 +93,14 @@
 {% endif %}
 
 {% if skills %}
-<h2>Skills (top {{ skills | length }})</h2>
+<h2>Skills</h2>
 <table class="data">
-  <thead><tr><th>Skill</th><th>Rating</th><th>Experience</th></tr></thead>
+  <thead><tr><th>Skill</th><th>Rating</th></tr></thead>
   <tbody>
-    {% for sk in skills %}
+    {% for skill in skills %}
     <tr>
-      <td class="mono">{{ sk.skill_id }}</td>
-      <td class="mono">{{ sk.rating }}</td>
-      <td class="mono">{{ sk.experience }}</td>
+      <td>{{ resolve_ctx.enum_label('job_skill', skill.skill_id) or skill.skill_id }}</td>
+      <td class="mono">{{ skill.rating }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -93,39 +108,16 @@
 {% endif %}
 
 {% if relationships %}
-<h2>Relationships ({{ relationships | length }})</h2>
+<h2>Relationships</h2>
 <table class="data">
-  <thead><tr><th>Source</th><th>Target</th><th>Type</th><th>Year</th><th>Source</th></tr></thead>
+  <thead><tr><th>Source</th><th>Target</th><th>Type</th><th>Year</th></tr></thead>
   <tbody>
     {% for rel in relationships %}
     <tr>
       <td><a href="/world/{{ slug }}/figures/{{ rel.source_hf }}">{{ figure_names.get(rel.source_hf, rel.source_hf) }}</a></td>
       <td><a href="/world/{{ slug }}/figures/{{ rel.target_hf }}">{{ figure_names.get(rel.target_hf, rel.target_hf) }}</a></td>
-      <td class="mono">{{ rel.relationship_type }}</td>
+      <td>{{ resolve_ctx.enum_label('histfig_relationship_type', rel.relationship_type) or rel.relationship_type }}</td>
       <td class="mono">{{ rel.year or '—' }}</td>
-      <td>{{ rel.source }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% endif %}
-
-{% set personality = (record.get('info') or {}).get('slots', {}).get('personality') %}
-{% if personality and personality.get('raw_b64') %}
-<h2>Personality</h2>
-<p class="subtitle">Full slot stored in record_json ({{ personality.get('size', '?') }} bytes)</p>
-{% endif %}
-
-{% if timeline %}
-<h2>Timeline ({{ "{:,}".format(timeline | length) }} events)</h2>
-<table class="data">
-  <thead><tr><th>Year</th><th>Type</th><th>Event</th></tr></thead>
-  <tbody>
-    {% for e in timeline %}
-    <tr>
-      <td class="mono">{{ e.year }}</td>
-      <td>{{ e.event_type }}</td>
-      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">event {{ e.event_id }}</a></td>
     </tr>
     {% endfor %}
   </tbody>

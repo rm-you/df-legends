@@ -1,21 +1,53 @@
 {% extends "base.html" %}
-{% block title %}History layer — {{ slug }}{% endblock %}
+{% block title %}Extraction debug — {{ world_name | default(slug) }}{% endblock %}
 {% block content %}
-<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / History layer</div>
-<h1>History layer</h1>
-<p class="subtitle">Binary anchors for events and figures — individual event records are not parsed yet.</p>
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / Extraction debug</div>
+<h1>Extraction debug</h1>
+<p class="subtitle">Binary anchors, layer walk status, and payload landmarks for reverse-engineering.</p>
+
+{% if layer_status %}
+<h2>Layer walk status</h2>
+<table class="data">
+  <thead>
+    <tr>
+      <th>Layer</th>
+      <th>Authoritative count</th>
+      <th>Body walk</th>
+      <th>Parsed</th>
+      <th>Desync offset</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ls in layer_status %}
+    <tr>
+      <td>{{ ls.layer }}</td>
+      <td class="mono">{{ "{:,}".format(ls.authoritative_count) if ls.authoritative_count is not none else "—" }}</td>
+      <td>
+        {% if ls.deterministic %}
+        <span class="badge badge-ready">deterministic</span>
+        {% else %}
+        <span class="badge">desync</span>
+        {% endif %}
+      </td>
+      <td class="mono">{{ ls.parsed_count if ls.parsed_count is not none else "—" }}</td>
+      <td class="mono">{% if ls.error_offset is not none %}0x{{ "%x" | format(ls.error_offset) }}{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if record_counts %}
+<p class="meta">
+  Stored rows: history_event = {{ record_counts.get("history_event", 0) }},
+  site_population = {{ record_counts.get("site_population", 0) }}
+</p>
+{% endif %}
+{% endif %}
 
 <div class="stats-row">
   {% if history_meta and history_meta.event_count is not none %}
   <div class="stat">
     <span class="label">Event count (anchor)</span>
     <span class="value">{{ "{:,}".format(history_meta.event_count) }}</span>
-  </div>
-  {% endif %}
-  {% if histfig_meta and histfig_meta.vector_count is not none %}
-  <div class="stat">
-    <span class="label">Histfig vector</span>
-    <span class="value">{{ "{:,}".format(histfig_meta.vector_count) }}</span>
   </div>
   {% endif %}
   {% if histfig_meta and histfig_meta.present_count is not none %}
@@ -32,30 +64,6 @@
   <dt>Payload offset</dt><dd class="mono">0x{{ "%x" | format(history_stats.payload_offset) }}</dd>
   <dt>Event counter</dt><dd class="mono">{{ "{:,}".format(history_stats.event_counter) }}</dd>
   <dt>Histfig counter</dt><dd class="mono">{{ "{:,}".format(history_stats.histfig_counter) }}</dd>
-</dl>
-{% endif %}
-
-{% if history_meta %}
-<h2>Event layer anchors</h2>
-<dl class="detail">
-  <dt>Events vector</dt>
-  <dd class="mono">{% if history_meta.events_vector_offset is not none %}0x{{ "%x" | format(history_meta.events_vector_offset) }}{% else %}—{% endif %}</dd>
-  <dt>Death events vector</dt>
-  <dd class="mono">{% if history_meta.death_events_offset is not none %}0x{{ "%x" | format(history_meta.death_events_offset) }}{% else %}—{% endif %}</dd>
-  <dt>Death present count</dt><dd class="mono">{{ history_meta.death_present_count or '—' }}</dd>
-  <dt>Stats offset</dt>
-  <dd class="mono">{% if history_meta.stats_offset is not none %}0x{{ "%x" | format(history_meta.stats_offset) }}{% else %}—{% endif %}</dd>
-</dl>
-{% endif %}
-
-{% if histfig_meta %}
-<h2>Figure catalog anchor</h2>
-<dl class="detail">
-  <dt>Vector offset</dt>
-  <dd class="mono">{% if histfig_meta.vector_offset is not none %}0x{{ "%x" | format(histfig_meta.vector_offset) }}{% else %}—{% endif %}</dd>
-  <dt>Bodies start</dt>
-  <dd class="mono">{% if histfig_meta.bodies_start is not none %}0x{{ "%x" | format(histfig_meta.bodies_start) }}{% else %}—{% endif %}</dd>
-  <dt>Max ID seen</dt><dd class="mono">{{ histfig_meta.max_id_seen or '—' }}</dd>
 </dl>
 {% endif %}
 
@@ -93,5 +101,14 @@
     {% endfor %}
   </tbody>
 </table>
+{% endif %}
+
+{% if notes %}
+<h2>Extraction notes</h2>
+<ul class="notes">
+  {% for note in notes %}
+  <li>{{ note }}</li>
+  {% endfor %}
+</ul>
 {% endif %}
 {% endblock %}

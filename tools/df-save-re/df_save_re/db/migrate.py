@@ -36,7 +36,9 @@ def make_engine(db_path: Path) -> Engine:
 def apply_migrations(db_path: Path, *, revision: str = "head") -> None:
     """Run Alembic upgrades against ``db_path`` (file may not exist yet)."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    cfg = Config(str(_alembic_ini_path()))
+    ini_path = _alembic_ini_path()
+    cfg = Config(str(ini_path))
+    cfg.set_main_option("script_location", str(ini_path.parent / "alembic"))
     cfg.set_main_option("sqlalchemy.url", sqlite_url(db_path))
     command.upgrade(cfg, revision)
 

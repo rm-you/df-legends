@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Eras — {{ slug }}{% endblock %}
+{% block title %}Eras — {{ world_name | default(slug) }}{% endblock %}
 {% block content %}
-<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / Eras</div>
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / Eras</div>
 <h1>Eras</h1>
 
 {% for era in eras %}
@@ -11,16 +11,13 @@
 <section class="era-block">
   <h2>{{ era.name or ("Era #" ~ era.id) }}</h2>
   <dl class="detail">
-    <dt>Index</dt><dd class="mono">{{ era.id }}</dd>
     <dt>Year</dt><dd class="mono">{{ rec.get('year', era.start_year) }}</dd>
-    <dt>Title type</dt><dd class="mono">{{ title.get('type', '—') }}</dd>
-    <dt>Title histfigs</dt><dd class="mono">{{ title.get('histfig_1', '—') }} / {{ title.get('histfig_2', '—') }}</dd>
-    <dt>Ordinal</dt><dd class="mono">{{ title.get('ordinal', '—') }}</dd>
+    {% if title.get('histfig_1') is not none and title.histfig_1 >= 0 %}
+    <dt>Title figure</dt>
+    <dd><a href="/world/{{ slug }}/figures/{{ title.histfig_1 }}">{{ figure_names.get(title.histfig_1, title.histfig_1) }}</a></dd>
+    {% endif %}
     <dt>Living powers</dt><dd class="mono">{{ details.get('living_powers', '—') }}</dd>
-    <dt>Living megabeasts</dt><dd class="mono">{{ details.get('living_megabeasts', '—') }}</dd>
-    <dt>Living semimegabeasts</dt><dd class="mono">{{ details.get('living_semimegabeasts', '—') }}</dd>
-    <dt>Civilized total</dt><dd class="mono">{{ details.get('civilized_total', '—') }}</dd>
-    <dt>Civilized mundane</dt><dd class="mono">{{ details.get('civilized_mundane', '—') }}</dd>
+    <dt>Civilized population</dt><dd class="mono">{{ details.get('civilized_total', '—') }}</dd>
   </dl>
 </section>
 {% endfor %}

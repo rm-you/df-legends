@@ -5,30 +5,57 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from ..db.paths import DEFAULT_DATA_DIR
+from .import_jobs import ImportJobManager
+from .presentation import (
+    build_resolve_context,
+    enum_label_for_field,
+    resolve_event_fields,
+    summarize_event,
+    summarize_events,
+    timeline_highlight,
+)
 from .queries import LegendsStore
+from .saves_catalog import find_region_dir, list_save_regions
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
 
 
-def create_app(*, data_dir: Path | None = None) -> FastAPI:
+def create_app(
+    *,
+    data_dir: Path | None = None,
+    saves_dir: Path | None = None,
+) -> FastAPI:
     store = LegendsStore(data_dir or DEFAULT_DATA_DIR)
     templates = Jinja2Templates(directory=str(_PACKAGE_DIR / "templates"))
+    resolved_saves_dir = saves_dir.resolve() if saves_dir else None
+
+    def _on_import_complete(slug: str) -> None:
+        store.clear_engine(slug)
+
+    job_manager = ImportJobManager(on_complete=_on_import_complete)
 
     app = FastAPI(
         title="DF Legends Explorer",
-        description="Proof-of-concept browser for extracted Dwarf Fortress world history",
+        description="Browser for extracted Dwarf Fortress world history",
         version="0.1.0",
     )
     app.mount("/static", StaticFiles(directory=str(_PACKAGE_DIR / "static")), name="static")
     app.state.store = store
     app.state.templates = templates
+    app.state.saves_dir = resolved_saves_dir
+    app.state.job_manager = job_manager
 
     def render(request: Request, template: str, **context):
+        slug = context.get("slug")
+        if slug and "world_name" not in context:
+            entry = store.entry_for_slug(slug)
+            if entry:
+                context["world_name"] = entry.world_name
         return templates.TemplateResponse(
             request,
             template,
@@ -42,7 +69,58 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request):
         entries = store.registry()
-        return render(request, "index.html", entries=entries, data_dir=str(store.data_dir))
+        regions = []
+        if resolved_saves_dir is not None:
+            regions = list_save_regions(
+                resolved_saves_dir,
+                store.data_dir,
+                job_manager=job_manager,
+            )
+        return render(
+            request,
+            "index.html",
+            entries=entries,
+            regions=regions,
+            data_dir=str(store.data_dir),
+            saves_dir=str(resolved_saves_dir) if resolved_saves_dir else None,
+        )
+
+    @app.get("/api/regions")
+    def api_regions():
+        if resolved_saves_dir is None:
+            raise HTTPException(status_code=404, detail="Saves directory not configured")
+        rows = list_save_regions(
+            resolved_saves_dir,
+            store.data_dir,
+            job_manager=job_manager,
+        )
+        return [row.to_dict() for row in rows]
+
+    @app.post("/api/regions/{region_name}/import")
+    def api_start_import(region_name: str):
+        if resolved_saves_dir is None:
+            raise HTTPException(status_code=404, detail="Saves directory not configured")
+        region_dir = find_region_dir(resolved_saves_dir, region_name)
+        if region_dir is None:
+            raise HTTPException(status_code=404, detail=f"Region not found: {region_name}")
+        if job_manager.is_running(region_name):
+            raise HTTPException(status_code=409, detail="Import already running")
+        try:
+            job = job_manager.start_import(
+                region_name,
+                region_dir,
+                data_dir=store.data_dir,
+            )
+        except RuntimeError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return JSONResponse(job.to_dict(), status_code=202)
+
+    @app.get("/api/regions/{region_name}/import")
+    def api_import_status(region_name: str):
+        job = job_manager.get_job(region_name)
+        if job is None:
+            raise HTTPException(status_code=404, detail="No import job for this region")
+        return job.to_dict()
 
     @app.get("/world/{slug}", response_class=HTMLResponse)
     def world_overview(request: Request, slug: str):
@@ -52,14 +130,7 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
         with store.session(slug) as session:
             world = store.get_world(session)
             counters = store.get_header_counters(session)
-            site_meta = store.get_site_catalog_meta(session)
-            histfig_meta = store.get_histfig_catalog_meta(session)
-            history_meta = store.get_history_events_meta(session)
-            history_stats = store.get_history_stats(session)
-            notes = store.get_latest_extraction_notes(session)
             entity_classes = store.get_entity_classes(session)
-            layer_status = store.get_layer_status(session)
-            record_counts = store.get_record_counts(session)
         return render(
             request,
             "world_overview.html",
@@ -67,14 +138,7 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             slug=slug,
             world=world,
             counters=counters,
-            site_meta=site_meta,
-            histfig_meta=histfig_meta,
-            history_meta=history_meta,
-            history_stats=history_stats,
-            notes=notes,
             entity_classes=entity_classes,
-            layer_status=layer_status,
-            record_counts=record_counts,
         )
 
     @app.get("/world/{slug}/entities", response_class=HTMLResponse)
@@ -112,6 +176,9 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             sites = store.get_sites_for_entity(session, entity_id)
             figures = store.get_figures_for_entity(session, entity_id)
             names = store.entity_name_map(session)
+            civ_events = store.get_events_for_entity(session, entity_id)
+            ctx = build_resolve_context(store, session, slug, events=civ_events)
+            event_summaries = summarize_events(civ_events, store, ctx)
         return render(
             request,
             "entity_detail.html",
@@ -121,6 +188,8 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             sites=sites,
             figures=figures,
             entity_names=names,
+            civ_events=civ_events,
+            event_summaries=event_summaries,
         )
 
     @app.get("/world/{slug}/sites", response_class=HTMLResponse)
@@ -161,6 +230,9 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
                 if site.cur_owner_id
                 else None
             )
+            site_events = store.get_events_for_site(session, site_id)
+            ctx = build_resolve_context(store, session, slug, events=site_events)
+            event_summaries = summarize_events(site_events, store, ctx)
         return render(
             request,
             "site_detail.html",
@@ -170,6 +242,8 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             owner=owner,
             civ_name=store.entity_display(civ),
             owner_name=store.entity_display(owner),
+            site_events=site_events,
+            event_summaries=event_summaries,
         )
 
     @app.get("/world/{slug}/figures", response_class=HTMLResponse)
@@ -185,6 +259,7 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             figure_rows = store.get_figures(session, civ_id=civ_id, search=q)
             civ_options = store.get_entities(session, named_only=True)
             selected_civ = store.get_entity(session, civ_id) if civ_id else None
+            ctx = build_resolve_context(store, session, slug)
         return render(
             request,
             "figures.html",
@@ -194,12 +269,19 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             civ_id=civ_id,
             selected_civ=selected_civ,
             search=q or "",
+            resolve_ctx=ctx,
         )
 
     @app.get("/world/{slug}/figures/{figure_id}", response_class=HTMLResponse)
-    def figure_detail(request: Request, slug: str, figure_id: int):
+    def figure_detail(
+        request: Request,
+        slug: str,
+        figure_id: int,
+        page: int = Query(default=1, ge=1),
+    ):
         if store.entry_for_slug(slug) is None:
             raise HTTPException(status_code=404, detail="World not found in registry")
+        per_page = 100
         with store.session(slug) as session:
             figure = store.get_figure(session, figure_id)
             if figure is None:
@@ -213,24 +295,43 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             nemesis = (
                 store.get_figure(session, figure.nemesis_id) if figure.nemesis_id else None
             )
-            timeline = store.get_events_for_figure(session, figure_id)
+            timeline, timeline_total = store.get_events_for_figure(
+                session,
+                figure_id,
+                limit=per_page,
+                offset=(page - 1) * per_page,
+            )
             links = store.get_figure_links(session, figure_id)
             skills = store.get_figure_skills(session, figure_id)
             relationships = store.get_figure_relationships(session, figure_id)
             record = store.figure_record(figure)
             link_target_ids = [ln.target_id for ln in links if ln.target_id is not None]
-            rel_hf_ids = []
+            rel_hf_ids: list[int] = []
             for rel in relationships:
                 if rel.source_hf is not None:
                     rel_hf_ids.append(rel.source_hf)
                 if rel.target_hf is not None:
                     rel_hf_ids.append(rel.target_hf)
+            ctx = build_resolve_context(
+                store,
+                session,
+                slug,
+                events=timeline,
+                extra_figure_ids=list(
+                    set(link_target_ids + rel_hf_ids + [figure_id])
+                ),
+            )
+            event_summaries = summarize_events(timeline, store, ctx)
             figure_names = store.figure_name_map(
                 session, list(set(link_target_ids + rel_hf_ids))
             )
+            site_names = ctx.site_names
+            entity_names = ctx.entity_names
+            profession_label = enum_label_for_field(ctx, "profession", figure.profession)
         return render(
             request,
             "figure_detail.html",
+            entry=store.entry_for_slug(slug),
             slug=slug,
             figure=figure,
             display_name=store.figure_display(figure),
@@ -241,11 +342,20 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             nemesis=nemesis,
             nemesis_name=store.figure_display(nemesis) if nemesis else None,
             timeline=timeline,
+            timeline_total=timeline_total,
+            timeline_page=page,
+            timeline_pages=max(1, -(-timeline_total // per_page)),
+            event_summaries=event_summaries,
             links=links,
             skills=skills,
             relationships=relationships,
             record=record,
             figure_names=figure_names,
+            site_names=site_names,
+            entity_names=entity_names,
+            profession_label=profession_label,
+            resolve_ctx=ctx,
+            timeline_highlight=timeline_highlight,
         )
 
     @app.get("/world/{slug}/events", response_class=HTMLResponse)
@@ -268,8 +378,8 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
                 per_page=per_page,
             )
             types = store.get_event_types(session)
-            hf_ids = [e.hfid for e in event_rows if e.hfid is not None and e.hfid >= 0]
-            figure_names = store.figure_name_map(session, hf_ids)
+            ctx = build_resolve_context(store, session, slug, events=event_rows)
+            event_summaries = summarize_events(event_rows, store, ctx)
         return render(
             request,
             "events.html",
@@ -281,7 +391,7 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             year=year,
             page=page,
             pages=max(1, -(-total // per_page)),
-            figure_names=figure_names,
+            event_summaries=event_summaries,
         )
 
     @app.get("/world/{slug}/events/{event_id}", response_class=HTMLResponse)
@@ -292,15 +402,11 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             event = store.get_event(session, event_id)
             if event is None:
                 raise HTTPException(status_code=404, detail="Event not found")
+            ctx = build_resolve_context(store, session, slug, events=[event])
             fields = store.event_fields(event)
-            hf_ids = [
-                v
-                for k, v in fields.items()
-                if isinstance(v, int) and v >= 0 and ("hf" in k or "histfig" in k)
-            ]
-            if event.hfid is not None and event.hfid >= 0:
-                hf_ids.append(event.hfid)
-            figure_names = store.figure_name_map(session, hf_ids)
+            summary = summarize_event(event, fields, ctx)
+            resolved_fields = resolve_event_fields(fields, ctx)
+            parent_collections = store.get_collections_for_event(session, event_id)
             site = store.get_site(session, event.site_id) if event.site_id and event.site_id >= 0 else None
             civ = store.get_entity(session, event.civ_id) if event.civ_id and event.civ_id >= 0 else None
         return render(
@@ -309,7 +415,9 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             slug=slug,
             event=event,
             fields=fields,
-            figure_names=figure_names,
+            summary=summary,
+            resolved_fields=resolved_fields,
+            parent_collections=parent_collections,
             site=site,
             civ=civ,
             civ_name=store.entity_display(civ) if civ else None,
@@ -366,8 +474,8 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             children = store.get_collections_by_ids(
                 session, record.get("collections") or []
             )
-            hf_ids = [e.hfid for e in event_rows if e.hfid is not None and e.hfid >= 0]
-            figure_names = store.figure_name_map(session, hf_ids)
+            ctx = build_resolve_context(store, session, slug, events=event_rows)
+            event_summaries = summarize_events(event_rows, store, ctx)
         return render(
             request,
             "collection_detail.html",
@@ -377,8 +485,63 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             record=record,
             events=event_rows,
             children=children,
-            figure_names=figure_names,
+            event_summaries=event_summaries,
+            resolve_ctx=ctx,
         )
+
+    @app.get("/world/{slug}/chronicle", response_class=HTMLResponse)
+    def chronicle(
+        request: Request,
+        slug: str,
+        event_type: str | None = Query(default=None),
+        year: int | None = Query(default=None),
+        page: int = Query(default=1, ge=1),
+        all_events: bool = Query(default=False),
+        include_preworld: bool = Query(default=False),
+    ):
+        if store.entry_for_slug(slug) is None:
+            raise HTTPException(status_code=404, detail="World not found in registry")
+        per_page = 100
+        with store.session(slug) as session:
+            event_rows, total = store.get_chronicle_events(
+                session,
+                event_type=event_type or None,
+                year=year,
+                page=page,
+                per_page=per_page,
+                min_year=-999 if include_preworld else 0,
+                narrative_only=not all_events,
+            )
+            types = store.get_event_types(session)
+            ctx = build_resolve_context(store, session, slug, events=event_rows)
+            event_summaries = summarize_events(event_rows, store, ctx)
+        return render(
+            request,
+            "chronicle.html",
+            slug=slug,
+            events=event_rows,
+            total=total,
+            types=types,
+            selected_type=event_type or "",
+            year=year,
+            page=page,
+            pages=max(1, -(-total // per_page)),
+            event_summaries=event_summaries,
+            narrative_only=not all_events,
+            include_preworld=include_preworld,
+        )
+
+    @app.get("/world/{slug}/search", response_class=HTMLResponse)
+    def search(request: Request, slug: str, q: str = Query(default="")):
+        if store.entry_for_slug(slug) is None:
+            raise HTTPException(status_code=404, detail="World not found in registry")
+        with store.session(slug) as session:
+            results = store.search_world(session, q) if q.strip() else {
+                "figures": [],
+                "sites": [],
+                "entities": [],
+            }
+        return render(request, "search.html", slug=slug, q=q, results=results)
 
     @app.get("/world/{slug}/eras", response_class=HTMLResponse)
     def eras(request: Request, slug: str):
@@ -387,8 +550,21 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
         with store.session(slug) as session:
             era_rows = store.get_eras(session)
             era_records = {e.id: store.era_record(e) for e in era_rows}
+            hf_ids: list[int] = []
+            for rec in era_records.values():
+                title = rec.get("title") or {}
+                for key in ("histfig_1", "histfig_2"):
+                    val = title.get(key)
+                    if isinstance(val, int) and val >= 0:
+                        hf_ids.append(val)
+            figure_names = store.figure_name_map(session, hf_ids)
         return render(
-            request, "eras.html", slug=slug, eras=era_rows, era_records=era_records
+            request,
+            "eras.html",
+            slug=slug,
+            eras=era_rows,
+            era_records=era_records,
+            figure_names=figure_names,
         )
 
     @app.get("/world/{slug}/history", response_class=HTMLResponse)
@@ -401,7 +577,9 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             histfig_meta = store.get_histfig_catalog_meta(session)
             anchors = store.get_vector_anchors(session)
             landmarks = store.get_layout_landmarks(session)
-            counters = store.get_header_counters(session)
+            layer_status = store.get_layer_status(session)
+            record_counts = store.get_record_counts(session)
+            notes = store.get_latest_extraction_notes(session)
         return render(
             request,
             "history.html",
@@ -411,7 +589,9 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             histfig_meta=histfig_meta,
             anchors=anchors,
             landmarks=landmarks,
-            counters=counters,
+            layer_status=layer_status,
+            record_counts=record_counts,
+            notes=notes,
         )
 
     @app.get("/health")

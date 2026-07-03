@@ -1,0 +1,23 @@
+services:
+  explorer:
+    build:
+      context: .
+      dockerfile: tools/df-save-re/Dockerfile
+    ports:
+      - "${EXPLORER_PORT:-8765}:8765"
+    environment:
+      DF_SAVES_DIR: /saves
+      DF_DATA_DIR: /data/legends
+      DF_STRUCTURES_DIR: /app/data/df-structures
+    volumes:
+      - "${SAVE_HOST_PATH:?Set SAVE_HOST_PATH in .env to your DF data/save directory}:/saves:ro"
+      - legends-data:/data/legends
+    command: >
+      df-save-re serve
+        --host 0.0.0.0
+        --port 8765
+        --data-dir /data/legends
+        --saves-dir /saves
+
+volumes:
+  legends-data:

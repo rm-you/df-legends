@@ -304,14 +304,21 @@ def cmd_import_db(args: argparse.Namespace) -> int:
 
 def cmd_serve(args: argparse.Namespace) -> int:
     """Run the legends explorer web UI."""
+    import os
+
     import uvicorn
 
     from .web import create_app
 
     data_dir = Path(args.data_dir)
-    app = create_app(data_dir=data_dir)
+    saves_dir = Path(args.saves_dir) if args.saves_dir else None
+    if saves_dir is None and os.environ.get("DF_SAVES_DIR"):
+        saves_dir = Path(os.environ["DF_SAVES_DIR"])
+    app = create_app(data_dir=data_dir, saves_dir=saves_dir)
     print(f"Legends explorer: http://{args.host}:{args.port}/")
     print(f"Data directory:   {data_dir.resolve()}")
+    if saves_dir:
+        print(f"Saves directory:  {saves_dir.resolve()}")
     print(f"Registered worlds: {len(list_legends(data_dir))}")
     uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level)
     return 0
@@ -1015,7 +1022,12 @@ def main(argv: list[str] | None = None) -> int:
     p_serve.add_argument(
         "--data-dir",
         default=str(DEFAULT_DATA_DIR),
-        help=f"Root data directory (default: {DEFAULT_DATA_DIR})",
+        help=f"Root data directory (default: {DEFAULT_DATA_DIR}; env: DF_DATA_DIR)",
+    )
+    p_serve.add_argument(
+        "--saves-dir",
+        default=None,
+        help="DF data/save directory with region folders (env: DF_SAVES_DIR)",
     )
     p_serve.add_argument("--host", default="127.0.0.1")
     p_serve.add_argument("--port", type=int, default=8765)

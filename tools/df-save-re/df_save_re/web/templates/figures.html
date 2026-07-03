@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Figures — {{ slug }}{% endblock %}
+{% block title %}Figures — {{ world_name | default(slug) }}{% endblock %}
 {% block content %}
-<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / Figures</div>
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / Figures</div>
 <h1>Historical figures</h1>
 
 <form class="filters" method="get">
@@ -31,13 +31,13 @@
 {% if figures %}
 <table class="data">
   <thead>
-    <tr><th>ID</th><th>Name</th><th>Civilization</th><th>Appeared</th><th>Died</th></tr>
+    <tr><th>Name</th><th>Profession</th><th>Civilization</th><th>Appeared</th><th>Died</th></tr>
   </thead>
   <tbody>
     {% for fig in figures %}
     <tr>
-      <td class="mono"><a href="/world/{{ slug }}/figures/{{ fig.figure_id }}">{{ fig.figure_id }}</a></td>
       <td><a href="/world/{{ slug }}/figures/{{ fig.figure_id }}">{{ fig.display_name }}</a></td>
+      <td>{{ resolve_ctx.enum_label('profession', fig.profession) or fig.profession or '—' }}</td>
       <td>
         {% if fig.civ_id %}
         <a href="/world/{{ slug }}/entities/{{ fig.civ_id }}">{{ fig.civ_name or fig.civ_id }}</a>

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Search — {{ world_name | default(slug) }}{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / Search</div>
+<h1>Search</h1>
+
+<form method="get" class="filters">
+  <label>
+    Query
+    <input type="search" name="q" value="{{ q }}" placeholder="Figure, site, or civ name">
+  </label>
+  <button type="submit">Search</button>
+</form>
+
+{% if q %}
+{% if results.figures %}
+<h2>Figures</h2>
+<ul>
+  {% for f in results.figures %}
+  <li><a href="/world/{{ slug }}/figures/{{ f.figure_id }}">{{ store.figure_display(f) }}</a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if results.sites %}
+<h2>Sites</h2>
+<ul>
+  {% for s in results.sites %}
+  <li><a href="/world/{{ slug }}/sites/{{ s.site_id }}">{{ s.display_name }}</a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if results.entities %}
+<h2>Civilizations</h2>
+<ul>
+  {% for e in results.entities %}
+  <li><a href="/world/{{ slug }}/entities/{{ e.entity_id }}">{{ store.entity_display(e) }}</a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if not results.figures and not results.sites and not results.entities %}
+<p class="empty">No matches for "{{ q }}".</p>
+{% endif %}
+{% endif %}
+{% endblock %}

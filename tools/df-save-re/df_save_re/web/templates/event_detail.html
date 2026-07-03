@@ -1,12 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Event {{ event.event_id }} — {{ slug }}{% endblock %}
+{% block title %}Event {{ event.event_id }} — {{ world_name | default(slug) }}{% endblock %}
 {% block content %}
-<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / <a href="/world/{{ slug }}/events">Events</a> / {{ event.event_id }}</div>
-<h1>Event {{ event.event_id }} <span class="tag">{{ event.event_type }}</span></h1>
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / <a href="/world/{{ slug }}/events">Events</a> / {{ event.event_id }}</div>
+<h1>Event <span class="tag">{{ event.event_type }}</span></h1>
+
+<p class="lead-summary">{{ summary }}</p>
 
 <dl class="detail">
   <dt>Year</dt><dd class="mono">{{ event.year }}</dd>
-  <dt>Seconds</dt><dd class="mono">{{ event.seconds }}</dd>
   {% if civ %}
   <dt>Civilization</dt><dd><a href="/world/{{ slug }}/entities/{{ civ.entity_id }}">{{ civ_name }}</a></dd>
   {% endif %}
@@ -15,24 +16,43 @@
   {% endif %}
 </dl>
 
-<h2>Fields</h2>
+{% if parent_collections %}
+<h2>Part of</h2>
+<ul>
+  {% for c in parent_collections %}
+  <li><a href="/world/{{ slug }}/collections/{{ c.collection_id }}">{{ store.collection_display(c) }}</a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<h2>Details</h2>
 <table class="data">
   <thead><tr><th>Field</th><th>Value</th></tr></thead>
   <tbody>
-    {% for key, value in fields.items() %}
+    {% for key, resolved in resolved_fields %}
     <tr>
       <td>{{ key }}</td>
-      <td class="mono">
-        {% if value is number and value >= 0 and ("hf" in key or "histfig" in key) and value in figure_names %}
-        <a href="/world/{{ slug }}/figures/{{ value }}">{{ figure_names[value] }}</a> ({{ value }})
-        {% elif value is number and value >= 0 and key in ("site", "site_id") %}
-        <a href="/world/{{ slug }}/sites/{{ value }}">site {{ value }}</a>
+      <td>
+        {% if resolved.href %}
+        <a href="{{ resolved.href }}">{{ resolved.display }}</a>
         {% else %}
-        {{ value }}
+        {{ resolved.display }}
         {% endif %}
       </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+
+<details class="debug-panel">
+  <summary>Raw fields (debug)</summary>
+  <table class="data">
+    <thead><tr><th>Field</th><th>Value</th></tr></thead>
+    <tbody>
+      {% for key, value in fields.items() %}
+      <tr><td>{{ key }}</td><td class="mono">{{ value }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</details>
 {% endblock %}

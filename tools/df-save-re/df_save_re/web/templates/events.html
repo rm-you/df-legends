@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Events — {{ slug }}{% endblock %}
+{% block title %}Events — {{ world_name | default(slug) }}{% endblock %}
 {% block content %}
-<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / Events</div>
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / Events</div>
 <h1>Events</h1>
 <p class="subtitle">{{ "{:,}".format(total) }} events{% if selected_type %} of type <strong>{{ selected_type }}</strong>{% endif %}{% if year is not none %} in year {{ year }}{% endif %}</p>
+<p><a href="/world/{{ slug }}/chronicle">View world chronicle (by year) →</a></p>
 
 <form method="get" class="filters">
   <label>
@@ -24,20 +25,14 @@
 
 <table class="data">
   <thead>
-    <tr><th>ID</th><th>Year</th><th>Type</th><th>Figure</th><th></th></tr>
+    <tr><th>Year</th><th>Summary</th><th></th></tr>
   </thead>
   <tbody>
     {% for e in events %}
     <tr>
-      <td class="mono">{{ e.event_id }}</td>
       <td class="mono">{{ e.year }}</td>
-      <td>{{ e.event_type }}</td>
-      <td>
-        {% if e.hfid is not none and e.hfid >= 0 %}
-        <a href="/world/{{ slug }}/figures/{{ e.hfid }}">{{ figure_names.get(e.hfid, "Figure #%d" % e.hfid) }}</a>
-        {% else %}—{% endif %}
-      </td>
-      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">detail</a></td>
+      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ event_summaries.get(e.event_id, e.event_type) }}</a></td>
+      <td class="meta mono">{{ e.event_type }}</td>
     </tr>
     {% endfor %}
   </tbody>

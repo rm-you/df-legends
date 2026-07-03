@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Chronicle — {{ world_name | default(slug) }}{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / Chronicle</div>
+<h1>World chronicle</h1>
+<p class="subtitle">
+  {{ "{:,}".format(total) }} events in chronological order
+  {% if narrative_only %} (hiding administrative link/job updates){% endif %}
+</p>
+<p class="meta">
+  {% if narrative_only %}
+  <a href="?all_events=1{% if selected_type %}&event_type={{ selected_type }}{% endif %}{% if year is not none %}&year={{ year }}{% endif %}{% if include_preworld %}&include_preworld=1{% endif %}">Show all event types</a>
+  {% else %}
+  <a href="?{% if selected_type %}event_type={{ selected_type }}&{% endif %}{% if year is not none %}year={{ year }}&{% endif %}{% if include_preworld %}include_preworld=1{% endif %}">Hide administrative events</a>
+  {% endif %}
+  {% if not include_preworld %}
+  · <a href="?include_preworld=1{% if not narrative_only %}&all_events=1{% endif %}{% if selected_type %}&event_type={{ selected_type }}{% endif %}">Include pre-world events</a>
+  {% endif %}
+</p>
+
+<form method="get" class="filters">
+  <label>
+    Type
+    <select name="event_type">
+      <option value="">all</option>
+      {% for t, n in types %}
+      <option value="{{ t }}" {% if t == selected_type %}selected{% endif %}>{{ t }} ({{ "{:,}".format(n) }})</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    Year
+    <input type="number" name="year" value="{{ year if year is not none else '' }}">
+  </label>
+  <button type="submit">Filter</button>
+</form>
+
+<table class="data timeline-table">
+  <thead><tr><th>Year</th><th>Event</th></tr></thead>
+  <tbody>
+    {% for e in events %}
+    {% if loop.index0 == 0 or (e.year // 10) != (events[loop.index0 - 1].year // 10) %}
+    <tr class="decade-row"><td colspan="2"><strong>{{ (e.year // 10) * 10 }}s</strong></td></tr>
+    {% endif %}
+    <tr>
+      <td class="mono">{{ e.year }}</td>
+      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ event_summaries.get(e.event_id, e.event_type) }}</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+  <a href="?{% if not narrative_only %}all_events=1&{% endif %}{% if include_preworld %}include_preworld=1&{% endif %}event_type={{ selected_type }}&year={{ year if year is not none else '' }}&page={{ page - 1 }}">&laquo; prev</a>
+  {% endif %}
+  <span>page {{ page }} / {{ "{:,}".format(pages) }}</span>
+  {% if page < pages %}
+  <a href="?{% if not narrative_only %}all_events=1&{% endif %}{% if include_preworld %}include_preworld=1&{% endif %}event_type={{ selected_type }}&year={{ year if year is not none else '' }}&page={{ page + 1 }}">next &raquo;</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
