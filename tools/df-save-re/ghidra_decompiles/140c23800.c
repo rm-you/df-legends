@@ -1,0 +1,27 @@
+// FUN_140c23800 @ 140c23800
+// callees:
+//   -> 1405bb7c0 FUN_1405bb7c0
+
+
+void FUN_140c23800(int *param_1,undefined8 param_2)
+
+{
+  int local_res8 [2];
+  
+  local_res8[0] = *param_1;
+  FUN_1405bb7c0(param_2,local_res8,4);
+  local_res8[0] = param_1[1];
+  FUN_1405bb7c0(param_2,local_res8,4);
+  local_res8[0] = param_1[2];
+  FUN_1405bb7c0(param_2,local_res8,4);
+  if (*param_1 == 0) {
+    local_res8[0]._0_2_ = (short)param_1[4];
+    FUN_1405bb7c0(param_2,local_res8,2);
+    local_res8[0]._0_2_ = *(undefined2 *)((longlong)param_1 + 0x12);
+    FUN_1405bb7c0(param_2,local_res8,2);
+    local_res8[0] = CONCAT22(local_res8[0]._2_2_,(short)param_1[5]);
+    FUN_1405bb7c0(param_2,local_res8,2);
+  }
+  return;
+}
+

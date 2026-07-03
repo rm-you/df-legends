@@ -1,0 +1,70 @@
+// FUN_1400c05e0 @ 1400c05e0
+// callees:
+
+
+undefined4 FUN_1400c05e0(ushort param_1)
+
+{
+  switch(param_1 - 0x1e9) {
+  case 0:
+  case 1:
+  case 2:
+  case 3:
+  case 4:
+  case 5:
+  case 6:
+  case 7:
+  case 8:
+  case 9:
+  case 10:
+  case 0xb:
+  case 0xc:
+  case 0xd:
+  case 0xe:
+  case 0xf:
+  case 0x10:
+  case 0x11:
+  case 0x12:
+  case 0x13:
+  case 0x14:
+  case 0x15:
+  case 0x16:
+  case 0x17:
+  case 0x18:
+  case 0x19:
+  case 0x65:
+  case 0x66:
+  case 0x67:
+  case 0x68:
+  case 0x69:
+  case 0x6a:
+  case 0x6b:
+  case 0x6c:
+  case 0x6d:
+  case 0x6e:
+  case 0x6f:
+  case 0x70:
+  case 0x71:
+  case 0x72:
+  case 0x73:
+  case 0xbf:
+  case 0xc0:
+  case 0xc1:
+  case 0xc2:
+  case 0xc3:
+  case 0xc4:
+  case 0xc5:
+  case 0xc6:
+  case 199:
+  case 200:
+  case 0xc9:
+  case 0xca:
+  case 0xcb:
+  case 0xcc:
+  case 0xcd:
+    return 1;
+  default:
+    return 0;
+  }
+}
+
