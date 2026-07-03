@@ -289,6 +289,43 @@ versions.
   site vector parses as a valid smaller vector) is SUPERSEDED by this — do not
   fix it. Plan: `.cursor/plans/persistence_status_and_remainder_793c27f5.plan.md`.
 
+#### 2026-07-03 (later) RE closure DONE + forward walk started
+
+- **The decompile closure is complete**: `scripts/decompile_closure.py`
+  computes the transitive callee closure (roots = the 41 per-case reader entry
+  functions of `FUN_140330310`, plus writer `FUN_1405f3a60`) and batch-runs
+  Ghidra headless until fixpoint. `ghidra_decompiles/` went 380 → **2,707 .c
+  files** (12 MB), zero failed decompiles, `index.json` rebuilt. Committed
+  (`feat: decompile the full save-load pipeline callee closure`).
+  Skip-list: CRT/allocator + named non-`FUN_` symbols + announce/UI
+  (`14014a480`, `140d38b10`, `140d24c10`). Do NOT root `140330310` itself —
+  its post-load fixup cases drag in game logic (an early unscoped run pulled
+  ~800 extra game-logic functions; they're committed and harmless).
+- **The complete world.dat stream map is documented in `FUNCTIONS.md`**
+  ("Full world reader case map") — every case 0..0x23 with its reader
+  function, version gates, and the case-2 **object registry** discovery: the
+  registry reads `i32 count` + per-element `i32 id` (+ `i32 type` for
+  items/buildings) for ~29 world object vectors; later cases (3-6, 0xb-0x1f)
+  iterate those pre-sized vectors WITHOUT re-reading counts. This is the key
+  to walking the whole file.
+- **Header correction**: the world header has **37 gated id slots at sv 1716**
+  (28 + version-gated), NOT 50 (`WorldHeaderHypothesis`/`target.py` guess is
+  wrong; `max_ids[8]`/`[9]` indices unaffected). After the header:
+  `language_name`, 15 flag bytes, save-folder string, then 8 nested string
+  tables + 20 raw-category string lists + unit-chunk records.
+- **Item/building polymorphism mapped**: `EnumerateFactoryVtables.java` dumped
+  `item_vtables.json` (65 subtypes, read slot vtable+0x438; 37 share generic
+  reader `FUN_140820540`, 25 distinct) and `building_vtables.json` (36
+  subtypes, +0x218). Their read_file closures are decompiled. Item base chain
+  transcription notes in FUNCTIONS.md.
+- **`forward_walk.py` (new)**: `read_world_header`, `read_string_tables`,
+  `read_registry` transcribed; byte-exact on region2 (`0x0..0x22a10e`,
+  registry counts sane: items 2101, written-content-like 3206, artifact-like
+  2101 = item count, squads 1). Driver: `scripts/walk_full_save.py <save>`.
+- **Next**: transcribe cases 3-8 bodies (items via vtable map → sites), plug
+  world_history in at case 9, then 0xa-0x20; adjacency-validate on all four
+  worlds; then persist-all + delete-heuristics per the plan.
+
 ---
 
 ## 6. How to make progress (the loop)

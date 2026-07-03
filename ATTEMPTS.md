@@ -628,3 +628,43 @@ full-name check kept as fallback). Result: `event_vtables.json` went from
   callee closure from `FUN_140330310`, batch-decompile everything missing,
   then transcribe front-to-back and delete the heuristic import paths.
 
+### 2026-07-03 (later) — decompile closure complete; forward walk begun
+
+- **Closure done.** `scripts/decompile_closure.py --run`: reader-side roots =
+  41 per-case entry functions (521 reachable), writer root `1405f3a60` (1,838
+  reachable); `ghidra_decompiles/` 380 → **2,707 .c** (12 MB), 0 failed,
+  index.json rebuilt. Lesson: rooting `140330310` directly pulls in game-logic
+  (FSOUND/viewscreens) via its fixup cases — root the per-case readers
+  instead; also skip announce `14014a480`, UI `140d38b10`, fixup driver
+  `140d24c10`, and any named non-`FUN_` symbol. Batches of 150 addrs run in
+  ~10-30s each with `-noanalysis`; whole closure took ~10 min.
+- **World reader case map extracted** (now in FUNCTIONS.md): the reader is a
+  state machine (case 0..0x23). Big discovery: **case 2 = object registry**
+  (`140aafe60`) — `i32 count` + per-element `i32 id` (+ `i32 type` via factory
+  for items/buildings) for ~29 vectors; cases 3-6/0xb-0x1f then iterate those
+  pre-sized vectors with NO counts in-stream. So the "missing counts" in the
+  case-0xd..0x1f readers were never missing — they're in case 2.
+- **Header correction**: 37 id slots @ sv1716 (28 + gates >0x5cb/+3,
+  >0x5cc/+2, >0x5d4/+1, >0x622/+1, >0x67d/+2), then language_name + 15 flag
+  bytes + save-folder string. The old 50-slot `WorldHeaderHypothesis` was
+  wrong (worked only because downstream code used indices ≤ 9 and re-anchored
+  by scanning). String tables: 8 nested vector<vector<string>> (2 gated) + 20
+  raw-category vector<string> (order fixed by validator `140d20680`) +
+  unit-chunk 0x40 records (2 fields gated >0x5cb).
+- **Item/building vtables enumerated** via `EnumerateFactoryVtables.java`:
+  `item_vtables.json` 65 subtypes (read slot +0x438; 37 share `140820540`),
+  `building_vtables.json` 36 (slot +0x218). read_file closure decompiled
+  (98 functions). Item base chain (`140315cd0` → `140315dd0` → `1408248c0` →
+  `140820540` + improvement factory `1407f0050`, 14 subtypes) transcription
+  notes in FUNCTIONS.md.
+- **`forward_walk.py` started**: header + string tables + registry byte-exact
+  on region2 (0x0..0x22a10e; items 2101, buildings 0, engine-objs 380,
+  written-content-like 3206, artifact-like 2101 == item count as expected for
+  worldgen saves, squads 1). Driver `scripts/walk_full_save.py`.
+- **Session env note**: two agent-side crashes (tool session restarts) while
+  reading large decompile files back-to-back; work resumed cleanly both times.
+- **NEXT**: transcribe case 3 (items, using the 25 distinct readers), case 4
+  (buildings), case 5 (`1404aaa30`), case 6, case 7 entities (`140a62e80`),
+  case 8 sites; plug existing world_history walker at case 9; then 0xa-0x20.
+  Acceptance: adjacency chain to `len(payload)` on all four worlds.
+

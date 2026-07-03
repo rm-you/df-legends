@@ -116,6 +116,98 @@ Link factories: `FUN_140707820` (entity, tags 0–16), `FUN_140707c90` (site, -1
 - `FUN_140019190`: the common **event base reader** — `+0x08 i32 year`, `+0x0c i32 seconds`, `+0x10 flags byte-vector` (`FUN_140002380`), `+0x20 i32 id`, then `+0x28/+0x2c/+0x30/+0x34` i32s. Nearly every subclass inlines this prefix; the 7 masterpiece events call it directly (recorded as `kind:"call"` in the layout JSON).
 - Event-body helper readers seen in subclass `read_file`s: `FUN_140002380` byte vector, `FUN_140002250` int32 vector, `FUN_140002140` int16 vector (each: i32 count + count×elem via `FUN_1405bba90`).
 
+## Full world reader case map (FUN_140330310) — 2026-07-03
+
+The world reader is a state machine over `*(param_1+0x168)` (case 0..0x23),
+one case per frame. Stream sections in order (all decompiled; the whole
+reachable callee closure is committed — see `scripts/decompile_closure.py`):
+
+- **case 0** — raw FILE header (via istream, NOT payload): `i32 save_version`
+  + `i32 compressed_flag`. Decompressed payload then starts: `i16 unknown`,
+  world header `FUN_140306a00`, string tables `FUN_14030aa20`.
+  - `FUN_140306a00` (header): **28 unconditional `i32` id-counter slots**
+    (+0xa8..+0x114), then gated: +3 if sv>0x5cb, +2 if >0x5cc, +1 if >0x5d4,
+    +1 if >0x622, +2 if >0x67d ⇒ **37 slots at sv 1716** (this supersedes the
+    old `WorldHeaderHypothesis` 50-slot guess); then `language_name`
+    (`FUN_140315ac0`), 15 flag bytes (+0x98..), save-folder string
+    (`FUN_1405bb6d0`).
+  - `FUN_14030aa20` (string tables): 5 unconditional `vector<vector<string>>`
+    tables, +1 gated sv>0x5cb, +1 unconditional, +1 gated sv>0x58e; then 20
+    unconditional `vector<string>` raw-category name lists in fixed order
+    (inorganic, plant, creaturebody, creaturebodygloss, creature, item,
+    entity, word, symbol, translation, color, shape, color_pattern, reaction,
+    material_template, tissue_template, body_detail_plan, building,
+    creature_variation, interaction — order confirmed by the raw-match
+    validator `FUN_140d20680`); then `i32 count` × 0x40-byte records
+    (`FUN_140309c40`: 16×i32, fields +0x28/+0x2c only when sv>0x5cb).
+- **case 1** — no stream reads (copies header max_ids into globals).
+- **case 2** — `FUN_140aafe60` **object registry**: for each world object
+  vector, `i32 count` then per element `i32 id` (+ for items/buildings the
+  factory reads an extra `i32 type` tag). Stream order of the 29 vectors
+  (gates as noted): items (factory `FUN_140812580`), buildings (factory
+  `FUN_1401961d0`), 0x2038-objects (`FUN_1404958d0` ctor), 0x68-objects
+  (`FUN_1409079f0` ctor, `DAT_141c67348`, written-content-like), 0x128-objects
+  (`FUN_140812440` ctor, `DAT_141c68028`, artifact-like), count-only 0x24
+  objects, squads (`FUN_140c14ef0` ctor 0x1d0, `DAT_141d64d38`), 4-byte ids
+  (`DAT_141d64d68`), 0x28-objects ×2, 0xa8 (`FUN_140df49e0`), 0xe8, 0x118
+  (`FUN_1407d60f0`), 0x118 (`FUN_140140ca0`), 0x40, 0x148 (`FUN_1400978f0`),
+  0xc8, 0x798, `FUN_140305410`, 0x50; gated sv>0x5cb: 0x100, `FUN_140301700`,
+  0x178 (`FUN_140143620`); gated sv>0x5cc: 0x758, 0x40; gated sv>0x5d4/0x622/
+  0x67d/0x67d: 4 more. These counts size the vectors that cases 3-6 and
+  0xd-0x1f iterate (their body loops read no counts).
+- **case 3** — item bodies: per registry item, virtual `read_file`
+  (vtable+0x438). 65 subtypes enumerated in
+  `ghidra_decompiles/item_vtables.json`; **37 share the generic reader
+  `FUN_140820540`**, 25 distinct impls total.
+- **case 4** — building bodies: vtable+0x218; 36 subtypes in
+  `building_vtables.json` (base body `FUN_1401662b0` et al).
+- **case 5** — 0x2038-object bodies via `FUN_1404aaa30` (large; army/unit-like).
+- **case 6** — 0x24-object bodies via `FUN_1401b6b20`.
+- **case 7** — historical entities `FUN_140a62e80` (reads own count).
+- **case 8** — 4 scalars (`i32,i16,i32,i16`) + `i32 count` + dense
+  `world_site` bodies `FUN_1403066f0` (buildings nested via `FUN_1403021d0`).
+- **case 9** — world_history `FUN_1407099a0`, then `FUN_14030b9e0`
+  (336×6 i32-vectors), gated sv>0x5cc `FUN_140309da0` (string+2×i32 vector),
+  gated sv>0x619 `FUN_14030bd50` (elements `FUN_14030bc20`).
+- **case 0xa** — `FUN_140305a20` + `i32` + string (`FUN_1405bb6d0`).
+- **case 0xb / 0xc** — artifact-like bodies `FUN_140323f70` (`FUN_14031fd40`
+  per element) / written-content-like `FUN_140323e70` (`FUN_1409085c0`),
+  iterating the registry vectors from case 2 (no counts re-read).
+- **cases 0xd..0x1f** — per-registry-vector body loops (no counts): 0xd squads
+  `FUN_140c15720`, 0xe `FUN_1403047a0`-loop, ..., version gates mirror the
+  registry gates (0x1b: >0x5cb ×3 + >0x5cc ×2; 0x1c >0x5d4; 0x1d >0x622;
+  0x1e/0x1f >0x67d).
+- **case 0x20** — `u8` + 3×`i32` tail + (sv<0x610 in-memory fixup, no reads) +
+  `FUN_1405bbd50` (stream-state check, no payload bytes).
+- **cases 0x21-0x23** — post-load fixups, no stream reads.
+
+### Item body base chain (validated from decompiles)
+
+- `FUN_140315cd0` (item base): `i16 x`, `i16 y`, `i16 z`, `i32 flags1`
+  (masked `&0xcfffffff` on load), `i32 flags2`, `i32 age`, `i32 id`, then
+  `FUN_140314d40` (+0x20 compound), `FUN_140315500` (+0x38, sv-gated), `i32
+  +0x50`, `i32 +0x54`.
+- `FUN_140315dd0` (+contaminants): base, `i32 stack_size(+0x78)`,
+  `u8 has` → `i32 n` × contaminant (`FUN_140223440`: `i16 mat_type`,
+  `i32 mat_index`, 3×`i16`, `i32`, sv>0x5b5 `i16 flags`; plus 2×`i16` per
+  entry read by caller), `u8 has` → `u8 has` → nested `FUN_140830840`,
+  `u8 has` → `i32 n` × (3×`i16`+`i32`), 3×`i16` (+0x98..), `i32 +0xa0`,
+  `i32 +0xa4`.
+- `FUN_1408248c0` (constructed): + `i16 mat_type(+0xb0)`, `i32 mat_index`,
+  `i16 +0xb8`, `i16 +0xba`, `i32 +0xbc`, `i32 +0xc0`, `i32 +0xc4`.
+- `FUN_140820540` (generic read_file, 37 item types): + `i32 count` ×
+  improvement (`i32 type` via factory `FUN_1407f0050` — 14
+  `itemimprovement_*st` subtypes — then improvement vtable+0x20 read).
+
+### Python transcription status (df_save_re/deserializers/forward_walk.py)
+
+`read_world_header` + `read_string_tables` + `read_registry` transcribed and
+byte-exact on region2: header `0x0..0xe3`, string tables `..0x2152a2`,
+registry `..0x22a10e` (items 2101, buildings 0, engine 380, written-content
+3206, artifact 2101, squads 1, ...). Driver: `scripts/walk_full_save.py`.
+Remaining: cases 3-8 bodies, 0xa-0x1f bodies, 0x20 tail; case 9 plugs in the
+existing world_history walker.
+
 ## Rejected / Low-Confidence
 
 - `FUN_140baff50`: not historical figures; decompilation showed site-pop correction strings, likely `world_site` related.
