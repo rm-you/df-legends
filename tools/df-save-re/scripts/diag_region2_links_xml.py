@@ -11,22 +11,58 @@ from collections import defaultdict
 from pathlib import Path
 
 
+_LINK_TYPE_ALIASES = {
+    "home_structure": "home_site_abstract_building",
+}
+
+
 def _norm_link_type(name: str) -> str:
-    return name.strip().lower().replace(" ", "_").replace("-", "_")
+    n = name.strip().lower().replace(" ", "_").replace("-", "_")
+    return _LINK_TYPE_ALIASES.get(n, n)
+
+
+def _figure_id(hf: ET.Element) -> int | None:
+    id_node = hf.find("id")
+    if id_node is not None and id_node.text:
+        return int(id_node.text.strip())
+    raw = hf.get("id")
+    return int(raw) if raw is not None else None
 
 
 def _parse_xml_links(xml_path: Path) -> dict[int, list[tuple[str, int]]]:
     root = ET.parse(xml_path).getroot()
     out: dict[int, list[tuple[str, int]]] = defaultdict(list)
     for hf in root.findall(".//historical_figure"):
-        fid = int(hf.get("id", "-1"))
-        for tag in ("entity_link", "site_link", "hf_link"):
-            for node in hf.findall(tag):
-                ltype = node.get("link_type") or node.get("type") or tag.replace("_link", "")
-                target = node.get("target") or node.get("site") or node.get("hf")
-                if target is None:
-                    continue
-                out[fid].append((_norm_link_type(ltype), int(target)))
+        fid = _figure_id(hf)
+        if fid is None:
+            continue
+        for node in hf.findall("entity_link"):
+            ltype = node.findtext("link_type") or "member"
+            target = node.findtext("entity_id")
+            if target is not None:
+                out[fid].append((_norm_link_type(ltype), int(target.strip())))
+        for node in hf.findall("entity_former_position_link"):
+            target = node.findtext("entity_id")
+            if target is not None:
+                out[fid].append(("former_position", int(target.strip())))
+        for node in hf.findall("entity_position_link"):
+            target = node.findtext("entity_id")
+            if target is not None:
+                out[fid].append(("position", int(target.strip())))
+        for node in hf.findall("entity_squad_link"):
+            target = node.findtext("entity_id")
+            if target is not None:
+                out[fid].append(("squad", int(target.strip())))
+        for node in hf.findall("site_link"):
+            ltype = node.findtext("link_type") or "site"
+            target = node.findtext("site_id")
+            if target is not None:
+                out[fid].append((_norm_link_type(ltype), int(target.strip())))
+        for node in hf.findall("hf_link"):
+            ltype = node.findtext("link_type") or "hf"
+            target = node.findtext("hfid") or node.findtext("histfig_id")
+            if target is not None:
+                out[fid].append((_norm_link_type(ltype), int(target.strip())))
     for fid in out:
         out[fid].sort()
     return dict(out)

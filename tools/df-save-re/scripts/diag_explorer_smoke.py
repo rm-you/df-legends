@@ -27,7 +27,10 @@ routes = [
     f"/world/{slug}/collections?collection_type=war&named_only=true",
     f"/world/{slug}/collections/{collection_id}",
     f"/world/{slug}/eras",
+    f"/world/{slug}/figures",
     f"/world/{slug}/figures/{figure_id}",
+    f"/world/{slug}/chronicle",
+    f"/world/{slug}/search?q=test",
     f"/world/{slug}/history",
 ]
 ok = True
