@@ -585,3 +585,46 @@ full-name check kept as fallback). Result: `event_vtables.json` went from
 - **Validated**: Namushul walk 87666/12748/8201/2, history_end `0x2902519`;
   `test_world_history_walk` pass.
 
+### 2026-07-03 — four-world validation sweep; decompile-first pivot
+
+- **Exhaustive locate fallback landed** (`_locate_events_start_exhaustive`):
+  byte-step backward scan (events count prefix is NOT 4-byte aligned —
+  Namushul's sits at `0x11b494a`), span-derived `max_decl` filter, min-offset
+  per declared count, verify ascending. Proven by
+  `test_locate_without_ratio_guesses` (guesses monkeypatched to `[]`; ~9s).
+  Earlier naive versions timed out (>10 min) — the early-abort in
+  `_verify_events_landmark` (stop once `reader.tell() >= events_end`) is what
+  makes it tractable.
+- **Waterlures locate root cause**: `_figures_anchor_candidates` searched only
+  the last 40MB; Waterlures' figures anchor is deeper in the 220MB payload.
+  Span now `max(40MB, (max_ids[8]+1)*4096)`. Walk lands exact:
+  433,727 / 46,662 / 24,943 / 2, history_end `0x969e77f`.
+- **Walk regression all four exact** (region2/region3/Namushul as before).
+- **Re-imports**: sn-nmon 71s, kar-minbaz ~75s, namushul ~78s, minbazkar 307s.
+  `diag_check_new_tables.py` green on all four (hf_link 104k/113k/135k/455k,
+  hf_skill 63k/82k/97k/356k, hf_relationship 23k/25k/46k/116k, 1 history_tail
+  each, era title+details present).
+- **Link-type bug**: `figure_links.py` looked up `layout["symbol"]`;
+  `build_layout_spec.py` emits `"struct"`. All link types were `tag_N`. Fixed
+  (checks both), region2 re-imported. **XML diff: 0 missing / 0 extra /
+  0 mismatches over 8,451 figures.** XML shape lessons: link data is in child
+  ELEMENTS (`<link_type>`, `<entity_id>`, `<hfid>`); position/squad links are
+  separate blocks (`entity_former_position_link` etc. with
+  `position_profile_id`, no link_type); `home_structure` in XML ==
+  `histfig_site_link_home_site_abstract_buildingst`.
+- **Pytest triage** (133 passed / 3 failed): stale `art_count == -1` assertion
+  (fabricated field — removed); stale "Extraction debug details" template
+  string; figures LIST route Jinja error was stale-`__pycache__` only — after
+  clearing caches all three pass. Smoke script now hits `/figures` too (15/15).
+- **Site backward-locate false landings — WILL NOT FIX**: suffix of the true
+  site vector re-parses as a valid smaller vector landing on the events count
+  (region2: found 4 vs true 194). Superseded by the decompile-first pivot:
+  in a forward parse, sites start where seq 7 ends. `skip_site_building`
+  (from `1403021d0.c`) and the site body walk transfer as-is.
+- **New decompiles**: `1403021d0`, `14030bc20`, `14031fd40` (artifact-like),
+  `1409085c0` (written-content-like); index.json rebuilt (380). Reader cases
+  0xd–0x23 enumerated in the plan — ~20 more sections, none transcribed yet.
+- **PIVOT**: next session starts `scripts/decompile_closure.py` — transitive
+  callee closure from `FUN_140330310`, batch-decompile everything missing,
+  then transcribe front-to-back and delete the heuristic import paths.
+

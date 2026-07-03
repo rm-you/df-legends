@@ -38,7 +38,7 @@ reverse-engineered save/load findings. Start here.
 The extraction toolkit lives in [`tools/df-save-re/`](tools/df-save-re/):
 
 ```bash
-cd tools/df-save-re && pip install -e .
+cd tools/df-save-re && uv venv && uv pip install -e .
 df-save-re validate tests/fixtures/small-retired/world.dat
 df-save-re extract tests/fixtures/small-retired/world.dat --json
 df-save-re serve        # explorer at http://127.0.0.1:8765

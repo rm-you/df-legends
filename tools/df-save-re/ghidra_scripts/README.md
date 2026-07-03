@@ -57,7 +57,7 @@ curated human-readable summary.
 ## PyGhidra alternative
 
 If you prefer Python over `analyzeHeadless.bat`, install the RE extras from
-`tools/df-save-re` (`pip install -e ".[re]"`), set `GHIDRA_INSTALL_DIR`, then:
+`tools/df-save-re` (`uv pip install -e ".[re]"`), set `GHIDRA_INSTALL_DIR`, then:
 
 ```powershell
 pyghidra path\to\Dwarf_Fortress.exe ghidra_scripts\find_read_file.py

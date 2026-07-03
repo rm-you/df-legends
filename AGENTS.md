@@ -33,7 +33,7 @@ that supersede earlier guesses.
 | Thing | Path |
 |-------|------|
 | Repo root | `C:\Users\rm_yo\CursorProjects\df-legends` |
-| Extraction tool | `tools\df-save-re\` (install: `pip install -e .`, CLI `python -m df_save_re.cli`) |
+| Extraction tool | `tools\df-save-re\` (install: `uv venv && uv pip install -e .`, CLI `python -m df_save_re.cli`) |
 | df-structures (vendored) | `data\df-structures\` (DFHack `0.47.05-r8`, commit `afe7e90`) |
 | **DF 0.47.05 binary** | `C:\Users\rm_yo\Downloads\df_47_05_win` (`Dwarf Fortress.exe`) |
 | **Ghidra** | `C:\Users\rm_yo\Downloads\ghidra_12.1.2_PUBLIC` (headless via `support\analyzeHeadless.bat`) |
@@ -45,6 +45,9 @@ that supersede earlier guesses.
 | Reverse-engineered function notes | `FUNCTIONS.md` |
 | Chronological attempt log | `ATTEMPTS.md` |
 | Tool docs (install, usage, modules, status) | `tools\df-save-re\README.md` |
+| **Docker explorer** | Repo-root `docker-compose.yml` + `.env` (`SAVE_HOST_PATH` required) |
+| Explorer UI (local) | `df-save-re serve` → `http://127.0.0.1:8765` |
+| Legends DB + registry | `data\legends\` (or Docker volume `legends-data` at `/data/legends`) |
 
 The save fixtures are gitignored; fetch with
 `python scripts/fetch_fixtures.py` from `tools\df-save-re\`. The Namushul
@@ -247,6 +250,44 @@ versions.
   skip legacy `anchor_history_vectors` when deterministic walk succeeds.
 - **Explorer + persistence:** events/collections/eras routes; region2 validated
   end-to-end (88,210 / 8,496 / 10,315 / 2).
+
+#### 2026-07-03 validation sweep + REVISED STRATEGY (decompile-first)
+
+- **Locate is now deterministic:** `_locate_events_start` = rfind fast path +
+  `_locate_events_start_exhaustive` (byte-step scan, count-prefix NOT 4-aligned,
+  span-based max_decl filter); `_verify_events_landmark` aborts past `events_end`.
+  Proven by `test_locate_without_ratio_guesses` (ratio guesses monkeypatched to
+  `[]`, still locates Namushul, ~9s). Figures-anchor search span now scales:
+  `max(40MB, (max_ids[8]+1)*4096)` — the fixed 40MB window missed Waterlures'
+  anchor entirely (220MB payload).
+- **Walk regression exact on all four worlds:** region2 88,210/8,496/10,315/2
+  end `0x14d4e69`; region3 110,225/10,591/16,483/2 end `0x15c2cb4`; Namushul
+  87,666/12,748/8,201/2 end `0x2902519`; Waterlures 433,727/46,662/24,943/2
+  end `0x969e77f` (locate 27s, walk 6s).
+- **All four re-imported** (slugs `sn-nmon`, `kar-minbaz`, `namushul`,
+  `minbazkar`); migration-004 tables verified populated on all
+  (`scripts/diag_check_new_tables.py`). **Bug fixed:** `figure_links.py` read
+  `layout["symbol"]` but `build_layout_spec.py` stores it as `"struct"` — every
+  link_type persisted as `tag_N`. **Region2 XML link diff after fix: 8,451
+  figures, 0 missing / 0 extra / 0 mismatches** (`diag_region2_links_xml.py`
+  rewritten for the XML's child-element shape + `entity_former_position_link`/
+  `entity_position_link`/`entity_squad_link`; alias `home_structure` →
+  `home_site_abstract_building`). Ruler check 74/74; explorer smoke 15/15.
+- **New decompiles** (committed, index.json 380 entries): `1403021d0` (site
+  abstract_building: 3 vectors of 12/12/8-byte elements — transcribed into
+  `skip_site_building`), `14030bc20` (seq-10 element: i32 + n×(5×i32) + i32),
+  `14031fd40` (seq-12 body — artifact-like: id-resolve, language_name, flags,
+  gated scalars), `1409085c0` (seq-13 body — written_content-like). GOTCHA:
+  `DecompileWithCallees.java` takes the OUTPUT DIR as its FIRST script arg.
+- **REVISED STRATEGY (project direction):** stop incremental anchoring. Next:
+  (1) decompile the ENTIRE reader callee closure from `FUN_140330310` up front
+  (`scripts/decompile_closure.py`, batched Ghidra runs), (2) transcribe the
+  whole stream front-to-back (seq 1 → case 0x23) with byte-exact adjacency as
+  the only acceptance, (3) persist every section structured, (4) delete all
+  locate/marker heuristics from the import path (locate survives only as a test
+  cross-check). The site backward-locate false-landing problem (suffix of the
+  site vector parses as a valid smaller vector) is SUPERSEDED by this — do not
+  fix it. Plan: `.cursor/plans/persistence_status_and_remainder_793c27f5.plan.md`.
 
 ---
 

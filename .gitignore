@@ -25,3 +25,7 @@ __pycache__/
 data/legends/databases/
 
 tools/df-save-re/data/legends/
+
+# Local env + scratch job-test artifacts
+.env
+tools/df-save-re/_tmp_job_test/

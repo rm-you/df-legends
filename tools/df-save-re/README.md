@@ -10,12 +10,17 @@ save without running the game).
 
 ## Install
 
+Requires [uv](https://docs.astral.sh/uv/). From `tools/df-save-re`:
+
 ```bash
 cd tools/df-save-re
-pip install -e .
-pip install -e ".[test]"   # pytest + httpx (for tests)
-pip install -e ".[re]"     # pyghidra — Ghidra API from Python (optional)
+uv venv
+uv pip install -e .
+uv pip install -e ".[test]"   # pytest + httpx (for tests)
+uv pip install -e ".[re]"     # pyghidra — Ghidra API from Python (optional)
 ```
+
+Activate the venv (`.venv\Scripts\activate` on Windows) or prefix commands with `uv run`.
 
 ## Quick start
 
@@ -40,6 +45,31 @@ df-save-re verify tests/fixtures/small-retired/world.dat /path/to/txt-exports/
 
 Pass a **region folder** instead of a file and `validate` picks `world.dat`
 (retired) or `world.sav` (active) automatically.
+
+## Docker (explorer + one-click import)
+
+From the **repo root**, copy `.env.example` to `.env` and set `SAVE_HOST_PATH`
+to your DF `data/save` directory (absolute path; contains `region1`, `region2`, …).
+
+```bash
+cp .env.example .env
+# edit SAVE_HOST_PATH=...
+
+docker compose up --build
+# → http://localhost:8765
+```
+
+The UI lists mounted region folders, shows whether each has a SQLite DB, and
+offers **Import** / **Browse** buttons. Imported databases persist in the
+`legends-data` Docker volume (`/data/legends` inside the container).
+
+Local equivalent without Docker:
+
+```bash
+df-save-re serve --saves-dir /path/to/data/save --data-dir data/legends
+```
+
+Environment variables: `DF_SAVES_DIR`, `DF_DATA_DIR` (used by `serve` when flags omitted).
 
 ## Commands
 

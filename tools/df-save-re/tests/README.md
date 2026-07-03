@@ -45,7 +45,7 @@ python -m pytest tests/test_historical_figures.py -v
 
 `pyproject.toml` sets a default **120s** per-test timeout via `pytest-timeout`. Tests marked `@pytest.mark.slow` override to **600s** where needed.
 
-Install test deps: `pip install -e ".[test]"`
+Install test deps: `uv pip install -e ".[test]"`
 
 ## Shared fixtures
 
