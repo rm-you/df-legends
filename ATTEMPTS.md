@@ -561,3 +561,27 @@ full-name check kept as fallback). Result: `event_vtables.json` went from
   legacy site layer should be treated as Namushul-only until the real
   walk exists.
 
+### 2026-07-02 — 100% persistence (world_history zero-loss)
+
+- **Figure tail fields named** from `FUN_14070a9d0`: on-disk order
+  `unit_id`, `nemesis_id`, `global_id`, flags byte-vector, `art_count`.
+- **Typed figure links** (`figure_links.py`): entity/site/histfig link
+  bodies read with named fields; persisted to `hf_link` + `record_json`.
+- **histfig_info + vague**: slot 1 skills typed; slots 0,2–12 as base64
+  blobs in `record_json`; vague + history-tail relationship events →
+  `hf_relationship`. Doc: `docs/histfig_info_fields.md`.
+- **Era + history tail**: `read_era_record` maps to df `history_era`
+  names; `read_history_tail` named vectors → `raw_record(layer=history_tail)`.
+- **Schema 004**: `hf_link`, `hf_relationship`, `hf_skill` + StreamWriter
+  layers; `stream_world_history` persists flags (hex), full tails, links.
+- **Explorer**: figure detail shows links/skills/relationships; eras show
+  title/details from `record_json`.
+- **Phase 2 scaffolding**: `post_history_walk.py` (seq 8–9 transcribed;
+  seq 10 needs `FUN_14030bc20` decompile), `world_site_walk.py` (case-8
+  `FUN_1403066f0` reader; nested buildings need `FUN_1403021d0`).
+- **Locate perf**: replaced O(scan×events) backward byte chain with rfind
+  on `int(max_ids[9]*0.775)` count echo + single verify; Namushul locate
+  ~0.9s / walk ~1.6s (figures skip-mode for validation scripts).
+- **Validated**: Namushul walk 87666/12748/8201/2, history_end `0x2902519`;
+  `test_world_history_walk` pass.
+

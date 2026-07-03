@@ -15,6 +15,9 @@ from .models import (
     HistoricalFigure,
     HistoryEra,
     HistoryEvent,
+    HfLink,
+    HfRelationship,
+    HfSkill,
     RawRecord,
     WrittenContent,
     WorldSite,
@@ -37,6 +40,9 @@ def _register_defaults() -> None:
             "written_content": lambda s, rows: s.bulk_insert_mappings(WrittenContent, rows),
             "event_collections": lambda s, rows: s.bulk_insert_mappings(EventCollection, rows),
             "eras": lambda s, rows: s.bulk_insert_mappings(HistoryEra, rows),
+            "hf_links": lambda s, rows: s.bulk_insert_mappings(HfLink, rows),
+            "hf_relationships": lambda s, rows: s.bulk_insert_mappings(HfRelationship, rows),
+            "hf_skills": lambda s, rows: s.bulk_insert_mappings(HfSkill, rows),
         }
     )
 
@@ -68,7 +74,7 @@ class StreamWriter:
             # PRAGMAs cannot run mid-transaction; bulk load still works.
             pass
 
-    def     on_record(self, layer: str, record: dict[str, Any], payload_offset: int) -> None:
+    def on_record(self, layer: str, record: dict[str, Any], payload_offset: int) -> None:
         """Callback compatible with :func:`walk_pointer_vector`."""
         if not self._sqlite_configured:
             self._configure_sqlite()

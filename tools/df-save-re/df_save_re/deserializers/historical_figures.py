@@ -17,8 +17,8 @@ from .vector_io import score_posnull_prefix, skip_posnull_pointer_vector
 class HistoricalFigureHeader:
     """Fixed historical_figure prefix through flags + ``field_e0`` (FUN_14070a9d0).
 
-    ``figure_id`` is the vector index (not stored on disk). ``art_count`` is not
-    written to compressed saves — kept as ``-1`` for API compatibility.
+    ``figure_id`` is the vector index (not stored on disk). On-disk tail order
+    (FUN_14070a9d0): ``unit_id``, ``nemesis_id``, ``global_id``, flags, ``art_count``.
     """
 
     profession: int
@@ -46,10 +46,9 @@ class HistoricalFigureHeader:
     flag_indices: list[int]
     unit_id: int
     nemesis_id: int
-    field_dc: int
-    field_e0: int
-    figure_id: int
+    global_id: int
     art_count: int
+    figure_id: int
     payload_offset: int
     header_bytes: int
 
@@ -120,12 +119,13 @@ def read_historical_figure_header(
     family_head_id = -1
     if save_version > 0x618:
         family_head_id = reader.read_int32()
-    # On-disk order from FUN_14070a9d0 (+0xe4, +0xd8, +0xdc) then byte flags (+0xc8) then +0xe0.
+    # On-disk order from FUN_14070a9d0: +0xe4 unit_id, +0xd8 nemesis_id, +0xdc global_id,
+    # byte flags (+0xc8), +0xe0 art_count (df.history_figure.xml field order differs in RAM).
     unit_id = reader.read_int32()
     nemesis_id = reader.read_int32()
-    field_dc = reader.read_int32()
+    global_id = reader.read_int32()
     flag_indices = _read_flagarray(reader)
-    field_e0 = reader.read_int32()
+    art_count = reader.read_int32()
     end = reader.tell()
     return HistoricalFigureHeader(
         profession=profession,
@@ -153,10 +153,9 @@ def read_historical_figure_header(
         flag_indices=flag_indices,
         unit_id=unit_id,
         nemesis_id=nemesis_id,
-        field_dc=field_dc,
-        field_e0=field_e0,
+        global_id=global_id,
+        art_count=art_count,
         figure_id=figure_id,
-        art_count=-1,
         payload_offset=start,
         header_bytes=end - start,
     )

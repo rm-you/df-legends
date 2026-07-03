@@ -22,7 +22,8 @@ from typing import Any, Callable
 
 from ..binary_reader import BinaryReader
 from .event_collections import read_collection_record
-from .histfig_info import skip_histfig_info, skip_vague_relationships
+from .figure_links import read_figure_links, skip_figure_links
+from .histfig_info import read_histfig_info, read_vague_relationships, skip_histfig_info, skip_vague_relationships
 from .historical_figures import HistoricalFigureHeader, read_historical_figure_header
 from .primitives import WorldHeaderHypothesis
 from ..structures.layout_dispatch import skip_layout_body
@@ -170,39 +171,7 @@ def walk_events_layer(
 
 
 # ---------------------------------------------------------------------------
-# figures
-
-
-# Tag -1 = base link class (histfig_entity_linkst / histfig_site_linkst /
-# histfig_hf_linkst). Active saves contain them; the writer emits get_type()=-1
-# followed by the base write_file body: site = 3x i32 (FUN_1406fbb40),
-# entity/histfig = i32 target + i16 strength (shared base block).
-_BASE_LINK_FIELDS = {
-    "entity": [{"mem_offset": 8, "kind": "i32", "size": 4}, {"mem_offset": 12, "kind": "i16", "size": 2}],
-    "site": [
-        {"mem_offset": 8, "kind": "i32", "size": 4},
-        {"mem_offset": 12, "kind": "i32", "size": 4},
-        {"mem_offset": 16, "kind": "i32", "size": 4},
-    ],
-    "histfig": [{"mem_offset": 8, "kind": "i32", "size": 4}, {"mem_offset": 12, "kind": "i16", "size": 2}],
-}
-
-
-def skip_figure_links(reader: BinaryReader, factory: str, *, save_version: int = 1716) -> int:
-    """Skip one dense polymorphic link vector (entity/site/histfig)."""
-    count = reader.read_int32()
-    if count < 0 or count > 100_000:
-        raise ValueError(f"implausible {factory} link count {count} at 0x{reader.tell() - 4:x}")
-    for _ in range(count):
-        tag = reader.read_int16()
-        if tag == -1:
-            skip_layout_body(reader, _BASE_LINK_FIELDS[factory], save_version=save_version)
-            continue
-        layout = SAVE_LAYOUTS.get(f"link:{factory}:{tag}")
-        if not layout or not layout.get("fields"):
-            raise ValueError(f"no layout for link:{factory}:{tag} at 0x{reader.tell() - 2:x}")
-        skip_layout_body(reader, layout["fields"], save_version=save_version)
-    return count
+# figures (link readers live in figure_links.py)
 
 
 def read_figure_record(
@@ -211,23 +180,41 @@ def read_figure_record(
     figure_id: int,
     save_version: int = 1716,
 ) -> tuple[HistoricalFigureHeader, dict[str, Any]]:
-    """Read one dense figure body (header parsed, tail skipped with exact layout)."""
+    """Read one dense figure body (header + links + info + vague)."""
     header = read_historical_figure_header(reader, save_version=save_version, figure_id=figure_id)
-    tail: dict[str, Any] = {}
-    tail["entity_link_count"] = skip_figure_links(reader, "entity", save_version=save_version)
-    tail["site_link_count"] = skip_figure_links(reader, "site", save_version=save_version)
-    tail["histfig_link_count"] = skip_figure_links(reader, "histfig", save_version=save_version)
+    tail: dict[str, Any] = {
+        "orientation_flags": header.orientation_flags,
+        "flags": header.flag_indices,
+        "global_id": header.global_id,
+        "art_count": header.art_count,
+    }
+    entity_links = read_figure_links(reader, "entity", save_version=save_version)
+    site_links = read_figure_links(reader, "site", save_version=save_version)
+    histfig_links = read_figure_links(reader, "histfig", save_version=save_version)
+    tail["entity_links"] = entity_links
+    tail["site_links"] = site_links
+    tail["histfig_links"] = histfig_links
+    tail["entity_link_count"] = len(entity_links)
+    tail["site_link_count"] = len(site_links)
+    tail["histfig_link_count"] = len(histfig_links)
     if reader.read_uint8():
-        skip_histfig_info(reader, save_version=save_version)
+        tail["info"] = read_histfig_info(reader, save_version=save_version)
         tail["has_info"] = True
     if save_version > 0x6A0 and reader.read_uint8():
-        skip_vague_relationships(reader)
+        tail["vague_relationships"] = read_vague_relationships(reader)
         tail["has_vague"] = True
     return header, tail
 
 
 def skip_figure_record(reader: BinaryReader, *, save_version: int = 1716) -> None:
-    read_figure_record(reader, figure_id=-1, save_version=save_version)
+    read_historical_figure_header(reader, save_version=save_version, figure_id=-1)
+    skip_figure_links(reader, "entity", save_version=save_version)
+    skip_figure_links(reader, "site", save_version=save_version)
+    skip_figure_links(reader, "histfig", save_version=save_version)
+    if reader.read_uint8():
+        skip_histfig_info(reader, save_version=save_version)
+    if save_version > 0x6A0 and reader.read_uint8():
+        skip_vague_relationships(reader)
 
 
 def walk_figures_dense_layer(
@@ -236,6 +223,7 @@ def walk_figures_dense_layer(
     *,
     save_version: int = 1716,
     limit: int | None = None,
+    read_bodies: bool = True,
     on_figure: Callable[[int, HistoricalFigureHeader, dict[str, Any]], None] | None = None,
 ) -> tuple[int, int]:
     """Walk dense figures vector (i32 count + count bodies)."""
@@ -243,8 +231,13 @@ def walk_figures_dense_layer(
     count = reader.read_int32()
     n = count if limit is None else min(count, limit)
     for slot in range(n):
-        header, tail = read_figure_record(reader, figure_id=slot, save_version=save_version)
-        if on_figure is not None:
+        if read_bodies:
+            header, tail = read_figure_record(reader, figure_id=slot, save_version=save_version)
+        else:
+            skip_figure_record(reader, save_version=save_version)
+            header = None
+            tail = {}
+        if on_figure is not None and header is not None:
             on_figure(slot, header, tail)
     return n, reader.tell() - start
 
@@ -280,38 +273,67 @@ def walk_collections_layer(
 
 @dataclass(frozen=True)
 class EraRecord:
-    """history_era body (FUN_14075cd70 + appearance FUN_14075ccb0)."""
+    """history_era body (FUN_14075cd70 + details FUN_14075ccb0)."""
 
-    index: int
     year: int
+    title_type: int
+    title_histfig_1: int
+    title_histfig_2: int
+    title_ordinal: int
     name: str
-    scalars: list[int] = field(default_factory=list)
-    appearance: dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
+
+    # Back-compat aliases used by older callbacks/tests.
+    @property
+    def index(self) -> int:
+        return self.year
+
+    @property
+    def year_display(self) -> int:
+        return self.year
 
 
 def read_era_record(reader: BinaryReader) -> EraRecord:
-    idx = reader.read_int32()
-    kind = reader.read_int16()
-    a = reader.read_int32()
-    b = reader.read_int32()
     year = reader.read_int32()
+    title_type = reader.read_int16()
+    title_histfig_1 = reader.read_int32()
+    title_histfig_2 = reader.read_int32()
+    title_ordinal = reader.read_int32()
     name_len = reader.read_int16()
     if name_len < 0 or name_len > 4096:
         raise ValueError(f"implausible era name length {name_len} at 0x{reader.tell() - 2:x}")
     name = reader.read_bytes(name_len).decode("cp437")
-    # FUN_14075ccb0: 6x i32, i32 vector, 2x i32
-    head = [reader.read_int32() for _ in range(6)]
+    # FUN_14075ccb0 details compound
+    living_powers = reader.read_int32()
+    living_megabeasts = reader.read_int32()
+    living_semimegabeasts = reader.read_int32()
+    power_hf1 = reader.read_int32()
+    power_hf2 = reader.read_int32()
+    power_hf3 = reader.read_int32()
     vec_n = reader.read_int32()
     if vec_n < 0 or vec_n > 1_000_000:
-        raise ValueError(f"implausible era vector count {vec_n} at 0x{reader.tell() - 4:x}")
-    vec = [reader.read_int32() for _ in range(vec_n)]
-    tail = [reader.read_int32() for _ in range(2)]
+        raise ValueError(f"implausible era civilized_races count {vec_n} at 0x{reader.tell() - 4:x}")
+    civilized_races = [reader.read_int32() for _ in range(vec_n)]
+    civilized_total = reader.read_int32()
+    civilized_mundane = reader.read_int32()
     return EraRecord(
-        index=idx,
         year=year,
+        title_type=title_type,
+        title_histfig_1=title_histfig_1,
+        title_histfig_2=title_histfig_2,
+        title_ordinal=title_ordinal,
         name=name,
-        scalars=[kind, a, b],
-        appearance={"head": head, "vec": vec, "tail": tail},
+        details={
+            "living_powers": living_powers,
+            "living_megabeasts": living_megabeasts,
+            "living_semimegabeasts": living_semimegabeasts,
+            "power_hf1": power_hf1,
+            "power_hf2": power_hf2,
+            "power_hf3": power_hf3,
+            "civilized_races": civilized_races,
+            "civilized_total": civilized_total,
+            "civilized_mundane": civilized_mundane,
+        },
     )
 
 
@@ -336,50 +358,97 @@ def walk_eras_layer(
 
 
 def skip_history_tail(reader: BinaryReader, *, save_version: int = 1716) -> None:
-    """Skip world_history trailing vectors/scalars after eras (FUN_1407099a0)."""
+    read_history_tail(reader, save_version=save_version)
 
-    def _vec(width: int, what: str) -> int:
+
+def read_history_tail(reader: BinaryReader, *, save_version: int = 1716) -> dict[str, Any]:
+    """Read world_history trailing vectors/scalars after eras (FUN_1407099a0)."""
+
+    def _read_i32_vec(name: str) -> list[int]:
         n = reader.read_int32()
         if n < 0 or n > 50_000_000:
-            raise ValueError(f"implausible {what} count {n} at 0x{reader.tell() - 4:x}")
-        reader.read_bytes(width * n)
-        return n
+            raise ValueError(f"implausible {name} count {n} at 0x{reader.tell() - 4:x}")
+        return [reader.read_int32() for _ in range(n)]
 
-    _vec(4, "history_tail_i32")
-    _vec(2, "history_tail_i16")
-    reader.read_bytes(16)  # 4x i32 scalars
-    _vec(4, "history_tail_i32b")
-    if save_version > 0x5D7:
-        reader.read_bytes(56)  # 14x i32 scalars
-    if save_version > 0x65C:
-        _vec(20, "history_tail_5xi32")  # per-item 5x i32
+    def _read_i16_vec(name: str) -> list[int]:
         n = reader.read_int32()
-        if n < 0 or n > 1_000_000:
-            raise ValueError(f"implausible relationship block count {n} at 0x{reader.tell() - 4:x}")
-        for _ in range(n):
-            # FUN_1406fedd0: i32 used, i32, then used x (i32+i16+i32+i32+i32)
+        if n < 0 or n > 50_000_000:
+            raise ValueError(f"implausible {name} count {n} at 0x{reader.tell() - 4:x}")
+        return [reader.read_int16() for _ in range(n)]
+
+    out: dict[str, Any] = {}
+    out["discovered_art_image_id"] = _read_i32_vec("discovered_art_image_id")
+    out["discovered_art_image_subid"] = _read_i16_vec("discovered_art_image_subid")
+    out["total_unk"] = reader.read_int32()
+    out["total_powers"] = reader.read_int32()
+    out["total_megabeasts"] = reader.read_int32()
+    out["total_semimegabeasts"] = reader.read_int32()
+    out["unk_14"] = _read_i32_vec("unk_14")
+    if save_version > 0x5D7:
+        out["unk_v42_1"] = [reader.read_int16() for _ in range(28)]
+    if save_version > 0x65C:
+        supp_count = reader.read_int32()
+        if supp_count < 0 or supp_count > 1_000_000:
+            raise ValueError(f"implausible supplement count {supp_count}")
+        supplements = []
+        for _ in range(supp_count):
+            supplements.append(
+                {
+                    "event": reader.read_int32(),
+                    "occasion_type": reader.read_int32(),
+                    "site": reader.read_int32(),
+                    "unk_1": reader.read_int32(),
+                    "unk_2": reader.read_int32(),
+                }
+            )
+        out["relationship_event_supplements"] = supplements
+        rel_blocks = []
+        block_count = reader.read_int32()
+        if block_count < 0 or block_count > 1_000_000:
+            raise ValueError(f"implausible relationship block count {block_count}")
+        for _ in range(block_count):
             used = reader.read_int32()
             if used < 0 or used > 1024:
-                raise ValueError(f"implausible relationship entry count {used} at 0x{reader.tell() - 4:x}")
-            reader.read_int32()
-            reader.read_bytes(18 * used)
+                raise ValueError(f"implausible relationship entry count {used}")
+            next_element = reader.read_int32()
+            entries = []
+            for _ in range(used):
+                entries.append(
+                    {
+                        "event": reader.read_int32(),
+                        "relationship": reader.read_int16(),
+                        "source_hf": reader.read_int32(),
+                        "target_hf": reader.read_int32(),
+                        "year": reader.read_int32(),
+                    }
+                )
+            rel_blocks.append({"next_element": next_element, "entries": entries})
+        out["relationship_events"] = rel_blocks
     if save_version > 0x68F:
         n = reader.read_int32()
         if n < 0 or n > 10_000_000:
-            raise ValueError(f"implausible gated tail count {n} at 0x{reader.tell() - 4:x}")
+            raise ValueError(f"implausible intrigue count {n}")
+        intrigues = []
         for _ in range(n):
-            # FUN_1406fefc0: i32, u8 has_body, [body FUN_1406feab0], 4x i32
-            reader.read_int32()
+            rec: dict[str, Any] = {"id": reader.read_int32()}
             if reader.read_uint8():
-                reader.read_bytes(12)
-                reader.read_int16()
-                reader.read_bytes(24)
-                reader.read_int16()
-                reader.read_bytes(4)
+                rec["body"] = {
+                    "f0": reader.read_int32(),
+                    "f1": reader.read_int32(),
+                    "f2": reader.read_int32(),
+                    "f3": reader.read_int16(),
+                    "block_a": [reader.read_int32() for _ in range(6)],
+                    "f4": reader.read_int16(),
+                    "f5": reader.read_int32(),
+                }
                 if save_version > 0x6A2:
-                    reader.read_bytes(12)
-                reader.read_bytes(40)
-            reader.read_bytes(16)
+                    rec["body"]["f6"] = [reader.read_int32() for _ in range(3)]
+                rec["body"]["block_b"] = [reader.read_int32() for _ in range(10)]
+            rec["tail"] = [reader.read_int32() for _ in range(4)]
+            intrigues.append(rec)
+        out["intrigues"] = intrigues
+    out["tail_offset"] = reader.tell()
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -397,14 +466,15 @@ def _figures_anchor_candidates(
         return []
     max_fig_id = header.max_ids[8]
     out: list[int] = []
+    search_lo = max(0, len(payload) - 40_000_000)
     for count in (max_fig_id + 1, max_fig_id):
         needle = struct.pack("<i", count)
-        pos = 0
-        while True:
+        pos = search_lo
+        while len(out) < 64:
             off = payload.find(needle, pos)
             if off < 0:
                 break
-            pos = off + 1
+            pos = off + 4
             reader = BinaryReader(BytesIO(payload))
             reader.seek(off + 4)
             try:
@@ -439,45 +509,54 @@ def _verify_events_landmark(
     return parsed == declared and reader.tell() == events_end
 
 
+def _event_count_guesses(header: WorldHeaderHypothesis) -> list[int]:
+    if len(header.max_ids) <= 9:
+        return []
+    mx = header.max_ids[9]
+    primary = int(mx * 0.775)
+    ordered = [primary, primary + 1, primary - 1, mx + 1, mx, mx - 1]
+    for ratio in (0.80, 0.85, 0.70, 0.65, 0.60, 0.50):
+        ordered.append(int(mx * ratio))
+    seen: set[int] = set()
+    out: list[int] = []
+    for g in ordered:
+        if g > 0 and g not in seen:
+            seen.add(g)
+            out.append(g)
+    return out
+
+
 def _locate_events_start(
     payload: bytes,
     events_end: int,
     *,
     save_version: int,
     scan_back: int,
+    header: WorldHeaderHypothesis | None = None,
 ) -> tuple[int, int, int] | None:
-    """Backward-chain event bodies to (count_offset, bodies_start, count)."""
+    """Find events count prefix by rfind on plausible counts, then verify forward walk."""
     lo = max(0, events_end - scan_back)
-    reader = BinaryReader(BytesIO(payload))
-    chain: dict[int, int] = {events_end: 0}
-    candidates: list[tuple[int, int, int]] = []
-    for s in range(events_end - 4, lo - 1, -1):
-        tag = struct.unpack_from("<i", payload, s)[0]
-        if not (0 <= tag <= 0x85):
-            continue
-        reader.seek(s + 4)
-        try:
-            skip_event_body(reader, tag, save_version=save_version)
-        except (ValueError, EOFError):
-            continue
-        nxt = reader.tell()
-        if nxt not in chain:
-            continue
-        n = chain[nxt] + 1
-        chain[s] = n
-        if s - 4 >= 0 and struct.unpack_from("<i", payload, s - 4)[0] == n:
-            candidates.append((s - 4, s, n))
-    if not candidates:
-        return None
-    for count_off, bodies_start, n in sorted(candidates, key=lambda t: t[2], reverse=True):
-        if _verify_events_landmark(
-            payload,
-            count_off,
-            bodies_start,
-            events_end,
-            save_version=save_version,
-        ):
-            return (count_off, bodies_start, n)
+    counts = _event_count_guesses(header) if header else []
+    if not counts:
+        counts = list(range(1, 5000))
+    for count in counts:
+        needle = struct.pack("<i", count)
+        pos = events_end
+        attempts = 0
+        while pos >= lo and attempts < 8:
+            off = payload.rfind(needle, lo, pos + 1)
+            if off < 0:
+                break
+            attempts += 1
+            if off + 4 <= events_end and _verify_events_landmark(
+                payload,
+                off,
+                off + 4,
+                events_end,
+                save_version=save_version,
+            ):
+                return (off, off + 4, count)
+            pos = off - 4
     return None
 
 
@@ -491,10 +570,18 @@ def locate_world_history(
     """Locate events + figures deterministically from the figures count echo."""
     if scan_back is None:
         est_events = header.max_ids[9] if len(header.max_ids) > 9 else 0
-        scan_back = min(len(payload), max(0x1000000, (est_events + 1) * 512))
+        scan_back = min(
+            len(payload),
+            max(0x1000000, (est_events + 1) * 512),
+            0x3000000,  # 48 MiB cap — enough for Waterlures (~21 MiB gap)
+        )
     for fig_off in _figures_anchor_candidates(payload, header, save_version=save_version):
         located = _locate_events_start(
-            payload, fig_off, save_version=save_version, scan_back=scan_back
+            payload,
+            fig_off,
+            save_version=save_version,
+            scan_back=scan_back,
+            header=header,
         )
         if located is None:
             continue
@@ -522,6 +609,8 @@ def walk_world_history(
     on_figure: Callable[[int, HistoricalFigureHeader, dict[str, Any]], None] | None = None,
     on_collection: Callable[[int, dict[str, Any]], None] | None = None,
     on_era: Callable[[int, EraRecord], None] | None = None,
+    on_history_tail: Callable[[dict[str, Any], int], None] | None = None,
+    read_figure_bodies: bool = True,
 ) -> WorldHistoryLandmarks:
     """Walk the full world_history section, invoking callbacks per record.
 
@@ -548,7 +637,11 @@ def walk_world_history(
         )
 
     fig_count, _ = walk_figures_dense_layer(
-        reader, payload, save_version=save_version, on_figure=on_figure
+        reader,
+        payload,
+        save_version=save_version,
+        read_bodies=read_figure_bodies,
+        on_figure=on_figure,
     )
     figures_end = reader.tell()
 
@@ -562,8 +655,11 @@ def walk_world_history(
     era_count, _ = walk_eras_layer(reader, on_era=on_era)
     eras_end = reader.tell()
 
-    skip_history_tail(reader, save_version=save_version)
+    tail_start = reader.tell()
+    tail_rec = read_history_tail(reader, save_version=save_version)
     history_end = reader.tell()
+    if on_history_tail is not None:
+        on_history_tail(tail_rec, tail_start)
 
     return WorldHistoryLandmarks(
         events_count_offset=lm.events_count_offset,

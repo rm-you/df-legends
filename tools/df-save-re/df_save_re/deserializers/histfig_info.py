@@ -14,6 +14,8 @@ Helper key (all in ghidra_decompiles/):
 
 from __future__ import annotations
 
+import base64
+
 from ..binary_reader import BinaryReader
 
 _MAX_COUNT = 2_000_000
@@ -424,6 +426,69 @@ _SLOT_READERS = [
 ]
 
 
+_SLOT_NAMES = [
+    "known_info",
+    "skills",
+    "likes",
+    "personality",
+    "preferences",
+    "needs",
+    "dreams",
+    "curse",
+    "masterpieces",
+    "identity",
+    "reputation",
+    "wounds",
+    "books",
+]
+
+
+def _capture_slot_body(reader: BinaryReader, slot_fn, save_version: int) -> dict:
+    start = reader.tell()
+    slot_fn(reader, save_version)
+    end = reader.tell()
+    reader.seek(start)
+    raw = reader.read_bytes(end - start)
+    reader.seek(end)
+    return {"raw_b64": base64.b64encode(raw).decode("ascii"), "size": len(raw)}
+
+
+def _read_slot1_skills(reader: BinaryReader, v: int) -> dict:
+    """FUN_1406f8600 — skill id/rating/experience vectors."""
+    skill_ids = []
+    n = _count(reader, "skill_ids")
+    for _ in range(n):
+        skill_ids.append(reader.read_int16())
+    ratings = []
+    n = _count(reader, "ratings")
+    for _ in range(n):
+        ratings.append(reader.read_int32())
+    exp_ids = []
+    n = _count(reader, "exp_ids")
+    for _ in range(n):
+        exp_ids.append(reader.read_int16())
+    experiences = []
+    n = _count(reader, "experiences")
+    for _ in range(n):
+        experiences.append(reader.read_int32())
+    out = {"skill_ids": skill_ids, "ratings": ratings, "exp_ids": exp_ids, "experiences": experiences}
+    out["unk_i16"] = reader.read_int16()
+    if v > 0x614:
+        out["unk_i32_614"] = reader.read_int32()
+    if v > 0x65D:
+        out["unk_i32_65d"] = reader.read_int32()
+    if v > 0x663 and reader.read_uint8():
+        extras = []
+        for _ in range(_count(reader, "skill_extra")):
+            f0 = reader.read_int32()
+            extra_vec = [reader.read_int32() for _ in range(_count(reader, "skill_extra_vec"))]
+            tail = [reader.read_int32() for _ in range(4)]
+            extras.append({"f0": f0, "vec": extra_vec, "tail": tail})
+        out["extras"] = extras
+        out["unk_tail"] = [reader.read_int32() for _ in range(2)]
+    return out
+
+
 def skip_histfig_info(reader: BinaryReader, *, save_version: int = 1716) -> None:
     """Skip optional info subprofiles: 13 x (u8 flag; if set, slot body)."""
     for slot_fn in _SLOT_READERS:
@@ -434,18 +499,27 @@ def skip_histfig_info(reader: BinaryReader, *, save_version: int = 1716) -> None
 
 
 def read_histfig_info(reader: BinaryReader, *, save_version: int = 1716) -> dict:
-    """Read histfig info presence flags; skip bodies on disk."""
+    """Read all present histfig_info slots (typed where mapped, always byte-faithful)."""
     start = reader.tell()
-    present_slots: list[int] = []
+    slots: dict[str, dict] = {}
     for slot_idx, slot_fn in enumerate(_SLOT_READERS):
         flag = reader.read_uint8()
         if flag == 0:
             continue
-        present_slots.append(slot_idx)
-        slot_fn(reader, save_version)
+        name = _SLOT_NAMES[slot_idx]
+        body_start = reader.tell()
+        if slot_idx == 1:
+            slots[name] = _read_slot1_skills(reader, save_version)
+        else:
+            slot_fn(reader, save_version)
+            body_end = reader.tell()
+            reader.seek(body_start)
+            raw = reader.read_bytes(body_end - body_start)
+            reader.seek(body_end)
+            slots[name] = {"raw_b64": base64.b64encode(raw).decode("ascii"), "size": len(raw)}
     return {
         "present": True,
-        "present_slots": present_slots,
+        "slots": slots,
         "bytes_consumed": reader.tell() - start,
     }
 

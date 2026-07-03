@@ -4,18 +4,26 @@
 <div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / Eras</div>
 <h1>Eras</h1>
 
-<table class="data">
-  <thead><tr><th>#</th><th>Name</th><th>Start year</th></tr></thead>
-  <tbody>
-    {% for era in eras %}
-    <tr>
-      <td class="mono">{{ era.id }}</td>
-      <td>{{ era.name or "—" }}</td>
-      <td class="mono">{{ era.start_year }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+{% for era in eras %}
+{% set rec = era_records.get(era.id, {}) %}
+{% set title = rec.get('title') or {} %}
+{% set details = rec.get('details') or {} %}
+<section class="era-block">
+  <h2>{{ era.name or ("Era #" ~ era.id) }}</h2>
+  <dl class="detail">
+    <dt>Index</dt><dd class="mono">{{ era.id }}</dd>
+    <dt>Year</dt><dd class="mono">{{ rec.get('year', era.start_year) }}</dd>
+    <dt>Title type</dt><dd class="mono">{{ title.get('type', '—') }}</dd>
+    <dt>Title histfigs</dt><dd class="mono">{{ title.get('histfig_1', '—') }} / {{ title.get('histfig_2', '—') }}</dd>
+    <dt>Ordinal</dt><dd class="mono">{{ title.get('ordinal', '—') }}</dd>
+    <dt>Living powers</dt><dd class="mono">{{ details.get('living_powers', '—') }}</dd>
+    <dt>Living megabeasts</dt><dd class="mono">{{ details.get('living_megabeasts', '—') }}</dd>
+    <dt>Living semimegabeasts</dt><dd class="mono">{{ details.get('living_semimegabeasts', '—') }}</dd>
+    <dt>Civilized total</dt><dd class="mono">{{ details.get('civilized_total', '—') }}</dd>
+    <dt>Civilized mundane</dt><dd class="mono">{{ details.get('civilized_mundane', '—') }}</dd>
+  </dl>
+</section>
+{% endfor %}
 
 {% if not eras %}
 <p>No eras extracted for this world.</p>

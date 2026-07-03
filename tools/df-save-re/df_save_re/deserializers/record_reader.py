@@ -468,8 +468,10 @@ def read_historical_figure_record(
         "flag_indices": list(header.flag_indices),
         "unit_id": header.unit_id,
         "nemesis_id": header.nemesis_id,
-        "field_dc": header.field_dc,
-        "field_e0": header.field_e0,
+        "field_dc": header.global_id,
+        "field_e0": header.art_count,
+        "global_id": header.global_id,
+        "art_count": header.art_count,
         "art_count": header.art_count,
         "payload_offset": header.payload_offset,
     }

@@ -47,8 +47,74 @@
     {% else %}—{% endif %}
   </dd>
   <dt>Unit ID</dt><dd class="mono">{{ figure.unit_id or '—' }}</dd>
+  <dt>Global ID</dt><dd class="mono">{{ record.get('global_id') or '—' }}</dd>
   <dt>Population ID</dt><dd class="mono">{{ figure.population_id or '—' }}</dd>
 </dl>
+
+{% if links %}
+<h2>Links ({{ "{:,}".format(links | length) }})</h2>
+<table class="data">
+  <thead><tr><th>Category</th><th>Type</th><th>Target</th><th>Extra</th></tr></thead>
+  <tbody>
+    {% for link in links %}
+    <tr>
+      <td>{{ link.category }}</td>
+      <td>{{ link.link_type }}</td>
+      <td>
+        {% if link.category == 'site' and link.target_id is not none %}
+        <a href="/world/{{ slug }}/sites/{{ link.target_id }}">{{ link.target_id }}</a>
+        {% elif link.category == 'entity' and link.target_id is not none %}
+        <a href="/world/{{ slug }}/entities/{{ link.target_id }}">{{ link.target_id }}</a>
+        {% elif link.category == 'histfig' and link.target_id is not none %}
+        <a href="/world/{{ slug }}/figures/{{ link.target_id }}">{{ figure_names.get(link.target_id, link.target_id) }}</a>
+        {% else %}—{% endif %}
+      </td>
+      <td class="mono">{{ link.extra_json or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if skills %}
+<h2>Skills (top {{ skills | length }})</h2>
+<table class="data">
+  <thead><tr><th>Skill</th><th>Rating</th><th>Experience</th></tr></thead>
+  <tbody>
+    {% for sk in skills %}
+    <tr>
+      <td class="mono">{{ sk.skill_id }}</td>
+      <td class="mono">{{ sk.rating }}</td>
+      <td class="mono">{{ sk.experience }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if relationships %}
+<h2>Relationships ({{ relationships | length }})</h2>
+<table class="data">
+  <thead><tr><th>Source</th><th>Target</th><th>Type</th><th>Year</th><th>Source</th></tr></thead>
+  <tbody>
+    {% for rel in relationships %}
+    <tr>
+      <td><a href="/world/{{ slug }}/figures/{{ rel.source_hf }}">{{ figure_names.get(rel.source_hf, rel.source_hf) }}</a></td>
+      <td><a href="/world/{{ slug }}/figures/{{ rel.target_hf }}">{{ figure_names.get(rel.target_hf, rel.target_hf) }}</a></td>
+      <td class="mono">{{ rel.relationship_type }}</td>
+      <td class="mono">{{ rel.year or '—' }}</td>
+      <td>{{ rel.source }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% set personality = (record.get('info') or {}).get('slots', {}).get('personality') %}
+{% if personality and personality.get('raw_b64') %}
+<h2>Personality</h2>
+<p class="subtitle">Full slot stored in record_json ({{ personality.get('size', '?') }} bytes)</p>
+{% endif %}
 
 {% if timeline %}
 <h2>Timeline ({{ "{:,}".format(timeline | length) }} events)</h2>

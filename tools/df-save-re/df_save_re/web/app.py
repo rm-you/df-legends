@@ -214,6 +214,20 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
                 store.get_figure(session, figure.nemesis_id) if figure.nemesis_id else None
             )
             timeline = store.get_events_for_figure(session, figure_id)
+            links = store.get_figure_links(session, figure_id)
+            skills = store.get_figure_skills(session, figure_id)
+            relationships = store.get_figure_relationships(session, figure_id)
+            record = store.figure_record(figure)
+            link_target_ids = [ln.target_id for ln in links if ln.target_id is not None]
+            rel_hf_ids = []
+            for rel in relationships:
+                if rel.source_hf is not None:
+                    rel_hf_ids.append(rel.source_hf)
+                if rel.target_hf is not None:
+                    rel_hf_ids.append(rel.target_hf)
+            figure_names = store.figure_name_map(
+                session, list(set(link_target_ids + rel_hf_ids))
+            )
         return render(
             request,
             "figure_detail.html",
@@ -227,6 +241,11 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             nemesis=nemesis,
             nemesis_name=store.figure_display(nemesis) if nemesis else None,
             timeline=timeline,
+            links=links,
+            skills=skills,
+            relationships=relationships,
+            record=record,
+            figure_names=figure_names,
         )
 
     @app.get("/world/{slug}/events", response_class=HTMLResponse)
@@ -367,7 +386,10 @@ def create_app(*, data_dir: Path | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="World not found in registry")
         with store.session(slug) as session:
             era_rows = store.get_eras(session)
-        return render(request, "eras.html", slug=slug, eras=era_rows)
+            era_records = {e.id: store.era_record(e) for e in era_rows}
+        return render(
+            request, "eras.html", slug=slug, eras=era_rows, era_records=era_records
+        )
 
     @app.get("/world/{slug}/history", response_class=HTMLResponse)
     def history(request: Request, slug: str):

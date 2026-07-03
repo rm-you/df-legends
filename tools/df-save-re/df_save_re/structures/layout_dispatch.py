@@ -55,52 +55,69 @@ def _read_scalar(reader: BinaryReader, field: dict) -> None:
         reader.read_bytes(size)
 
 
-def skip_layout_body(
+def read_layout_body(
     reader: BinaryReader,
     fields: list[dict],
     *,
     save_version: int = 1716,
-) -> None:
+) -> dict:
+    """Read one layout field list into a name→value dict."""
+    out: dict = {}
     for field in fields:
         vg = field.get("version_gt")
         if vg is not None and save_version <= int(vg, 16):
             continue
+        name = field.get("name") or f"f_{field.get('mem_offset')}"
         kind = field.get("kind")
-        if kind in ("i32", "i16", "u8", "scalar"):
-            _read_scalar(reader, field)
+        if kind in ("i32", "scalar") or (kind is None and field.get("size") == 4):
+            out[name] = reader.read_int32()
+            continue
+        if kind == "i16" or (kind is None and field.get("size") == 2):
+            out[name] = reader.read_int16()
+            continue
+        if kind == "u8" or (kind is None and field.get("size") == 1):
+            out[name] = reader.read_uint8()
             continue
         if kind == "byte_vector":
             count = reader.read_int32()
             if count < 0 or count > 5_000_000:
                 raise ValueError(f"byte_vector count {count}")
-            reader.read_bytes(count)
+            out[name] = list(reader.read_bytes(count))
             continue
         if kind == "i32_vector":
             count = reader.read_int32()
             if count < 0 or count > 5_000_000:
                 raise ValueError(f"i32_vector count {count}")
-            reader.read_bytes(count * 4)
+            out[name] = [reader.read_int32() for _ in range(count)]
             continue
         if kind == "i16_vector":
             count = reader.read_int32()
             if count < 0 or count > 5_000_000:
                 raise ValueError(f"i16_vector count {count}")
-            reader.read_bytes(count * 2)
+            out[name] = [reader.read_int16() for _ in range(count)]
             continue
         if kind == "string":
-            DfString.read(reader)
+            out[name] = DfString.read(reader).value
             continue
         if kind == "stl_string":
-            length = reader.read_int16()
-            if length > 0:
-                reader.read_bytes(length)
+            out[name] = reader.read_fixed_string()
             continue
         if kind == "language_name":
-            read_language_name(reader)
+            out[name] = read_language_name(reader).words
             continue
         if kind == "temp":
             reader.read_bytes(field.get("size") or 4)
             continue
         if kind == "call":
             continue
-        _read_scalar(reader, field)
+        out[name] = reader.read_int32()
+    return out
+
+
+def skip_layout_body(
+    reader: BinaryReader,
+    fields: list[dict],
+    *,
+    save_version: int = 1716,
+) -> None:
+    read_layout_body(reader, fields, save_version=save_version)

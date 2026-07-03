@@ -381,6 +381,58 @@ class EventCollection(Base):
     record_json: Mapped[str | None] = mapped_column(Text)
 
 
+class HfLink(Base):
+    """Normalized historical_figure link (entity/site/histfig)."""
+
+    __tablename__ = "hf_link"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    figure_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    category: Mapped[str] = mapped_column(String(16), nullable=False)
+    link_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    tag: Mapped[int] = mapped_column(Integer, nullable=False)
+    target_id: Mapped[int | None] = mapped_column(Integer)
+    extra_json: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        Index("ix_hf_link_figure_id", "figure_id"),
+        Index("ix_hf_link_target_id", "target_id"),
+    )
+
+
+class HfRelationship(Base):
+    """Vague or relationship-event edges between figures."""
+
+    __tablename__ = "hf_relationship"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source_hf: Mapped[int] = mapped_column(Integer, nullable=False)
+    target_hf: Mapped[int] = mapped_column(Integer, nullable=False)
+    relationship_type: Mapped[int | None] = mapped_column(Integer)
+    year: Mapped[int | None] = mapped_column(Integer)
+    event_id: Mapped[int | None] = mapped_column(Integer)
+    source: Mapped[str] = mapped_column(String(32), nullable=False)
+
+    __table_args__ = (
+        Index("ix_hf_relationship_source_hf", "source_hf"),
+        Index("ix_hf_relationship_target_hf", "target_hf"),
+    )
+
+
+class HfSkill(Base):
+    """Skill ratings from histfig_info slot 1."""
+
+    __tablename__ = "hf_skill"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    figure_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    skill_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    rating: Mapped[int | None] = mapped_column(Integer)
+    experience: Mapped[int | None] = mapped_column(Integer)
+
+    __table_args__ = (Index("ix_hf_skill_figure_id", "figure_id"),)
+
+
 class RawRecord(Base):
     """Generic landing table for any streamed layer record."""
 

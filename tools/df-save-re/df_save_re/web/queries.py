@@ -14,6 +14,9 @@ from ..db.models import (
     EventCollection,
     ExtractionNote,
     ExtractionRun,
+    HfLink,
+    HfRelationship,
+    HfSkill,
     HistoricalEntity,
     HistoricalFigure,
     HistoricalFigureCatalogMeta,
@@ -488,6 +491,92 @@ class LegendsStore:
         return list(
             session.scalars(select(HistoryEra).order_by(HistoryEra.id)).all()
         )
+
+    @staticmethod
+    def era_record(era: HistoryEra) -> dict:
+        if not era.record_json:
+            return {}
+        try:
+            return json.loads(era.record_json)
+        except ValueError:
+            return {}
+
+    @staticmethod
+    def figure_record(figure: HistoricalFigure) -> dict:
+        if not figure.record_json:
+            return {}
+        try:
+            return json.loads(figure.record_json)
+        except ValueError:
+            return {}
+
+    def get_figure_links(
+        self, session: Session, figure_id: int, *, limit: int = 200
+    ) -> list[HfLink]:
+        return list(
+            session.scalars(
+                select(HfLink)
+                .where(HfLink.figure_id == figure_id)
+                .order_by(HfLink.category, HfLink.link_type, HfLink.target_id)
+                .limit(limit)
+            ).all()
+        )
+
+    def get_figure_skills(
+        self, session: Session, figure_id: int, *, limit: int = 100
+    ) -> list[HfSkill]:
+        return list(
+            session.scalars(
+                select(HfSkill)
+                .where(HfSkill.figure_id == figure_id)
+                .order_by(HfSkill.rating.desc(), HfSkill.skill_id)
+                .limit(limit)
+            ).all()
+        )
+
+    def get_figure_relationships(
+        self, session: Session, figure_id: int, *, limit: int = 100
+    ) -> list[HfRelationship]:
+        return list(
+            session.scalars(
+                select(HfRelationship)
+                .where(
+                    or_(
+                        HfRelationship.source_hf == figure_id,
+                        HfRelationship.target_hf == figure_id,
+                    )
+                )
+                .order_by(HfRelationship.year.desc().nullslast(), HfRelationship.id)
+                .limit(limit)
+            ).all()
+        )
+
+    def link_target_display(
+        self,
+        session: Session,
+        link: HfLink,
+        *,
+        site_names: dict[int, str] | None = None,
+        entity_names: dict[int, str] | None = None,
+        figure_names: dict[int, str] | None = None,
+    ) -> str:
+        tid = link.target_id
+        if tid is None or tid < 0:
+            return "—"
+        if link.category == "site":
+            if site_names and tid in site_names:
+                return site_names[tid]
+            site = session.get(WorldSite, tid)
+            return site.display_name if site and site.display_name else f"site #{tid}"
+        if link.category == "entity":
+            if entity_names and tid in entity_names:
+                return entity_names[tid]
+            ent = session.get(HistoricalEntity, tid)
+            return self.entity_display(ent) if ent else f"entity #{tid}"
+        if figure_names and tid in figure_names:
+            return figure_names[tid]
+        fig = session.get(HistoricalFigure, tid)
+        return self.figure_display(fig) if fig else f"figure #{tid}"
 
     def figure_name_map(
         self, session: Session, figure_ids: list[int]

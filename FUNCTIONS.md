@@ -51,7 +51,7 @@ FUN_1405f3a60  world writer            FUN_140330310  world reader
 - `FUN_140763aa0`: `history_event_collection` factory (18 tags 0–17). Vtables in `collection_vtables.json` (18/18 via `LookupVtableSlots.java` for war/battle/abduction/theft); on-disk bodies share base prefix via `FUN_140083d80` (see `collection_layouts.json`, 18/18 with fields). **The auto-extracted layouts drop nested calls** (`language_name` in war/battle, `FUN_1406fc080` war tallies, purge string) — the authoritative Python readers are hand-transcribed in `df_save_re/deserializers/event_collections.py` (validated exact-landing on Namushul 8,201 + region2 10,315).
 - `FUN_140083d80`: shared `history_event_collection` base reader (two i32 vectors, four i32 scalars, byte flags vector, trailing i32). Called from most collection subclass `read_file` implementations.
 - Collection subclass readers (tag → function): 0 war `FUN_1407699e0` (name + 2 civ vecs + gated vec + tallies `FUN_1406fc080`: i16vec+4×i32vec+i32, i16vec+3×i32vec+i32, i16vec+2×i32vec+i32); 1 battle `FUN_140084360` (name, 4×i32, 2×i16, hf/civ/squad vecs with `>=0x66e`/`>=0x670` gates, i16 outcome, `>0x66f` trailer); 2 duel `FUN_140085420`; 3 site_conquered `FUN_140085710`; 4 abduction `FUN_140085a80`; 5 theft `FUN_140085ec0` (12 vectors + i32); 6 beast_attack `FUN_1400c5260`; 7 journey `FUN_1404907b0`; 8/9/16/17 insurrection/occasion/persecution/entity_overthrown `FUN_1401ba540` (3×i32); 10–13 performance/competition/procession/ceremony `FUN_1406fe760` (5×i32); 14 purge `FUN_140490630` (i32 + string + i32); 15 raid `FUN_1400866a0`.
-- `FUN_14075cd70`: `history_era` reader — `i32 id`, `i16 type`, four `i32` scalars, `stl_string` @ +0x18 (`FUN_1405bb6d0`), nested details @ +0x40 via `FUN_14075ccb0`. Layout in `era_layout.json`.
+- `FUN_14075cd70`: `history_era` reader — `i32 year`, `i16 title.type`, `i32 title.histfig_1`, `i32 title.histfig_2`, `i32 title.ordinal`, `stl_string title.name`, nested `details` @ +0x40 via `FUN_14075ccb0` (`living_powers`, `living_megabeasts`, `living_semimegabeasts`, `power_hf1..3`, `civilized_races` vec, `civilized_total`, `civilized_mundane`).
 - `FUN_14075ccb0`: era nested details — six `i32` scalars + `i32_vector` + two trailing `i32`.
 - `FUN_1406fedd0`: version-gated (`>0x65c`) intrigue-update element reader — count @ +0x4800, per-entry five parallel arrays (i32, i16, i32×3) indexed by count.
 - `FUN_1406fefc0`: version-gated (`>0x68f`) relationship-update element reader — leading `i32`, optional nested struct, four trailing `i32`.
@@ -62,7 +62,7 @@ FUN_1405f3a60  world writer            FUN_140330310  world reader
   - `language_name` (`FUN_1403159b0`)
   - `int32 civ_id`, `int32 population_id`, `int32 breed_id`, `int32 cultural_identity`
   - `int32 family_head_id` — **version-gated: only if save_version > 0x618**
-  - 4× `int32` (in-memory +0xe4, +0xd8, +0xdc, +0xe0; includes nemesis_id/unit_id, exact names TBD)
+  - 4× `int32` on disk after `family_head_id` (>0x618): **`unit_id`** (+0xe4), **`nemesis_id`** (+0xd8), **`global_id`** (+0xdc), then byte flags (+0xc8), **`art_count`** (+0xe0). RAM order in df.history_figure.xml differs; save order from `FUN_14070a9d0`.
   - flags byte-vector via `FUN_1400022f0` (in-memory +0xc8)
   - 3 dense polymorphic link vectors (see below)
   - `uint8 has_info` → if set, `info` body via `FUN_14070a5d0`

@@ -27,6 +27,9 @@ from .models import (
     HistoricalEntity,
     HistoricalFigure,
     HistoricalFigureCatalogMeta,
+    HfLink,
+    HfRelationship,
+    HfSkill,
     HistoryEra,
     HistoryEvent,
     HistoryEventsMeta,
@@ -66,6 +69,50 @@ def _json_int_list(values: tuple[int, ...] | list[int]) -> str:
     return json.dumps(list(values))
 
 
+def _flags_hex(flags: list[int] | None) -> str | None:
+    if not flags:
+        return None
+    return bytes(flags).hex()
+
+
+def _link_rows(figure_id: int, links: list[dict]) -> list[dict]:
+    rows = []
+    for link in links:
+        target = link.get("target_id") or link.get("site_id")
+        extra = {k: v for k, v in link.items() if k not in ("category", "tag", "link_type", "target_id", "site_id")}
+        rows.append(
+            {
+                "figure_id": figure_id,
+                "category": link.get("category"),
+                "link_type": link.get("link_type"),
+                "tag": link.get("tag"),
+                "target_id": target,
+                "extra_json": json.dumps(extra, separators=(",", ":")) if extra else None,
+            }
+        )
+    return rows
+
+
+def _skill_rows(figure_id: int, info: dict | None) -> list[dict]:
+    if not info:
+        return []
+    skills = (info.get("slots") or {}).get("skills") or {}
+    ids = skills.get("skill_ids") or []
+    ratings = skills.get("ratings") or []
+    exps = skills.get("experiences") or []
+    rows = []
+    for i, skill_id in enumerate(ids):
+        rows.append(
+            {
+                "figure_id": figure_id,
+                "skill_id": skill_id,
+                "rating": ratings[i] if i < len(ratings) else None,
+                "experience": exps[i] if i < len(exps) else None,
+            }
+        )
+    return rows
+
+
 def stream_world_history(
     session: Session,
     payload: bytes,
@@ -102,6 +149,9 @@ def stream_world_history(
     def on_event(idx: int, tag: int, body_off: int) -> None:
         event_reader.seek(body_off)
         rec = read_event_record(event_reader, tag, save_version=save_version)
+        fields = dict(rec)
+        if "flags" in fields and isinstance(fields["flags"], list):
+            fields["flags"] = _flags_hex(fields["flags"])
         row = {
             "event_id": int(rec.get("id", idx)),
             "year": rec.get("year"),
@@ -111,7 +161,7 @@ def stream_world_history(
             "site_id": rec.get("site") or rec.get("site_id"),
             "hfid": rec.get("hfid") or rec.get("histfig") or rec.get("victim_hf"),
             "fields_json": _json_mod.dumps(
-                {k: v for k, v in rec.items() if k not in ("_tag", "flags")},
+                {k: v for k, v in fields.items() if k != "_tag"},
                 separators=(",", ":"),
             ),
             "record_json": None,
@@ -123,6 +173,9 @@ def stream_world_history(
 
     def on_figure(slot: int, fh, tail: dict) -> None:
         display, _src = resolve_language_name_display(fh.name, words=words)
+        tail_out = dict(tail)
+        if isinstance(tail_out.get("flags"), list):
+            tail_out["flags"] = _flags_hex(tail_out["flags"])
         row = {
             "figure_id": slot,
             "profession": fh.profession,
@@ -146,11 +199,40 @@ def stream_world_history(
             "name_display": display or None,
             "name_words_json": _json_mod.dumps(list(fh.name.words)),
             "payload_offset": fh.payload_offset,
-            "record_json": _json_mod.dumps(tail, separators=(",", ":")) if tail else None,
+            "record_json": _json_mod.dumps(tail_out, separators=(",", ":")) if tail_out else None,
         }
         writer._buffers["figures"].append(row)
+        for link_row in _link_rows(slot, tail_out.get("entity_links", [])):
+            link_row["category"] = "entity"
+            writer._buffers["hf_links"].append(link_row)
+        for link_row in _link_rows(slot, tail_out.get("site_links", [])):
+            link_row["category"] = "site"
+            writer._buffers["hf_links"].append(link_row)
+        for link_row in _link_rows(slot, tail_out.get("histfig_links", [])):
+            link_row["category"] = "histfig"
+            writer._buffers["hf_links"].append(link_row)
+        for skill_row in _skill_rows(slot, tail_out.get("info")):
+            writer._buffers["hf_skills"].append(skill_row)
+        vague = tail_out.get("vague_relationships") or {}
+        for entry in vague.get("entries") or []:
+            writer._buffers["hf_relationships"].append(
+                {
+                    "source_hf": slot,
+                    "target_hf": entry.get("hf_id"),
+                    "relationship_type": entry.get("relationship_type"),
+                    "year": None,
+                    "event_id": None,
+                    "source": "vague",
+                }
+            )
         if len(writer._buffers["figures"]) >= writer.batch_size:
             writer._flush_layer("figures")
+        if len(writer._buffers["hf_links"]) >= writer.batch_size:
+            writer._flush_layer("hf_links")
+        if len(writer._buffers["hf_skills"]) >= writer.batch_size:
+            writer._flush_layer("hf_skills")
+        if len(writer._buffers["hf_relationships"]) >= writer.batch_size:
+            writer._flush_layer("hf_relationships")
         counts["figures"] += 1
 
     def on_collection(idx: int, rec: dict) -> None:
@@ -162,15 +244,16 @@ def stream_world_history(
                 if isinstance(w, int) and 0 <= w < len(words)
             ]
             display = " ".join(parts) if parts else None
+        rec_out = dict(rec)
+        if isinstance(rec_out.get("flags"), list):
+            rec_out["flags"] = _flags_hex(rec_out["flags"])
         row = {
             "collection_id": int(rec.get("id", idx)),
             "collection_type": rec.get("type"),
             "start_year": rec.get("start_year"),
             "end_year": rec.get("end_year"),
             "name_display": display,
-            "record_json": _json_mod.dumps(
-                {k: v for k, v in rec.items() if k != "flags"}, separators=(",", ":")
-            ),
+            "record_json": _json_mod.dumps(rec_out, separators=(",", ":")),
         }
         writer._buffers["event_collections"].append(row)
         if len(writer._buffers["event_collections"]) >= writer.batch_size:
@@ -184,11 +267,44 @@ def stream_world_history(
                 "name": era.name or None,
                 "start_year": era.year,
                 "record_json": _json_mod.dumps(
-                    {"index": era.index, "scalars": era.scalars}, separators=(",", ":")
+                    {
+                        "year": era.year,
+                        "title": {
+                            "type": era.title_type,
+                            "histfig_1": era.title_histfig_1,
+                            "histfig_2": era.title_histfig_2,
+                            "ordinal": era.title_ordinal,
+                            "name": era.name,
+                        },
+                        "details": era.details,
+                    },
+                    separators=(",", ":"),
                 ),
             }
         )
         counts["eras"] += 1
+
+    def on_history_tail(tail_rec: dict, tail_start: int) -> None:
+        writer._raw_buffer.append(
+            {
+                "layer": "history_tail",
+                "record_id": 0,
+                "payload_offset": tail_start,
+                "record_json": _json_mod.dumps(tail_rec, separators=(",", ":")),
+            }
+        )
+        for block in tail_rec.get("relationship_events") or []:
+            for entry in block.get("entries") or []:
+                writer._buffers["hf_relationships"].append(
+                    {
+                        "source_hf": entry.get("source_hf"),
+                        "target_hf": entry.get("target_hf"),
+                        "relationship_type": entry.get("relationship"),
+                        "year": entry.get("year"),
+                        "event_id": entry.get("event"),
+                        "source": "relationship_event",
+                    }
+                )
 
     full = walk_world_history(
         payload,
@@ -199,6 +315,7 @@ def stream_world_history(
         on_figure=on_figure,
         on_collection=on_collection,
         on_era=on_era,
+        on_history_tail=on_history_tail,
     )
     writer.flush()
 

@@ -53,8 +53,8 @@ def main() -> int:
     def on_collection(idx, rec):
         coll_tags[rec["type"]] += 1
 
-    def on_era(idx, rec):
-        eras.append((rec.index, rec.year, rec.name))
+    def on_era(idx: int, rec):
+        eras.append((rec.year, rec.title_type, rec.name))
 
     t1 = time.time()
     full = walk_world_history(
@@ -66,6 +66,7 @@ def main() -> int:
         on_figure=on_figure,
         on_collection=on_collection,
         on_era=on_era,
+        read_figure_bodies=False,
     )
     print(f"[walk {time.time() - t1:.1f}s]")
     print(f"events walked: {sum(ev_tags.values())} ({len(ev_tags)} distinct tags)")
