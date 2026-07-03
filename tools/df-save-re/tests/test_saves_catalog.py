@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from df_save_re.db.store import import_world_dat
-from df_save_re.web.saves_catalog import RegionStatus, list_save_regions
+from df_save_re.web.saves_catalog import RegionStatus, SaveRegionsCache, list_save_regions
 from tests.fixture_paths import resolve_fixture
 
 
@@ -48,3 +48,14 @@ def test_catalog_shows_ready_after_import(region_fixture_tree: tuple[Path, Path,
     assert len(rows) == 1
     assert rows[0].status == RegionStatus.READY
     assert rows[0].event_count is not None
+
+
+def test_catalog_cache_reuses_scan(region_fixture_tree: tuple[Path, Path, Path]) -> None:
+    saves_dir, data_dir, _ = region_fixture_tree
+    cache = SaveRegionsCache()
+    first = list_save_regions(saves_dir, data_dir, cache=cache)
+    second = list_save_regions(saves_dir, data_dir, cache=cache)
+    assert first == second
+    cache.invalidate()
+    third = list_save_regions(saves_dir, data_dir, cache=cache)
+    assert third == first

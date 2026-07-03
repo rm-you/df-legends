@@ -20,7 +20,7 @@
   </label>
   <button type="submit">Filter</button>
   {% if civ_id or search %}
-  <a href="/world/{{ slug }}/figures" style="align-self:center;font-size:0.85rem;">Clear</a>
+  <a href="/world/{{ slug }}/figures" class="filter-clear">Clear</a>
   {% endif %}
 </form>
 
@@ -29,26 +29,23 @@
 {% endif %}
 
 {% if figures %}
-<table class="data">
-  <thead>
-    <tr><th>Name</th><th>Profession</th><th>Civilization</th><th>Appeared</th><th>Died</th></tr>
-  </thead>
-  <tbody>
-    {% for fig in figures %}
-    <tr>
-      <td><a href="/world/{{ slug }}/figures/{{ fig.figure_id }}">{{ fig.display_name }}</a></td>
-      <td>{{ resolve_ctx.enum_label('profession', fig.profession) or fig.profession or '—' }}</td>
-      <td>
-        {% if fig.civ_id %}
-        <a href="/world/{{ slug }}/entities/{{ fig.civ_id }}">{{ fig.civ_name or fig.civ_id }}</a>
-        {% else %}—{% endif %}
-      </td>
-      <td class="mono">{{ fig.appeared_year or '—' }}</td>
-      <td class="mono">{{ fig.died_year or '—' }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="card-grid list-cards">
+  {% for fig in figures %}
+  <a href="/world/{{ slug }}/figures/{{ fig.figure_id }}" class="card card-link">
+    <h3>{{ fig.display_name }}</h3>
+    {% if resolve_ctx.enum_label('profession', fig.profession) %}
+    <div class="meta"><span class="badge">{{ resolve_ctx.enum_label('profession', fig.profession) }}</span></div>
+    {% endif %}
+    {% if fig.civ_name %}
+    <div class="meta">{{ fig.civ_name }}</div>
+    {% endif %}
+    <div class="card-stats">
+      {% if valid_year(fig.appeared_year) %}<span class="card-stat">appeared {{ fig.appeared_year }}</span>{% endif %}
+      {% if valid_year(fig.died_year) %}<span class="card-stat">died {{ fig.died_year }}</span>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
 <p class="meta">Showing up to {{ figures | length }} figures{% if figures | length >= 200 %} (limit reached){% endif %}</p>
 {% else %}
 <p class="empty">No figures match the current filters.</p>

@@ -117,3 +117,48 @@ def decompress_file(path: Path | str) -> DecompressedSave:
         index += 1
 
     return DecompressedSave(header=header, blocks=blocks, payload=b"".join(chunks))
+
+
+def decompress_file_prefix(
+    path: Path | str,
+    *,
+    min_bytes: int = 65_536,
+) -> tuple[SaveHeader, bytes]:
+    """
+    Decompress only enough of a save blob to read its preamble (world name, etc.).
+
+    Streams from disk block-by-block instead of loading/decompressing the full file.
+    """
+    path = Path(path)
+    min_bytes = max(512, min_bytes)
+    with path.open("rb") as handle:
+        header = read_header(handle.read(8))
+        if not header.is_compressed:
+            return header, handle.read(min_bytes)
+
+        chunks: list[bytes] = []
+        total = 0
+        index = 0
+        while total < min_bytes:
+            size_bytes = handle.read(4)
+            if len(size_bytes) < 4:
+                break
+            (compressed_size,) = struct.unpack("<I", size_bytes)
+            if compressed_size == 0:
+                break
+            compressed = handle.read(compressed_size)
+            if len(compressed) < compressed_size:
+                raise ValueError(
+                    f"block {index}: truncated compressed block in {path} "
+                    f"(expected {compressed_size} bytes)"
+                )
+            try:
+                decompressed = zlib.decompress(compressed)
+            except zlib.error as exc:
+                raise ValueError(
+                    f"block {index}: zlib decompress failed in {path}"
+                ) from exc
+            chunks.append(decompressed)
+            total += len(decompressed)
+            index += 1
+        return header, b"".join(chunks)

@@ -48,7 +48,22 @@ CHRONICLE_NOISE_TYPES: frozenset[str] = frozenset(
     }
 )
 
-DEBUG_FIELD_RE = re.compile(r"^(flags|raw_b64|f_\d+)$")
+DEBUG_FIELD_RE = re.compile(r"^(flags|raw_b64|f_\d+|record_json)$")
+
+# Fields omitted from the public event detail view (summary + links cover these).
+EVENT_DETAIL_SKIP_FIELDS: frozenset[str] = frozenset(
+    {
+        "id",
+        "year",
+        "seconds",
+        "subtype",
+        "event_type",
+        "tag",
+        "site_id",
+    }
+)
+
+_PLACEHOLDER_SITE_RE = re.compile(r"^site_\d+$", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -185,7 +200,12 @@ def build_resolve_context(
     if extra_figure_ids:
         hf_ids.update(extra_figure_ids)
     sites = session.scalars(select(WorldSite)).all()
-    site_names = {s.site_id: s.display_name or f"Site #{s.site_id}" for s in sites}
+    site_names = {
+        s.site_id: prettify_site_name(s.display_name, s.site_id)
+        or s.display_name
+        or f"Site #{s.site_id}"
+        for s in sites
+    }
     entity_names = store.entity_name_map(session)
     figure_names = (
         store.figure_name_map(session, list(hf_ids)) if hf_ids else {}
@@ -199,8 +219,29 @@ def build_resolve_context(
     )
 
 
+def valid_year(year: Any) -> bool:
+    return isinstance(year, int) and year >= 0
+
+
+def prettify_site_name(name: str | None, site_id: int | None = None) -> str | None:
+    if not name:
+        return None
+    if _PLACEHOLDER_SITE_RE.match(name) or (site_id is not None and name == f"Site #{site_id}"):
+        return "an unnamed site"
+    return name
+
+
 def is_debug_field(field_name: str) -> bool:
     return bool(DEBUG_FIELD_RE.match(field_name))
+
+
+def is_internal_event_field(field_name: str) -> bool:
+    key = field_name.lower()
+    if key in EVENT_DETAIL_SKIP_FIELDS:
+        return True
+    if key.endswith("_id"):
+        return True
+    return is_debug_field(field_name)
 
 
 def _field_enum_type(field_name: str) -> str | None:
@@ -221,7 +262,7 @@ def resolve_reference(
         return ResolvedValue(display=str(value), raw=value)
 
     if isinstance(value, int) and value < 0:
-        return ResolvedValue(display=str(value), raw=value)
+        return ResolvedValue(display="", raw=value, hidden=True)
 
     key = field_name.lower()
     if isinstance(value, int):
@@ -251,10 +292,34 @@ def resolve_event_fields(
 ) -> list[tuple[str, ResolvedValue]]:
     rows: list[tuple[str, ResolvedValue]] = []
     for key, value in sorted(fields.items()):
+        if not include_debug and is_internal_event_field(key):
+            continue
         resolved = resolve_reference(key, value, ctx)
         if resolved.hidden and not include_debug:
             continue
+        if not include_debug and not str(resolved.display).strip():
+            continue
         rows.append((key, resolved))
+    return rows
+
+
+def resolve_narrative_event_fields(
+    fields: dict[str, Any],
+    ctx: ResolveContext,
+) -> list[tuple[str, ResolvedValue]]:
+    """User-facing event detail: linked figures/sites/civs and labeled enums only."""
+    rows: list[tuple[str, ResolvedValue]] = []
+    for key, value in sorted(fields.items()):
+        if is_internal_event_field(key):
+            continue
+        resolved = resolve_reference(key, value, ctx)
+        if resolved.hidden or not str(resolved.display).strip():
+            continue
+        if resolved.href is not None:
+            rows.append((key, resolved))
+            continue
+        if _field_enum_type(key) and isinstance(value, int) and value >= 0:
+            rows.append((key, resolved))
     return rows
 
 
@@ -565,15 +630,170 @@ def _summarize_artifact_lost_found(ctx: ResolveContext, fields: dict, year: Any,
     return text
 
 
+def humanize_type_name(type_name: str | None) -> str:
+    if not type_name:
+        return "Unknown"
+    return type_name.replace("_", " ").strip().title()
+
+
+def humanize_field_name(field_name: str) -> str:
+    return field_name.replace("_", " ").replace(".", " — ").strip().title()
+
+
+def humanize_link_type(link_type: str) -> str:
+    return link_type.replace("_", " ").strip().title()
+
+
+def sex_label(sex: int | None) -> str | None:
+    if sex is None or sex < 0:
+        return None
+    if sex == 0:
+        return "Female"
+    if sex == 1:
+        return "Male"
+    return None
+
+
+def parse_link_extra(extra_json: str | None) -> dict[str, Any]:
+    if not extra_json:
+        return {}
+    try:
+        data = json.loads(extra_json)
+        return data if isinstance(data, dict) else {}
+    except (ValueError, TypeError):
+        return {}
+
+
+def format_link_tenure(extra: dict[str, Any]) -> str:
+    start = extra.get("start_year")
+    end = extra.get("end_year")
+    if isinstance(start, int) and isinstance(end, int) and end >= 0:
+        return f"{start}–{end}"
+    if isinstance(start, int) and start >= 0:
+        return f"from {start}"
+    if isinstance(end, int) and end >= 0:
+        return f"until {end}"
+    return ""
+
+
+def _summarize_at_site(ctx: ResolveContext, fields: dict, year: Any, *, what: str) -> str:
+    site = _fmt_site(ctx, fields, "site", "site_id")
+    text = f"{what}{_year_phrase(year)}"
+    if site:
+        text += f" at {site}"
+    return text
+
+
+def _summarize_hf_site_link(
+    ctx: ResolveContext, fields: dict, year: Any, *, added: bool
+) -> str:
+    who = _fmt_figure(ctx, fields, "histfig", "hf", "hfid") or "A figure"
+    site = _fmt_site(ctx, fields, "site", "site_id") or "a site"
+    verb = "settled at" if added else "left"
+    return f"{who} {verb} {site}{_year_phrase(year)}"
+
+
+def _summarize_artifact_stored(ctx: ResolveContext, fields: dict, year: Any) -> str:
+    return _summarize_at_site(ctx, fields, year, what="An artifact was stored")
+
+
+def _summarize_performance_like(
+    ctx: ResolveContext, fields: dict, year: Any, *, kind: str
+) -> str:
+    who = _fmt_figure(ctx, fields, "histfig", "hfid")
+    site = _fmt_site(ctx, fields, "site", "site_id")
+    text = f"A {kind} was held{_year_phrase(year)}"
+    if who:
+        text = f"{who} performed at a {kind}{_year_phrase(year)}"
+    if site:
+        text += f" at {site}"
+    return text
+
+
+def _summarize_reputation(ctx: ResolveContext, fields: dict, year: Any) -> str:
+    who = _fmt_figure(ctx, fields, "hf", "histfig", "hfid") or "A figure"
+    other = _fmt_figure(ctx, fields, "hf_target", "hfid_target") or "another"
+    return f"{who} formed a reputation with {other}{_year_phrase(year)}"
+
+
+def _summarize_abducted(ctx: ResolveContext, fields: dict, year: Any) -> str:
+    victim = _fmt_figure(ctx, fields, "victim", "victim_hf", "histfig", "hfid") or "Someone"
+    captor = _fmt_figure(ctx, fields, "captor", "slayer_hf", "hfid") or "a captor"
+    return f"{victim} was abducted by {captor}{_year_phrase(year)}"
+
+
+def _summarize_wounded(ctx: ResolveContext, fields: dict, year: Any) -> str:
+    victim = _fmt_figure(ctx, fields, "victim_hf", "histfig", "hfid") or "Someone"
+    attacker = _fmt_figure(ctx, fields, "slayer_hf", "attacker_hf") or "an attacker"
+    site = _fmt_site(ctx, fields, "site", "site_id")
+    text = f"{victim} was wounded by {attacker}{_year_phrase(year)}"
+    if site:
+        text += f" at {site}"
+    return text
+
+
+def _summarize_first_contact(ctx: ResolveContext, fields: dict, year: Any) -> str:
+    a = _fmt_entity(ctx, fields, "contactor", "first_civ", "civ") or "One civilization"
+    b = _fmt_entity(ctx, fields, "contacted", "second_civ") or "another"
+    return f"{a} made first contact with {b}{_year_phrase(year)}"
+
+
+def _summarize_war_action(ctx: ResolveContext, fields: dict, year: Any, *, verb: str) -> str:
+    attacker = _fmt_entity(ctx, fields, "attacker_civ", "attacker", "civ") or "An army"
+    site = _fmt_site(ctx, fields, "site", "site_id") or "a site"
+    return f"{attacker} {verb} {site}{_year_phrase(year)}"
+
+
+def _summarize_body_state(ctx: ResolveContext, fields: dict, year: Any) -> str:
+    who = _fmt_figure(ctx, fields, "histfig", "hfid") or "A figure"
+    site = _fmt_site(ctx, fields, "site", "site_id")
+    text = f"{who}'s remains were interred{_year_phrase(year)}"
+    if site:
+        text += f" at {site}"
+    return text
+
+
+def _summarize_reach_summit(ctx: ResolveContext, fields: dict, year: Any) -> str:
+    who = _fmt_figure_group(ctx, fields, "group") or _fmt_figure(ctx, fields, "histfig", "hfid")
+    text = f"{who or 'Explorers'} reached a summit{_year_phrase(year)}"
+    return text
+
+
+def _summarize_assume_identity(ctx: ResolveContext, fields: dict, year: Any) -> str:
+    who = _fmt_figure(ctx, fields, "histfig", "hfid") or "A figure"
+    return f"{who} assumed a new identity{_year_phrase(year)}"
+
+
+def _summarize_convicted(ctx: ResolveContext, fields: dict, year: Any) -> str:
+    who = _fmt_figure(ctx, fields, "histfig", "hfid") or "A figure"
+    site = _fmt_site(ctx, fields, "site", "site_id")
+    text = f"{who} was convicted{_year_phrase(year)}"
+    if site:
+        text += f" at {site}"
+    return text
+
+
+def _summarize_item_stolen(ctx: ResolveContext, fields: dict, year: Any) -> str:
+    thief = _fmt_figure(ctx, fields, "thief_hf", "histfig", "hfid")
+    site = _fmt_site(ctx, fields, "site", "site_id")
+    if thief:
+        text = f"{thief} stole an item{_year_phrase(year)}"
+    else:
+        text = f"An item was stolen{_year_phrase(year)}"
+    if site:
+        text += f" at {site}"
+    return text
+
+
 def _summarize_default(event_type: str, ctx: ResolveContext, fields: dict, year: Any) -> str:
     who = _fmt_figure(ctx, fields, "hfid", "histfig", "victim_hf", "slayer_hf")
     site = _fmt_site(ctx, fields, "site", "site_id")
     civ = _fmt_entity(ctx, fields, "entity", "civ", "attacker_civ", "defender_civ")
-    label = event_type.replace("_", " ").strip() or "event"
+    label = humanize_type_name(event_type).lower()
     if who:
-        text = f"{who}: {label}"
+        text = f"{who} — {label}"
     else:
-        text = label
+        text = label.capitalize()
     text += _year_phrase(year)
     if site:
         text += f" at {site}"
@@ -609,6 +829,23 @@ _EVENT_SUMMARIZERS: dict[str, Callable[[ResolveContext, dict, Any], str]] = {
     "artifact_lost": lambda c, f, y: _summarize_artifact_lost_found(c, f, y, found=False),
     "artifact_found": lambda c, f, y: _summarize_artifact_lost_found(c, f, y, found=True),
     "hist_figure_revived": lambda c, f, y: f"{_fmt_figure(c, f, 'hfid', 'histfig') or 'A figure'} was revived{_year_phrase(y)}",
+    "artifact_stored": _summarize_artifact_stored,
+    "performance": lambda c, f, y: _summarize_performance_like(c, f, y, kind="performance"),
+    "ceremony": lambda c, f, y: _summarize_performance_like(c, f, y, kind="ceremony"),
+    "competition": lambda c, f, y: _summarize_performance_like(c, f, y, kind="competition"),
+    "hfs_formed_reputation_relationship": _summarize_reputation,
+    "hist_figure_abducted": _summarize_abducted,
+    "hist_figure_wounded": _summarize_wounded,
+    "item_stolen": _summarize_item_stolen,
+    "assume_identity": _summarize_assume_identity,
+    "hf_convicted": _summarize_convicted,
+    "add_hf_site_link": lambda c, f, y: _summarize_hf_site_link(c, f, y, added=True),
+    "remove_hf_site_link": lambda c, f, y: _summarize_hf_site_link(c, f, y, added=False),
+    "first_contact": _summarize_first_contact,
+    "war_plundered_site": lambda c, f, y: _summarize_war_action(c, f, y, verb="plundered"),
+    "war_site_tribute_forced": lambda c, f, y: _summarize_war_action(c, f, y, verb="forced tribute from"),
+    "change_hf_body_state": _summarize_body_state,
+    "hist_figure_reach_summit": _summarize_reach_summit,
 }
 
 

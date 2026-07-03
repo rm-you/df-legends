@@ -114,7 +114,9 @@ class LegendsStore:
             return "—"
         if entity.resolved_name:
             return entity.resolved_name
-        return f"{entity.entity_class} #{entity.entity_id}"
+        if entity.entity_class:
+            return entity.entity_class.replace("_", " ").title()
+        return "Unknown civilization"
 
     def entity_name_map(self, session: Session) -> dict[int, str]:
         entities = session.scalars(select(HistoricalEntity)).all()
@@ -758,6 +760,37 @@ class LegendsStore:
         ).all()
         return list(events), total
 
+    def get_site_populations(
+        self, session: Session, site_id: int, *, limit: int = 50
+    ) -> list[SitePopulation]:
+        return list(
+            session.scalars(
+                select(SitePopulation)
+                .where(SitePopulation.site_id == site_id)
+                .order_by(SitePopulation.count.desc().nullslast(), SitePopulation.race)
+                .limit(limit)
+            ).all()
+        )
+
+    def get_entity_officials(
+        self, session: Session, entity_id: int, *, limit: int = 50
+    ) -> list[HfLink]:
+        return list(
+            session.scalars(
+                select(HfLink)
+                .where(
+                    HfLink.category == "entity",
+                    HfLink.target_id == entity_id,
+                    or_(
+                        HfLink.link_type.ilike("%position%"),
+                        HfLink.link_type == "member",
+                    ),
+                )
+                .order_by(HfLink.link_type, HfLink.figure_id)
+                .limit(limit)
+            ).all()
+        )
+
     def search_world(
         self,
         session: Session,
@@ -767,7 +800,7 @@ class LegendsStore:
     ) -> dict[str, list]:
         q = f"%{query.strip()}%"
         if not query.strip():
-            return {"figures": [], "sites": [], "entities": []}
+            return {"figures": [], "sites": [], "entities": [], "events": []}
         figures = session.scalars(
             select(HistoricalFigure)
             .where(HistoricalFigure.name_display.ilike(q))
@@ -786,4 +819,20 @@ class LegendsStore:
             .order_by(HistoricalEntity.resolved_name)
             .limit(limit)
         ).all()
-        return {"figures": list(figures), "sites": list(sites), "entities": list(entities)}
+        events = session.scalars(
+            select(HistoryEvent)
+            .where(
+                or_(
+                    HistoryEvent.event_type.ilike(q),
+                    HistoryEvent.fields_json.ilike(q),
+                )
+            )
+            .order_by(HistoryEvent.year.desc().nullslast(), HistoryEvent.event_id.desc())
+            .limit(limit)
+        ).all()
+        return {
+            "figures": list(figures),
+            "sites": list(sites),
+            "entities": list(entities),
+            "events": list(events),
+        }

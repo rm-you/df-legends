@@ -6,11 +6,10 @@ from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
 
-from ..db.paths import fortress_slug, legends_db_path
+from ..db.paths import fortress_slug, legends_db_path, registry_path
 from ..db.registry import LegendsRegistryEntry, list_legends
-from ..deserializers.active_save import SavPreamble
 from ..save_bundle import index_save_folder, legends_parse_target
-from ..save_preamble import resolve_save_payload
+from ..save_preamble import peek_save_world_name
 from .import_jobs import ImportJobManager, ImportJobState
 
 
@@ -46,16 +45,75 @@ class SaveRegionRow:
 
 def _peek_region_metadata(region_dir: Path) -> tuple[str | None, str | None]:
     """Return (world_name, slug) from a region folder without running a full import."""
-    resolved = resolve_save_payload(region_dir)
-    preamble = resolved.preamble
-    if isinstance(preamble, SavPreamble):
-        world_name = preamble.world_name
-    elif preamble.header.world_name:
-        world_name = preamble.header.world_name.value
-    else:
-        world_name = None
+    world_name = peek_save_world_name(region_dir)
     slug = fortress_slug(world_name or "unknown")
     return world_name, slug
+
+
+def _region_blob_signature(target_path: Path) -> tuple[float, int]:
+    stat = target_path.stat()
+    return (stat.st_mtime_ns, stat.st_size)
+
+
+def _catalog_signature(saves_dir: Path, data_dir: Path) -> tuple:
+    registry = registry_path(data_dir)
+    registry_sig = (
+        registry.stat().st_mtime_ns,
+        registry.stat().st_size,
+    ) if registry.is_file() else (0, 0)
+    region_sigs: list[tuple[str, tuple[float, int]]] = []
+    for child in sorted(saves_dir.iterdir()):
+        if not child.is_dir():
+            continue
+        try:
+            index = index_save_folder(child)
+        except OSError:
+            continue
+        target = legends_parse_target(index)
+        if target is None:
+            region_sigs.append((child.name, (0, 0)))
+            continue
+        region_sigs.append((child.name, _region_blob_signature(target.path)))
+    return (saves_dir.stat().st_mtime_ns, registry_sig, tuple(region_sigs))
+
+
+class SaveRegionsCache:
+    """Memoize save-region scans; invalidate when saves or registry change."""
+
+    def __init__(self) -> None:
+        self._signature: tuple | None = None
+        self._rows: list[SaveRegionRow] | None = None
+        self._saves_dir: Path | None = None
+        self._data_dir: Path | None = None
+
+    def invalidate(self) -> None:
+        self._signature = None
+        self._rows = None
+
+    def list_regions(
+        self,
+        saves_dir: Path,
+        data_dir: Path,
+        *,
+        job_manager: ImportJobManager | None = None,
+    ) -> list[SaveRegionRow]:
+        saves_dir = saves_dir.resolve()
+        data_dir = data_dir.resolve()
+        signature = _catalog_signature(saves_dir, data_dir)
+        if (
+            self._rows is not None
+            and self._signature == signature
+            and self._saves_dir == saves_dir
+            and self._data_dir == data_dir
+        ):
+            return list(self._rows)
+
+        rows = _list_save_regions(saves_dir, data_dir, job_manager=job_manager)
+        self._signature = signature
+        self._rows = rows
+        self._saves_dir = saves_dir
+        self._data_dir = data_dir
+        return list(rows)
 
 
 def list_save_regions(
@@ -63,8 +121,20 @@ def list_save_regions(
     data_dir: Path,
     *,
     job_manager: ImportJobManager | None = None,
+    cache: SaveRegionsCache | None = None,
 ) -> list[SaveRegionRow]:
     """List immediate child region folders under ``saves_dir`` with import status."""
+    if cache is not None:
+        return cache.list_regions(saves_dir, data_dir, job_manager=job_manager)
+    return _list_save_regions(saves_dir, data_dir, job_manager=job_manager)
+
+
+def _list_save_regions(
+    saves_dir: Path,
+    data_dir: Path,
+    *,
+    job_manager: ImportJobManager | None = None,
+) -> list[SaveRegionRow]:
     saves_dir = saves_dir.resolve()
     if not saves_dir.is_dir():
         return []

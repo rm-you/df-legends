@@ -82,6 +82,34 @@ def parse_save_preamble(
     return parse_sav_preamble(payload, save_version=save_version)
 
 
+def peek_save_world_name(path: Path | str) -> str | None:
+    """
+    Return the world name from a save folder or blob without a full decompress/import.
+
+    Reads only the first ~64 KiB of decompressed payload — enough for the header /
+    SAV name block — and streams compressed blocks from disk.
+    """
+    from io import BytesIO
+
+    from .binary_reader import BinaryReader
+    from .compression import decompress_file_prefix
+    from .deserializers.active_save import peek_sav_world_name
+    from .deserializers.primitives import WorldHeaderHypothesis
+
+    blob_path = resolve_save_path(path)
+    header, prefix = decompress_file_prefix(blob_path)
+    kind = preamble_kind_for_path(blob_path)
+    if kind == SavePreambleKind.DAT:
+        world_header = WorldHeaderHypothesis.read(
+            BinaryReader(BytesIO(prefix)),
+            save_version=header.save_version,
+        )
+        if world_header.world_name and world_header.world_name.value:
+            return world_header.world_name.value
+        return None
+    return peek_sav_world_name(prefix, save_version=header.save_version)
+
+
 def resolve_save_payload(path: Path | str) -> ResolvedSavePayload:
     """Decompress a world blob and parse the appropriate preamble."""
     blob_path = resolve_save_path(path)

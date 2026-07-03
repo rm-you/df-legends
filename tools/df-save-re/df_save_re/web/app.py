@@ -14,13 +14,23 @@ from .import_jobs import ImportJobManager
 from .presentation import (
     build_resolve_context,
     enum_label_for_field,
+    format_link_tenure,
+    humanize_field_name,
+    humanize_link_type,
+    humanize_type_name,
+    parse_link_extra,
+    prettify_site_name,
     resolve_event_fields,
+    resolve_narrative_event_fields,
+    sex_label,
     summarize_event,
     summarize_events,
     timeline_highlight,
+    valid_year,
 )
+from .params import OptionalIntQuery, OptionalStrQuery, build_page_query
 from .queries import LegendsStore
-from .saves_catalog import find_region_dir, list_save_regions
+from .saves_catalog import SaveRegionsCache, find_region_dir, list_save_regions
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
 
@@ -34,10 +44,27 @@ def create_app(
     templates = Jinja2Templates(directory=str(_PACKAGE_DIR / "templates"))
     resolved_saves_dir = saves_dir.resolve() if saves_dir else None
 
+    regions_cache = SaveRegionsCache()
+
     def _on_import_complete(slug: str) -> None:
         store.clear_engine(slug)
+        regions_cache.invalidate()
 
     job_manager = ImportJobManager(on_complete=_on_import_complete)
+
+    def _debug_mode(request: Request) -> bool:
+        return request.query_params.get("debug") == "1"
+
+    templates.env.globals["humanize_type"] = humanize_type_name
+    templates.env.globals["humanize_field"] = humanize_field_name
+    templates.env.globals["humanize_link_type"] = humanize_link_type
+    templates.env.globals["sex_label"] = sex_label
+    templates.env.globals["parse_link_extra"] = parse_link_extra
+    templates.env.globals["format_link_tenure"] = format_link_tenure
+    templates.env.globals["timeline_highlight"] = timeline_highlight
+    templates.env.globals["valid_year"] = valid_year
+    templates.env.globals["prettify_site_name"] = prettify_site_name
+    templates.env.globals["build_page_query"] = build_page_query
 
     app = FastAPI(
         title="DF Legends Explorer",
@@ -56,6 +83,7 @@ def create_app(
             entry = store.entry_for_slug(slug)
             if entry:
                 context["world_name"] = entry.world_name
+        context.setdefault("debug_mode", _debug_mode(request))
         return templates.TemplateResponse(
             request,
             template,
@@ -69,18 +97,10 @@ def create_app(
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request):
         entries = store.registry()
-        regions = []
-        if resolved_saves_dir is not None:
-            regions = list_save_regions(
-                resolved_saves_dir,
-                store.data_dir,
-                job_manager=job_manager,
-            )
         return render(
             request,
             "index.html",
             entries=entries,
-            regions=regions,
             data_dir=str(store.data_dir),
             saves_dir=str(resolved_saves_dir) if resolved_saves_dir else None,
         )
@@ -93,6 +113,7 @@ def create_app(
             resolved_saves_dir,
             store.data_dir,
             job_manager=job_manager,
+            cache=regions_cache,
         )
         return [row.to_dict() for row in rows]
 
@@ -177,8 +198,13 @@ def create_app(
             figures = store.get_figures_for_entity(session, entity_id)
             names = store.entity_name_map(session)
             civ_events = store.get_events_for_entity(session, entity_id)
-            ctx = build_resolve_context(store, session, slug, events=civ_events)
+            officials = store.get_entity_officials(session, entity_id)
+            official_ids = [ln.figure_id for ln in officials]
+            ctx = build_resolve_context(
+                store, session, slug, events=civ_events, extra_figure_ids=official_ids
+            )
             event_summaries = summarize_events(civ_events, store, ctx)
+            figure_names = store.figure_name_map(session, official_ids)
         return render(
             request,
             "entity_detail.html",
@@ -190,6 +216,8 @@ def create_app(
             entity_names=names,
             civ_events=civ_events,
             event_summaries=event_summaries,
+            officials=officials,
+            figure_names=figure_names,
         )
 
     @app.get("/world/{slug}/sites", response_class=HTMLResponse)
@@ -231,6 +259,7 @@ def create_app(
                 else None
             )
             site_events = store.get_events_for_site(session, site_id)
+            populations = store.get_site_populations(session, site_id)
             ctx = build_resolve_context(store, session, slug, events=site_events)
             event_summaries = summarize_events(site_events, store, ctx)
         return render(
@@ -244,6 +273,7 @@ def create_app(
             owner_name=store.entity_display(owner),
             site_events=site_events,
             event_summaries=event_summaries,
+            populations=populations,
         )
 
     @app.get("/world/{slug}/figures", response_class=HTMLResponse)
@@ -328,6 +358,7 @@ def create_app(
             site_names = ctx.site_names
             entity_names = ctx.entity_names
             profession_label = enum_label_for_field(ctx, "profession", figure.profession)
+            top_skills = skills[:3]
         return render(
             request,
             "figure_detail.html",
@@ -348,6 +379,7 @@ def create_app(
             event_summaries=event_summaries,
             links=links,
             skills=skills,
+            top_skills=top_skills,
             relationships=relationships,
             record=record,
             figure_names=figure_names,
@@ -355,15 +387,14 @@ def create_app(
             entity_names=entity_names,
             profession_label=profession_label,
             resolve_ctx=ctx,
-            timeline_highlight=timeline_highlight,
         )
 
     @app.get("/world/{slug}/events", response_class=HTMLResponse)
     def events(
         request: Request,
         slug: str,
-        event_type: str | None = Query(default=None),
-        year: int | None = Query(default=None),
+        event_type: OptionalStrQuery = None,
+        year: OptionalIntQuery = None,
         page: int = Query(default=1, ge=1),
     ):
         if store.entry_for_slug(slug) is None:
@@ -405,7 +436,10 @@ def create_app(
             ctx = build_resolve_context(store, session, slug, events=[event])
             fields = store.event_fields(event)
             summary = summarize_event(event, fields, ctx)
-            resolved_fields = resolve_event_fields(fields, ctx)
+            resolved_fields = resolve_event_fields(
+                fields, ctx, include_debug=_debug_mode(request)
+            )
+            narrative_fields = resolve_narrative_event_fields(fields, ctx)
             parent_collections = store.get_collections_for_event(session, event_id)
             site = store.get_site(session, event.site_id) if event.site_id and event.site_id >= 0 else None
             civ = store.get_entity(session, event.civ_id) if event.civ_id and event.civ_id >= 0 else None
@@ -417,6 +451,7 @@ def create_app(
             fields=fields,
             summary=summary,
             resolved_fields=resolved_fields,
+            narrative_fields=narrative_fields,
             parent_collections=parent_collections,
             site=site,
             civ=civ,
@@ -493,8 +528,8 @@ def create_app(
     def chronicle(
         request: Request,
         slug: str,
-        event_type: str | None = Query(default=None),
-        year: int | None = Query(default=None),
+        event_type: OptionalStrQuery = None,
+        year: OptionalIntQuery = None,
         page: int = Query(default=1, ge=1),
         all_events: bool = Query(default=False),
         include_preworld: bool = Query(default=False),
@@ -540,8 +575,18 @@ def create_app(
                 "figures": [],
                 "sites": [],
                 "entities": [],
+                "events": [],
             }
-        return render(request, "search.html", slug=slug, q=q, results=results)
+            ctx = build_resolve_context(store, session, slug, events=results.get("events", []))
+            event_summaries = summarize_events(results.get("events", []), store, ctx)
+        return render(
+            request,
+            "search.html",
+            slug=slug,
+            q=q,
+            results=results,
+            event_summaries=event_summaries,
+        )
 
     @app.get("/world/{slug}/eras", response_class=HTMLResponse)
     def eras(request: Request, slug: str):

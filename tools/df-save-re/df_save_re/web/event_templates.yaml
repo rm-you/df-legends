@@ -55,6 +55,44 @@ templates:
     status: implemented
   remove_hf_hf_link:
     status: implemented
+  artifact_stored:
+    status: implemented
+  performance:
+    status: implemented
+  ceremony:
+    status: implemented
+  competition:
+    status: implemented
+  hfs_formed_reputation_relationship:
+    status: implemented
+  hist_figure_abducted:
+    status: implemented
+  hist_figure_wounded:
+    status: implemented
+  item_stolen:
+    status: implemented
+  assume_identity:
+    status: implemented
+  hf_convicted:
+    status: implemented
+  add_hf_site_link:
+    status: implemented
+  remove_hf_site_link:
+    status: implemented
+  first_contact:
+    status: implemented
+  war_plundered_site:
+    status: implemented
+  war_site_tribute_forced:
+    status: implemented
+  change_hf_body_state:
+    status: implemented
+  hist_figure_reach_summit:
+    status: implemented
+  created_site:
+    status: implemented
+  created_building:
+    status: implemented
 fallback:
   status: implemented
   note: Type name plus resolved actors/sites for unhandled event types

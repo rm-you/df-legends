@@ -7,24 +7,35 @@
   <a href="/world/{{ slug }}/figures">Figures</a> /
   {{ display_name }}
 </div>
-<h1>{{ display_name }}</h1>
 
-<h2>Identity</h2>
-<dl class="detail">
-  <dt>Civilization</dt>
-  <dd>
+<section class="figure-hero">
+  <h1>{{ display_name }}</h1>
+  <div class="hero-badges">
+    {% if profession_label %}<span class="badge">{{ profession_label }}</span>{% endif %}
+    {% if sex_label(figure.sex) %}<span class="badge">{{ sex_label(figure.sex) }}</span>{% endif %}
+    {% if debug_mode and figure.race is not none and figure.race >= 0 %}<span class="badge">Race #{{ figure.race }}</span>{% endif %}
     {% if civ %}
-    <a href="/world/{{ slug }}/entities/{{ civ.entity_id }}">{{ civ_name }}</a>
-    {% else %}—{% endif %}
-  </dd>
-  <dt>Profession</dt><dd>{{ profession_label or figure.profession or '—' }}</dd>
-  <dt>Life</dt>
-  <dd>
-    {% if figure.born_year %}born {{ figure.born_year }}{% endif %}
-    {% if figure.died_year %}{% if figure.born_year %} · {% endif %}died {{ figure.died_year }}{% endif %}
-    {% if not figure.born_year and not figure.died_year %}—{% endif %}
-  </dd>
-</dl>
+    <a href="/world/{{ slug }}/entities/{{ civ.entity_id }}" class="badge badge-link">{{ civ_name }}</a>
+    {% endif %}
+  </div>
+  {% if valid_year(figure.born_year) or valid_year(figure.died_year) %}
+  <div class="lifespan">
+    {% if valid_year(figure.born_year) %}<span>born {{ figure.born_year }}</span>{% endif %}
+    {% if valid_year(figure.born_year) and valid_year(figure.died_year) %}<span class="lifespan-sep">·</span>{% endif %}
+    {% if valid_year(figure.died_year) %}<span>died {{ figure.died_year }}</span>{% endif %}
+    {% if valid_year(figure.born_year) and valid_year(figure.died_year) and figure.died_year > figure.born_year %}
+    <span class="lifespan-duration">({{ figure.died_year - figure.born_year }} years)</span>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% if top_skills %}
+  <div class="skill-tags">
+    {% for skill in top_skills %}
+    <span class="badge">{{ resolve_ctx.enum_label('job_skill', skill.skill_id) or 'Skill' }} {{ skill.rating }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
 
 <h2>Relations</h2>
 <dl class="detail">
@@ -49,8 +60,8 @@
   <tbody>
     {% for e in timeline %}
     <tr class="{% if timeline_highlight(e.event_type) %}timeline-highlight{% endif %}">
-      <td class="mono">{{ e.year }}</td>
-      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ event_summaries.get(e.event_id, e.event_type) }}</a></td>
+      <td class="mono year-cell">{{ e.year }}</td>
+      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ event_summaries.get(e.event_id, humanize_type(e.event_type)) }}</a></td>
     </tr>
     {% endfor %}
   </tbody>
@@ -71,21 +82,22 @@
 {% if links %}
 <h2>Positions &amp; links</h2>
 <table class="data">
-  <thead><tr><th>Category</th><th>Type</th><th>Target</th></tr></thead>
+  <thead><tr><th>Role</th><th>Target</th><th>Tenure</th></tr></thead>
   <tbody>
     {% for link in links %}
+    {% set extra = parse_link_extra(link.extra_json) %}
     <tr>
-      <td>{{ link.category }}</td>
-      <td>{{ link.link_type }}</td>
+      <td>{{ humanize_link_type(link.link_type) }}</td>
       <td>
         {% if link.category == 'site' and link.target_id is not none %}
-        <a href="/world/{{ slug }}/sites/{{ link.target_id }}">{{ site_names.get(link.target_id, link.target_id) }}</a>
+        <a href="/world/{{ slug }}/sites/{{ link.target_id }}">{{ site_names.get(link.target_id, 'Site') }}</a>
         {% elif link.category == 'entity' and link.target_id is not none %}
-        <a href="/world/{{ slug }}/entities/{{ link.target_id }}">{{ entity_names.get(link.target_id, link.target_id) }}</a>
+        <a href="/world/{{ slug }}/entities/{{ link.target_id }}">{{ entity_names.get(link.target_id, 'Civilization') }}</a>
         {% elif link.category == 'histfig' and link.target_id is not none %}
-        <a href="/world/{{ slug }}/figures/{{ link.target_id }}">{{ figure_names.get(link.target_id, link.target_id) }}</a>
+        <a href="/world/{{ slug }}/figures/{{ link.target_id }}">{{ figure_names.get(link.target_id, 'Figure') }}</a>
         {% else %}—{% endif %}
       </td>
+      <td class="mono">{{ format_link_tenure(extra) or '—' }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -95,12 +107,18 @@
 {% if skills %}
 <h2>Skills</h2>
 <table class="data">
-  <thead><tr><th>Skill</th><th>Rating</th></tr></thead>
+  <thead><tr><th>Skill</th><th>Level</th>{% if debug_mode %}<th>Experience</th>{% endif %}</tr></thead>
   <tbody>
     {% for skill in skills %}
     <tr>
       <td>{{ resolve_ctx.enum_label('job_skill', skill.skill_id) or skill.skill_id }}</td>
-      <td class="mono">{{ skill.rating }}</td>
+      <td>
+        <div class="skill-bar-wrap">
+          <div class="skill-bar" style="width: {{ skill.rating * 5 if skill.rating * 5 <= 100 else 100 }}%"></div>
+          <span class="skill-bar-label">{{ skill.rating }}</span>
+        </div>
+      </td>
+      {% if debug_mode %}<td class="mono">{{ skill.experience or '—' }}</td>{% endif %}
     </tr>
     {% endfor %}
   </tbody>
@@ -110,14 +128,20 @@
 {% if relationships %}
 <h2>Relationships</h2>
 <table class="data">
-  <thead><tr><th>Source</th><th>Target</th><th>Type</th><th>Year</th></tr></thead>
+  <thead><tr><th>Figure</th><th>Related to</th><th>Type</th><th>Year</th></tr></thead>
   <tbody>
     {% for rel in relationships %}
     <tr>
-      <td><a href="/world/{{ slug }}/figures/{{ rel.source_hf }}">{{ figure_names.get(rel.source_hf, rel.source_hf) }}</a></td>
-      <td><a href="/world/{{ slug }}/figures/{{ rel.target_hf }}">{{ figure_names.get(rel.target_hf, rel.target_hf) }}</a></td>
-      <td>{{ resolve_ctx.enum_label('histfig_relationship_type', rel.relationship_type) or rel.relationship_type }}</td>
-      <td class="mono">{{ rel.year or '—' }}</td>
+      <td><a href="/world/{{ slug }}/figures/{{ rel.source_hf }}">{{ figure_names.get(rel.source_hf, 'Figure') }}</a></td>
+      <td><a href="/world/{{ slug }}/figures/{{ rel.target_hf }}">{{ figure_names.get(rel.target_hf, 'Figure') }}</a></td>
+      <td>
+        {% if rel.event_id %}
+        <a href="/world/{{ slug }}/events/{{ rel.event_id }}">{{ resolve_ctx.enum_label('histfig_relationship_type', rel.relationship_type) or rel.relationship_type }}</a>
+        {% else %}
+        {{ resolve_ctx.enum_label('histfig_relationship_type', rel.relationship_type) or rel.relationship_type }}
+        {% endif %}
+      </td>
+      <td class="mono">{{ rel.year if valid_year(rel.year) else '—' }}</td>
     </tr>
     {% endfor %}
   </tbody>

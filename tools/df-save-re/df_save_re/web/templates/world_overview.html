@@ -3,69 +3,65 @@
 {% block content %}
 <div class="breadcrumb"><a href="/">Worlds</a> / {{ entry.world_name }}</div>
 <h1>{{ entry.world_name }}</h1>
-<p class="subtitle">
-  Extracted {{ world.extracted_at.strftime('%Y-%m-%d %H:%M UTC') if world and world.extracted_at else '—' }}
-</p>
+<p class="subtitle">A world of legends, extracted and ready to explore.</p>
 
 <div class="stats-row">
   <div class="stat">
-    <span class="label">Civilizations</span>
-    <span class="value">{{ entry.entity_count }}</span>
+    <span class="label">Events</span>
+    <span class="value">{% if entry.event_count is not none %}{{ "{:,}".format(entry.event_count) }}{% else %}—{% endif %}</span>
+  </div>
+  <div class="stat">
+    <span class="label">Figures</span>
+    <span class="value">{{ entry.histfig_header_count }}</span>
   </div>
   <div class="stat">
     <span class="label">Sites</span>
     <span class="value">{{ entry.site_count }}</span>
   </div>
   <div class="stat">
-    <span class="label">Figures</span>
-    <span class="value">{{ entry.histfig_header_count }}</span>
+    <span class="label">Civilizations</span>
+    <span class="value">{{ entry.entity_count }}</span>
   </div>
-  {% if entry.event_count is not none %}
-  <div class="stat">
-    <span class="label">Events</span>
-    <span class="value">{{ "{:,}".format(entry.event_count) }}</span>
-  </div>
-  {% endif %}
 </div>
 
 <h2>Explore</h2>
 <div class="card-grid">
-  <a href="/world/{{ slug }}/chronicle" class="card" style="display:block;text-decoration:none;color:inherit;">
+  <a href="/world/{{ slug }}/chronicle" class="card card-link">
     <h3>Chronicle</h3>
-    <div class="meta">Browse world history year by year with readable event summaries.</div>
+    <div class="meta">Read world history year by year — deaths, battles, founding, and more.</div>
   </a>
-  <a href="/world/{{ slug }}/entities" class="card" style="display:block;text-decoration:none;color:inherit;">
-    <h3>Civilizations</h3>
-    <div class="meta">Nations, sites, and civ history.</div>
-  </a>
-  <a href="/world/{{ slug }}/sites" class="card" style="display:block;text-decoration:none;color:inherit;">
-    <h3>Sites</h3>
-    <div class="meta">Settlements and ruins with local event timelines.</div>
-  </a>
-  <a href="/world/{{ slug }}/figures" class="card" style="display:block;text-decoration:none;color:inherit;">
+  <a href="/world/{{ slug }}/figures" class="card card-link">
     <h3>Historical figures</h3>
-    <div class="meta">People and their life chronicles.</div>
+    <div class="meta">People and their life stories.</div>
   </a>
-  <a href="/world/{{ slug }}/events" class="card" style="display:block;text-decoration:none;color:inherit;">
-    <h3>Events</h3>
-    <div class="meta">Filter and search the full event catalog.</div>
+  <a href="/world/{{ slug }}/entities" class="card card-link">
+    <h3>Civilizations</h3>
+    <div class="meta">Nations, rulers, and their histories.</div>
   </a>
-  <a href="/world/{{ slug }}/collections" class="card" style="display:block;text-decoration:none;color:inherit;">
+  <a href="/world/{{ slug }}/sites" class="card card-link">
+    <h3>Sites</h3>
+    <div class="meta">Settlements, ruins, and local events.</div>
+  </a>
+  <a href="/world/{{ slug }}/collections" class="card card-link">
     <h3>Collections</h3>
-    <div class="meta">Wars, battles, and grouped event narratives.</div>
+    <div class="meta">Wars, battles, and grouped narratives.</div>
   </a>
-  <a href="/world/{{ slug }}/eras" class="card" style="display:block;text-decoration:none;color:inherit;">
+  <a href="/world/{{ slug }}/events" class="card card-link">
+    <h3>Events</h3>
+    <div class="meta">Search and filter the full event catalog.</div>
+  </a>
+  <a href="/world/{{ slug }}/eras" class="card card-link">
     <h3>Eras</h3>
     <div class="meta">World ages and population milestones.</div>
   </a>
-  <a href="/world/{{ slug }}/search" class="card" style="display:block;text-decoration:none;color:inherit;">
+  <a href="/world/{{ slug }}/search" class="card card-link">
     <h3>Search</h3>
     <div class="meta">Find figures, sites, and civilizations by name.</div>
   </a>
 </div>
 
 {% if entity_classes %}
-<h2>Entity classes</h2>
+<h2>Browse by type</h2>
 <p>
   {% for cls in entity_classes %}
   <a href="/world/{{ slug }}/entities?entity_class={{ cls | urlencode }}" class="badge">{{ cls }}</a>
@@ -73,5 +69,7 @@
 </p>
 {% endif %}
 
-<p class="meta"><a href="/world/{{ slug }}/history">Extraction debug details →</a></p>
+{% if debug_mode %}
+<p class="meta"><a href="/world/{{ slug }}/history">Extraction debug →</a></p>
+{% endif %}
 {% endblock %}

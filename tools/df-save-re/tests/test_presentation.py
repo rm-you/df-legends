@@ -116,8 +116,42 @@ def test_year_negative_uses_fields():
     assert "98" in text
     assert "-1" not in text
 
-    assert timeline_highlight("hist_figure_born") is True
-    assert timeline_highlight("war_attacked_site") is False
+
+def test_humanize_type_name():
+    from df_save_re.web.presentation import humanize_type_name
+
+    assert humanize_type_name("hist_figure_died") == "Hist Figure Died"
+    assert humanize_type_name(None) == "Unknown"
+
+
+def test_resolve_event_fields_hides_sentinels():
+    from df_save_re.web.presentation import resolve_event_fields, resolve_narrative_event_fields
+
+    ctx = _ctx()
+    fields = {
+        "id": 53,
+        "seconds": -1,
+        "builder_hf": -1,
+        "civ": 7,
+        "site": 12,
+        "year": 1,
+        "death_cause": 43,
+    }
+    rows = resolve_event_fields(fields, ctx)
+    keys = {key for key, _ in rows}
+    assert "id" not in keys
+    assert "seconds" not in keys
+    assert "builder_hf" not in keys
+    assert "year" not in keys
+    assert "civ" in keys
+    assert "site" in keys
+
+    narrative = resolve_narrative_event_fields(fields, ctx)
+    narrative_keys = {key for key, _ in narrative}
+    assert "civ" in narrative_keys
+    assert "site" in narrative_keys
+    assert "death_cause" in narrative_keys
+    assert "year" not in narrative_keys
 
 
 def test_event_template_manifest_matches_implementation():

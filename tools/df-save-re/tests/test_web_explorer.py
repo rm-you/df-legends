@@ -52,13 +52,11 @@ def test_world_overview_extraction_status(explorer_client: TestClient) -> None:
     overview = explorer_client.get("/world/namushul")
     assert overview.status_code == 200
     assert "Chronicle" in overview.text
-    assert "Extraction debug details" in overview.text
+    assert "Extraction debug" not in overview.text
 
-    history = explorer_client.get("/world/namushul/history")
+    history = explorer_client.get("/world/namushul/history?debug=1")
     assert history.status_code == 200
     assert "Layer walk status" in history.text
-    assert "figures" in history.text
-    assert ("deterministic" in history.text) or ("desync" in history.text)
 
 
 def test_entities_and_cross_links(explorer_client: TestClient) -> None:
@@ -83,9 +81,9 @@ def test_sites_filter_by_civ(explorer_client: TestClient) -> None:
 def test_figures_and_history(explorer_client: TestClient) -> None:
     figures = explorer_client.get("/world/namushul/figures")
     assert figures.status_code == 200
-    history = explorer_client.get("/world/namushul/history")
+    history = explorer_client.get("/world/namushul/history?debug=1")
     assert history.status_code == 200
-    assert "Extraction debug" in history.text
+    assert "Layer walk status" in history.text
 
 
 def test_narrative_routes(explorer_client: TestClient) -> None:
@@ -105,7 +103,17 @@ def test_narrative_routes(explorer_client: TestClient) -> None:
     event_detail = explorer_client.get("/world/namushul/events/1")
     if event_detail.status_code == 200:
         assert "lead-summary" in event_detail.text
-        assert "Raw fields (debug)" in event_detail.text
+        assert "Raw fields" not in event_detail.text
+        assert "All fields" not in event_detail.text
+
+    event_debug = explorer_client.get("/world/namushul/events/1?debug=1")
+    if event_debug.status_code == 200:
+        assert "Raw fields" in event_debug.text
+        assert "All fields" in event_debug.text
+
+    chronicle_page2 = explorer_client.get("/world/namushul/chronicle?page=2&year=")
+    assert chronicle_page2.status_code == 200
+    assert "World chronicle" in chronicle_page2.text
 
 
 def test_unknown_world_404(explorer_client: TestClient) -> None:
@@ -133,10 +141,15 @@ def saves_explorer_client(tmp_path: Path) -> TestClient:
 def test_index_shows_region_table(saves_explorer_client: TestClient) -> None:
     response = saves_explorer_client.get("/")
     assert response.status_code == 200
-    assert "Save regions" in response.text
-    assert "region-a" in response.text
-    assert "Namushul" in response.text
-    assert "Not imported" in response.text
+    assert "Import from save regions" in response.text
+
+    api = saves_explorer_client.get("/api/regions")
+    assert api.status_code == 200
+    rows = api.json()
+    assert len(rows) == 1
+    assert rows[0]["region_name"] == "region-a"
+    assert rows[0]["world_name"] == "Namushul"
+    assert rows[0]["status"] == "importable"
 
 
 @pytest.mark.timeout(600)

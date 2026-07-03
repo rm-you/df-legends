@@ -1,52 +1,62 @@
-{% extends "base.html" %}
-{% block title %}{{ site.display_name }} — {{ world_name | default(slug) }}{% endblock %}
-{% block content %}
-<div class="breadcrumb">
-  <a href="/">Worlds</a> /
-  <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> /
-  <a href="/world/{{ slug }}/sites">Sites</a> /
-  {{ site.display_name }}
-</div>
-<h1>{{ site.display_name }}</h1>
-<p class="subtitle">{% if site.site_type_name %}{{ site.site_type_name }}{% endif %}</p>
-
-<dl class="detail">
-  <dt>Civilization</dt>
-  <dd>
-    {% if civ %}
-    <a href="/world/{{ slug }}/entities/{{ civ.entity_id }}">{{ civ_name }}</a>
-    {% else %}—{% endif %}
-  </dd>
-  <dt>Current owner</dt>
-  <dd>
-    {% if owner %}
-    <a href="/world/{{ slug }}/entities/{{ owner.entity_id }}">{{ owner_name }}</a>
-    {% else %}—{% endif %}
-  </dd>
-  <dt>Coordinates</dt>
-  <dd class="mono">
-    {% if site.pos_x is not none and site.pos_y is not none %}
-    ({{ site.pos_x }}, {{ site.pos_y }})
-    {% else %}—{% endif %}
-  </dd>
-</dl>
-
-{% if site_events %}
-<h2>Events at this site ({{ site_events | length }})</h2>
-<table class="data timeline-table">
-  <thead><tr><th>Year</th><th>Event</th></tr></thead>
-  <tbody>
-    {% for e in site_events %}
-    <tr>
-      <td class="mono">{{ e.year }}</td>
-      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ event_summaries.get(e.event_id, e.event_type) }}</a></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% endif %}
-
-{% if civ and civ.entity_id != (site.cur_owner_id or -1) %}
-<p><a href="/world/{{ slug }}/sites?civ_id={{ civ.entity_id }}">More sites for {{ civ_name }} →</a></p>
-{% endif %}
-{% endblock %}
+{% extends "base.html" %}
+{% block title %}{{ site.display_name }} — {{ world_name | default(slug) }}{% endblock %}
+{% block content %}
+<div class="breadcrumb">
+  <a href="/">Worlds</a> /
+  <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> /
+  <a href="/world/{{ slug }}/sites">Sites</a> /
+  {{ prettify_site_name(site.display_name, site.site_id) or site.display_name }}
+</div>
+
+<section class="site-hero">
+  <h1>{{ (prettify_site_name(site.display_name, site.site_id) or site.display_name) | capitalize }}</h1>
+  {% if site.site_type_name %}<p class="subtitle">{{ site.site_type_name }}</p>{% endif %}
+  <div class="hero-badges">
+    {% if civ %}
+    <a href="/world/{{ slug }}/entities/{{ civ.entity_id }}" class="badge badge-link">{{ civ_name }}</a>
+    {% endif %}
+    {% if owner and owner.entity_id != (civ.entity_id if civ else -1) %}
+    <span class="badge">Owned by <a href="/world/{{ slug }}/entities/{{ owner.entity_id }}">{{ owner_name }}</a></span>
+    {% endif %}
+    {% if debug_mode and site.pos_x is not none and site.pos_y is not none %}
+    <span class="badge mono">({{ site.pos_x }}, {{ site.pos_y }})</span>
+    {% endif %}
+  </div>
+</section>
+
+{% if populations %}
+<h2>Demographics</h2>
+<table class="data">
+  <thead><tr><th>Population</th><th>Count</th></tr></thead>
+  <tbody>
+    {% for pop in populations %}
+    <tr>
+      <td>{{ pop.race or 'Unknown' }}{% if pop.is_animal %} <span class="badge">animal</span>{% endif %}</td>
+      <td>{{ pop.count or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<h2>History at this site</h2>
+{% if site_events %}
+<table class="data timeline-table">
+  <thead><tr><th>Year</th><th>Event</th></tr></thead>
+  <tbody>
+    {% for e in site_events %}
+    <tr>
+      <td class="mono year-cell">{% if valid_year(e.year) %}{{ e.year }}{% else %}—{% endif %}</td>
+      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ event_summaries.get(e.event_id, humanize_type(e.event_type)) }}</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">No recorded events at this site.</p>
+{% endif %}
+
+{% if civ %}
+<p><a href="/world/{{ slug }}/sites?civ_id={{ civ.entity_id }}">More sites for {{ civ_name }} →</a></p>
+{% endif %}
+{% endblock %}

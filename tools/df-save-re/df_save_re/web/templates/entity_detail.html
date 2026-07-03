@@ -10,44 +10,49 @@
 <h1>{{ display_name }}</h1>
 <p class="subtitle"><span class="badge">{{ entity.entity_class }}</span></p>
 
-<h2>Sites ({{ sites | length }})</h2>
-{% if sites %}
+{% if officials %}
+<h2>Rulers &amp; officials</h2>
 <table class="data">
-  <thead>
-    <tr><th>Name</th><th>Type</th><th>Coords</th><th>Owner</th></tr>
-  </thead>
+  <thead><tr><th>Figure</th><th>Role</th><th>Tenure</th></tr></thead>
   <tbody>
-    {% for site in sites %}
+    {% for ln in officials %}
+    {% set extra = parse_link_extra(ln.extra_json) %}
     <tr>
-      <td><a href="/world/{{ slug }}/sites/{{ site.site_id }}">{{ site.display_name }}</a></td>
-      <td>{{ site.site_type_name or site.site_type or '—' }}</td>
-      <td class="mono">
-        {% if site.pos_x is not none and site.pos_y is not none %}
-        ({{ site.pos_x }}, {{ site.pos_y }})
-        {% else %}—{% endif %}
-      </td>
-      <td>
-        {% if site.cur_owner_id and site.cur_owner_id != entity.entity_id %}
-        <a href="/world/{{ slug }}/entities/{{ site.cur_owner_id }}">{{ entity_names.get(site.cur_owner_id, site.cur_owner_id) }}</a>
-        {% else %}—{% endif %}
-      </td>
+      <td><a href="/world/{{ slug }}/figures/{{ ln.figure_id }}">{{ figure_names.get(ln.figure_id, 'Figure') }}</a></td>
+      <td>{{ humanize_link_type(ln.link_type) }}</td>
+      <td class="mono">{{ format_link_tenure(extra) or '—' }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+{% endif %}
+
+<h2>Sites ({{ sites | length }})</h2>
+{% if sites %}
+<div class="card-grid list-cards">
+  {% for site in sites %}
+  <a href="/world/{{ slug }}/sites/{{ site.site_id }}" class="card card-link">
+    <h3>{{ site.display_name }}</h3>
+    <div class="meta">{{ site.site_type_name or site.site_type or 'Settlement' }}</div>
+    {% if debug_mode and site.pos_x is not none and site.pos_y is not none %}
+    <div class="meta mono">({{ site.pos_x }}, {{ site.pos_y }})</div>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
 {% else %}
-<p class="empty">No sites linked to this entity.</p>
+<p class="empty">No sites linked to this civilization.</p>
 {% endif %}
 
 {% if civ_events %}
-<h2>History ({{ civ_events | length }} recent events)</h2>
+<h2>Recent history</h2>
 <table class="data timeline-table">
   <thead><tr><th>Year</th><th>Event</th></tr></thead>
   <tbody>
     {% for e in civ_events %}
     <tr>
-      <td class="mono">{{ e.year }}</td>
-      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ event_summaries.get(e.event_id, e.event_type) }}</a></td>
+      <td class="mono year-cell">{{ e.year }}</td>
+      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ event_summaries.get(e.event_id, humanize_type(e.event_type)) }}</a></td>
     </tr>
     {% endfor %}
   </tbody>
@@ -56,22 +61,19 @@
 
 <h2>Notable figures ({{ figures | length }})</h2>
 {% if figures %}
-<table class="data">
-  <thead>
-    <tr><th>Name</th><th>Appeared</th><th>Died</th></tr>
-  </thead>
-  <tbody>
-    {% for fig in figures %}
-    <tr>
-      <td><a href="/world/{{ slug }}/figures/{{ fig.figure_id }}">{{ store.figure_display(fig) }}</a></td>
-      <td class="mono">{{ fig.appeared_year or '—' }}</td>
-      <td class="mono">{{ fig.died_year or '—' }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-<p class="meta"><a href="/world/{{ slug }}/figures?civ_id={{ entity.entity_id }}">View all figures for this civ →</a></p>
+<div class="card-grid list-cards">
+  {% for fig in figures %}
+  <a href="/world/{{ slug }}/figures/{{ fig.figure_id }}" class="card card-link">
+    <h3>{{ store.figure_display(fig) }}</h3>
+    <div class="card-stats">
+      {% if valid_year(fig.appeared_year) %}<span class="card-stat">appeared {{ fig.appeared_year }}</span>{% endif %}
+      {% if valid_year(fig.died_year) %}<span class="card-stat">died {{ fig.died_year }}</span>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+<p class="meta"><a href="/world/{{ slug }}/figures?civ_id={{ entity.entity_id }}">View all figures →</a></p>
 {% else %}
-<p class="empty">No figures for this civ yet.</p>
+<p class="empty">No figures for this civilization yet.</p>
 {% endif %}
 {% endblock %}

@@ -1,58 +1,79 @@
-{% extends "base.html" %}
-{% block title %}Event {{ event.event_id }} — {{ world_name | default(slug) }}{% endblock %}
-{% block content %}
-<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / <a href="/world/{{ slug }}/events">Events</a> / {{ event.event_id }}</div>
-<h1>Event <span class="tag">{{ event.event_type }}</span></h1>
-
-<p class="lead-summary">{{ summary }}</p>
-
-<dl class="detail">
-  <dt>Year</dt><dd class="mono">{{ event.year }}</dd>
-  {% if civ %}
-  <dt>Civilization</dt><dd><a href="/world/{{ slug }}/entities/{{ civ.entity_id }}">{{ civ_name }}</a></dd>
-  {% endif %}
-  {% if site %}
-  <dt>Site</dt><dd><a href="/world/{{ slug }}/sites/{{ site.site_id }}">{{ site.display_name }}</a></dd>
-  {% endif %}
-</dl>
-
-{% if parent_collections %}
-<h2>Part of</h2>
-<ul>
-  {% for c in parent_collections %}
-  <li><a href="/world/{{ slug }}/collections/{{ c.collection_id }}">{{ store.collection_display(c) }}</a></li>
-  {% endfor %}
-</ul>
-{% endif %}
-
-<h2>Details</h2>
-<table class="data">
-  <thead><tr><th>Field</th><th>Value</th></tr></thead>
-  <tbody>
-    {% for key, resolved in resolved_fields %}
-    <tr>
-      <td>{{ key }}</td>
-      <td>
-        {% if resolved.href %}
-        <a href="{{ resolved.href }}">{{ resolved.display }}</a>
-        {% else %}
-        {{ resolved.display }}
-        {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-<details class="debug-panel">
-  <summary>Raw fields (debug)</summary>
-  <table class="data">
-    <thead><tr><th>Field</th><th>Value</th></tr></thead>
-    <tbody>
-      {% for key, value in fields.items() %}
-      <tr><td>{{ key }}</td><td class="mono">{{ value }}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</details>
-{% endblock %}
+{% extends "base.html" %}
+{% block title %}{{ summary[:60] }} — {{ world_name | default(slug) }}{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / <a href="/world/{{ slug }}/events">Events</a> / Event</div>
+
+<div class="event-hero">
+  <p class="lead-summary">{{ summary }}</p>
+  <div class="event-meta">
+    {% if valid_year(event.year) %}<span class="badge">Year {{ event.year }}</span>{% endif %}
+    {% if debug_mode %}<span class="badge">{{ humanize_type(event.event_type) }}</span>{% endif %}
+    {% if civ %}
+    <a href="/world/{{ slug }}/entities/{{ civ.entity_id }}" class="badge badge-link">{{ civ_name }}</a>
+    {% endif %}
+    {% if site %}
+    <a href="/world/{{ slug }}/sites/{{ site.site_id }}" class="badge badge-link">{{ prettify_site_name(site.display_name, site.site_id) or site.display_name }}</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if parent_collections %}
+<h2>Part of</h2>
+<ul class="link-list">
+  {% for c in parent_collections %}
+  <li><a href="/world/{{ slug }}/collections/{{ c.collection_id }}">{{ store.collection_display(c) }}</a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if narrative_fields %}
+<h2>Who &amp; what</h2>
+<ul class="involved-list">
+  {% for key, resolved in narrative_fields %}
+  <li>
+    <span class="involved-label">{{ humanize_field(key) }}</span>
+    {% if resolved.href %}
+    <a href="{{ resolved.href }}">{{ resolved.display }}</a>
+    {% else %}
+    <span>{{ resolved.display }}</span>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if debug_mode and resolved_fields %}
+<h2>All fields</h2>
+<table class="data">
+  <thead><tr><th>Field</th><th>Value</th></tr></thead>
+  <tbody>
+    {% for key, resolved in resolved_fields %}
+    <tr>
+      <td class="field-label">{{ humanize_field(key) }}</td>
+      <td>
+        {% if resolved.href %}
+        <a href="{{ resolved.href }}">{{ resolved.display }}</a>
+        {% else %}
+        {{ resolved.display }}
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if debug_mode %}
+<details class="debug-panel">
+  <summary>Raw fields (developer)</summary>
+  <table class="data">
+    <thead><tr><th>Field</th><th>Value</th></tr></thead>
+    <tbody>
+      {% for key, value in fields.items() %}
+      <tr><td>{{ key }}</td><td class="mono">{{ value }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</details>
+{% endif %}
+{% endblock %}

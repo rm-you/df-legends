@@ -1,52 +1,58 @@
-{% extends "base.html" %}
-{% block title %}Events — {{ world_name | default(slug) }}{% endblock %}
-{% block content %}
-<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / Events</div>
-<h1>Events</h1>
-<p class="subtitle">{{ "{:,}".format(total) }} events{% if selected_type %} of type <strong>{{ selected_type }}</strong>{% endif %}{% if year is not none %} in year {{ year }}{% endif %}</p>
-<p><a href="/world/{{ slug }}/chronicle">View world chronicle (by year) →</a></p>
-
-<form method="get" class="filters">
-  <label>
-    Type
-    <select name="event_type">
-      <option value="">all</option>
-      {% for t, n in types %}
-      <option value="{{ t }}" {% if t == selected_type %}selected{% endif %}>{{ t }} ({{ "{:,}".format(n) }})</option>
-      {% endfor %}
-    </select>
-  </label>
-  <label>
-    Year
-    <input type="number" name="year" value="{{ year if year is not none else '' }}">
-  </label>
-  <button type="submit">Filter</button>
-</form>
-
-<table class="data">
-  <thead>
-    <tr><th>Year</th><th>Summary</th><th></th></tr>
-  </thead>
-  <tbody>
-    {% for e in events %}
-    <tr>
-      <td class="mono">{{ e.year }}</td>
-      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ event_summaries.get(e.event_id, e.event_type) }}</a></td>
-      <td class="meta mono">{{ e.event_type }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-{% if pages > 1 %}
-<div class="pagination">
-  {% if page > 1 %}
-  <a href="?event_type={{ selected_type }}&year={{ year if year is not none else '' }}&page={{ page - 1 }}">&laquo; prev</a>
-  {% endif %}
-  <span>page {{ page }} / {{ "{:,}".format(pages) }}</span>
-  {% if page < pages %}
-  <a href="?event_type={{ selected_type }}&year={{ year if year is not none else '' }}&page={{ page + 1 }}">next &raquo;</a>
-  {% endif %}
-</div>
-{% endif %}
-{% endblock %}
+{% extends "base.html" %}
+{% block title %}Events — {{ world_name | default(slug) }}{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / Events</div>
+<h1>Events</h1>
+<p class="subtitle">{{ "{:,}".format(total) }} events{% if selected_type %} — {{ humanize_type(selected_type) }}{% endif %}{% if year is not none %} in year {{ year }}{% endif %}</p>
+<p><a href="/world/{{ slug }}/chronicle">Read the world chronicle →</a></p>
+
+<form method="get" class="filters">
+  <label>
+    Type
+    <select name="event_type">
+      <option value="">All types</option>
+      {% for t, n in types %}
+      <option value="{{ t }}" {% if t == selected_type %}selected{% endif %}>{{ humanize_type(t) }} ({{ "{:,}".format(n) }})</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    Year
+    <input type="number" name="year" value="{{ year if year is not none else '' }}">
+  </label>
+  <button type="submit">Filter</button>
+  {% if selected_type or year is not none %}
+  <a href="/world/{{ slug }}/events" class="filter-clear">Clear filters</a>
+  {% endif %}
+</form>
+
+{% if events %}
+<table class="data timeline-table">
+  <thead>
+    <tr><th>Year</th><th>Event</th></tr>
+  </thead>
+  <tbody>
+    {% for e in events %}
+    <tr>
+      <td class="mono year-cell">{% if valid_year(e.year) %}{{ e.year }}{% else %}—{% endif %}</td>
+      <td><a href="/world/{{ slug }}/events/{{ e.event_id }}">{{ event_summaries.get(e.event_id, humanize_type(e.event_type)) }}</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">No events match the current filters. <a href="/world/{{ slug }}/events">Clear filters</a>.</p>
+{% endif %}
+
+{% if pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+  <a href="{{ build_page_query(page=page - 1, event_type=selected_type, year=year) }}">&laquo; prev</a>
+  {% endif %}
+  <span>page {{ page }} / {{ "{:,}".format(pages) }}</span>
+  {% if page < pages %}
+  <a href="{{ build_page_query(page=page + 1, event_type=selected_type, year=year) }}">next &raquo;</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

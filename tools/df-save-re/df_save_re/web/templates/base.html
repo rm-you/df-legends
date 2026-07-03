@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}DF Legends Explorer{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -20,7 +23,9 @@
       <a href="/world/{{ slug }}/collections">Collections</a>
       <a href="/world/{{ slug }}/eras">Eras</a>
       <a href="/world/{{ slug }}/search">Search</a>
+      {% if debug_mode %}
       <a href="/world/{{ slug }}/history" class="nav-debug">Extraction</a>
+      {% endif %}
     </nav>
     {% endif %}
   </header>
@@ -29,6 +34,11 @@
   </main>
   <footer class="site-footer">
     DF Legends Explorer — browse extracted Dwarf Fortress world history
+    {% if slug is defined and not debug_mode %}
+    · <a href="{{ request.url.path }}?debug=1" class="footer-debug-link">Developer mode</a>
+    {% elif slug is defined and debug_mode %}
+    · <a href="{{ request.url.path }}" class="footer-debug-link">Exit developer mode</a>
+    {% endif %}
   </footer>
 </body>
 </html>

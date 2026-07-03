@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Sites — {{ slug }}{% endblock %}
+{% block title %}Sites — {{ world_name | default(slug) }}{% endblock %}
 {% block content %}
-<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / Sites</div>
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / Sites</div>
 <h1>Sites</h1>
 
 <form class="filters" method="get">
@@ -20,7 +20,7 @@
   </label>
   <button type="submit">Filter</button>
   {% if civ_id or search %}
-  <a href="/world/{{ slug }}/sites" style="align-self:center;font-size:0.85rem;">Clear</a>
+  <a href="/world/{{ slug }}/sites" class="filter-clear">Clear</a>
   {% endif %}
 </form>
 
@@ -29,30 +29,20 @@
 {% endif %}
 
 {% if sites %}
-<table class="data">
-  <thead>
-    <tr><th>ID</th><th>Name</th><th>Type</th><th>Civilization</th><th>Coords</th></tr>
-  </thead>
-  <tbody>
-    {% for site in sites %}
-    <tr>
-      <td class="mono"><a href="/world/{{ slug }}/sites/{{ site.site_id }}">{{ site.site_id }}</a></td>
-      <td><a href="/world/{{ slug }}/sites/{{ site.site_id }}">{{ site.display_name }}</a></td>
-      <td>{{ site.site_type_name or '—' }}</td>
-      <td>
-        {% if site.civ_id %}
-        <a href="/world/{{ slug }}/entities/{{ site.civ_id }}">{{ site.civ_name or site.civ_id }}</a>
-        {% else %}—{% endif %}
-      </td>
-      <td class="mono">
-        {% if site.pos_x is not none and site.pos_y is not none %}
-        ({{ site.pos_x }}, {{ site.pos_y }})
-        {% else %}—{% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="card-grid list-cards">
+  {% for site in sites %}
+  <a href="/world/{{ slug }}/sites/{{ site.site_id }}" class="card card-link">
+    <h3>{{ site.display_name }}</h3>
+    <div class="meta">{{ site.site_type_name or 'Settlement' }}</div>
+    {% if site.civ_name %}
+    <div class="meta">{{ site.civ_name }}</div>
+    {% endif %}
+    {% if debug_mode and site.pos_x is not none and site.pos_y is not none %}
+    <div class="meta mono">({{ site.pos_x }}, {{ site.pos_y }})</div>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
 <p class="meta">Showing up to {{ sites | length }} sites{% if sites | length >= 500 %} (limit reached){% endif %}</p>
 {% else %}
 <p class="empty">No sites match the current filters.</p>

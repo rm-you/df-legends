@@ -6,7 +6,7 @@ import zlib
 import pytest
 
 from df_save_re.binary_reader import BinaryReader
-from df_save_re.compression import decompress_file, read_header
+from df_save_re.compression import decompress_file, decompress_file_prefix, read_header
 from df_save_re.scan import find_markers
 from io import BytesIO
 
@@ -33,6 +33,20 @@ def test_decompress_roundtrip(tmp_path):
     dec = decompress_file(path)
     assert dec.payload == payload
     assert len(dec.blocks) == 1
+
+
+def test_decompress_file_prefix_stops_early(tmp_path):
+    block_a = b"A" * 120_000
+    block_b = b"B" * 120_000
+    path = tmp_path / "world.dat"
+    header = struct.pack("<II", 1716, 1)
+    chunks = header + struct.pack("<I", len(zlib.compress(block_a))) + zlib.compress(block_a)
+    chunks += struct.pack("<I", len(zlib.compress(block_b))) + zlib.compress(block_b)
+    chunks += struct.pack("<I", 0)
+    path.write_bytes(chunks)
+
+    _, prefix = decompress_file_prefix(path, min_bytes=100_000)
+    assert prefix == block_a
 
 
 def test_binary_reader_string():

@@ -162,6 +162,22 @@ def parse_sav_preamble(payload: bytes, *, save_version: int | None = None) -> Sa
     return SavPreamble.read(reader, payload=payload, save_version=save_version)
 
 
+def peek_sav_world_name(payload: bytes, *, save_version: int | None = None) -> str | None:
+    """Read world name from the SAV preamble prefix without parsing the full save."""
+    del save_version  # reserved for future version-gated layout tweaks
+    reader = BinaryReader(BytesIO(payload))
+    WorldHeaderSavHypothesis.read(reader)
+    blob_start = reader.tell()
+    try:
+        gamemode_offset = _find_gamemode_offset(payload, blob_start)
+    except ValueError:
+        return None
+    reader = BinaryReader(BytesIO(payload))
+    reader.seek(gamemode_offset + 2)
+    DfString.read(reader)
+    return DfString.read(reader).value
+
+
 def _find_gamemode_offset(payload: bytes, blob_start: int) -> int:
     """
     Locate gamemode uint16 followed by two plausible DfStrings (GameName, WorldName).

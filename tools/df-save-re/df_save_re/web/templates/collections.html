@@ -1,46 +1,41 @@
 {% extends "base.html" %}
-{% block title %}Collections — {{ slug }}{% endblock %}
+{% block title %}Collections — {{ world_name | default(slug) }}{% endblock %}
 {% block content %}
-<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ slug }}</a> / Collections</div>
+<div class="breadcrumb"><a href="/">Worlds</a> / <a href="/world/{{ slug }}">{{ world_name | default(slug) }}</a> / Collections</div>
 <h1>Event collections</h1>
-<p class="subtitle">{{ "{:,}".format(total) }} collections{% if selected_type %} of type <strong>{{ selected_type }}</strong>{% endif %}</p>
+<p class="subtitle">{{ "{:,}".format(total) }} collections{% if selected_type %} — {{ humanize_type(selected_type) }}{% endif %}</p>
 
 <form method="get" class="filters">
   <label>
     Type
     <select name="collection_type">
-      <option value="">all</option>
+      <option value="">All types</option>
       {% for t, n in types %}
-      <option value="{{ t }}" {% if t == selected_type %}selected{% endif %}>{{ t }} ({{ "{:,}".format(n) }})</option>
+      <option value="{{ t }}" {% if t == selected_type %}selected{% endif %}>{{ humanize_type(t) }} ({{ "{:,}".format(n) }})</option>
       {% endfor %}
     </select>
   </label>
   <label>
     Name
-    <input type="text" name="q" value="{{ search }}">
+    <input type="text" name="q" value="{{ search }}" placeholder="Search names…">
   </label>
-  <label>
-    <input type="checkbox" name="named_only" value="true" {% if named_only %}checked{% endif %}> named only
+  <label class="filter-checkbox">
+    <input type="checkbox" name="named_only" value="true" {% if named_only %}checked{% endif %}> Named only
   </label>
   <button type="submit">Filter</button>
 </form>
 
-<table class="data">
-  <thead>
-    <tr><th>ID</th><th>Type</th><th>Name</th><th>Years</th><th></th></tr>
-  </thead>
-  <tbody>
-    {% for c in collections %}
-    <tr>
-      <td class="mono">{{ c.collection_id }}</td>
-      <td>{{ c.collection_type }}</td>
-      <td>{% if c.name_display %}{{ c.name_display.title() }}{% else %}—{% endif %}</td>
-      <td class="mono">{{ c.start_year }}–{{ c.end_year }}</td>
-      <td><a href="/world/{{ slug }}/collections/{{ c.collection_id }}">detail</a></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="card-grid list-cards">
+  {% for c in collections %}
+  <a href="/world/{{ slug }}/collections/{{ c.collection_id }}" class="card card-link">
+    <h3>{% if c.name_display %}{{ c.name_display.title() }}{% else %}{{ humanize_type(c.collection_type) }}{% endif %}</h3>
+    <div class="meta"><span class="badge">{{ humanize_type(c.collection_type) }}</span></div>
+    <div class="card-stats">
+      <span class="card-stat">{{ c.start_year }}–{{ c.end_year }}</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
 
 {% if pages > 1 %}
 <div class="pagination">
