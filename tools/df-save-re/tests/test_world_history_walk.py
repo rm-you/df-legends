@@ -14,6 +14,24 @@ from fixture_paths import resolve_fixture
 pytestmark = [pytest.mark.slow, pytest.mark.timeout(900)]
 
 
+def test_locate_without_ratio_guesses(monkeypatch):
+    """Exhaustive fallback must locate when fixture-tuned ratio guesses are disabled."""
+    path = resolve_fixture("small-retired", "world.dat")
+    if path is None:
+        pytest.skip("fixture missing: small-retired/world.dat")
+    resolved = resolve_save_payload(path)
+    monkeypatch.setattr(
+        "df_save_re.deserializers.world_history_walk._event_count_guesses",
+        lambda _header: [],
+    )
+    lm = locate_world_history(
+        resolved.payload, resolved.preamble.header, save_version=resolved.save_version
+    )
+    assert lm is not None
+    assert lm.event_count == 87666
+    assert lm.figure_count == resolved.preamble.header.max_ids[8] + 1
+
+
 def test_full_walk_namushul():
     path = resolve_fixture("small-retired", "world.dat")
     if path is None:

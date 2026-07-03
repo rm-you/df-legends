@@ -43,10 +43,14 @@ def _read_i32_vec(reader: BinaryReader, label: str) -> list[int]:
 
 
 def skip_site_building(reader: BinaryReader) -> None:
-    """FUN_1403021d0 — not yet decompiled; raises until RE lands."""
-    raise NotImplementedError(
-        "FUN_1403021d0 (site abstract_building body) is not decompiled yet"
-    )
+    """FUN_1403021d0 — abstract_building body (three nested i32 vectors)."""
+    for slot_size, vec_idx in ((12, 0), (12, 1), (8, 2)):
+        count = reader.read_int32()
+        if count < 0 or count > 100_000:
+            raise ValueError(
+                f"implausible abstract_building vec{vec_idx} count {count} at 0x{reader.tell() - 4:x}"
+            )
+        reader.seek(reader.tell() + count * slot_size)
 
 
 def skip_world_site_body(reader: BinaryReader) -> dict[str, Any]:
@@ -103,9 +107,12 @@ def locate_world_sites_vector(
     scan_back: int = 32_000_000,
 ) -> WorldSitesVectorLandmark | None:
     """Find case-8 site vector by backward scan; body walk must land on ``events_count_offset``."""
+    from .world_header_ids import resolve_site_ceiling
+
     lo = max(0, events_count_offset - scan_back)
+    expected = resolve_site_ceiling(header)
     best: WorldSitesVectorLandmark | None = None
-    for off in range(events_count_offset - 16, lo, -4):
+    for off in range(events_count_offset - 16, lo, -1):
         try:
             reader = BinaryReader(BytesIO(payload))
             reader.seek(off)
@@ -119,8 +126,19 @@ def locate_world_sites_vector(
             bodies_start = reader.tell()
             for _ in range(count):
                 skip_world_site_body(reader)
-            if reader.tell() == events_count_offset:
+            if reader.tell() != events_count_offset:
+                continue
+            if expected is not None and count == expected:
                 return WorldSitesVectorLandmark(
+                    prefix_offset=off,
+                    count_offset=off + 12,
+                    bodies_start=bodies_start,
+                    site_count=count,
+                    events_count_offset=events_count_offset,
+                    notes=[f"landed on events @ 0x{events_count_offset:x} (header ceiling)"],
+                )
+            if best is None or count > best.site_count:
+                best = WorldSitesVectorLandmark(
                     prefix_offset=off,
                     count_offset=off + 12,
                     bodies_start=bodies_start,
@@ -128,7 +146,7 @@ def locate_world_sites_vector(
                     events_count_offset=events_count_offset,
                     notes=[f"landed on events @ 0x{events_count_offset:x}"],
                 )
-        except (ValueError, NotImplementedError, EOFError):
+        except (ValueError, EOFError):
             continue
     return best
 

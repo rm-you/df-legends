@@ -26,6 +26,7 @@ validated by the existing site / histfig readers:
 
 from __future__ import annotations
 
+import os
 import struct
 from io import BytesIO
 from pathlib import Path
@@ -46,7 +47,24 @@ class SkipError(ValueError):
 
 
 def default_xml_dir() -> Path:
-    return Path(__file__).resolve().parents[4] / "data" / "df-structures"
+    """Locate vendored df-structures XML (repo ``data/df-structures``)."""
+    env = os.environ.get("DF_STRUCTURES_DIR")
+    if env:
+        path = Path(env)
+        if path.is_dir():
+            return path
+        raise FileNotFoundError(f"DF_STRUCTURES_DIR is not a directory: {path}")
+
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        candidate = parent / "data" / "df-structures"
+        if candidate.is_dir():
+            return candidate
+
+    raise FileNotFoundError(
+        "df-structures XML directory not found; set DF_STRUCTURES_DIR "
+        "or install data/df-structures beside the package"
+    )
 
 
 # Fixed byte widths for scalar field kinds (None => special handling).

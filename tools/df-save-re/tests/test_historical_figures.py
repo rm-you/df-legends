@@ -51,7 +51,8 @@ def test_read_first_historical_figure_header():
     sv = 1716
     fig0 = read_historical_figure_header(reader, save_version=sv, figure_id=0)
     assert fig0.figure_id == 0
-    assert fig0.art_count == -1
+    # No art_count assertion: there is no art_count field in the save stream
+    # (AGENTS.md §4); the dataclass slot is a legacy placeholder.
     assert fig0.race == 0
     assert fig0.civ_id == 437
 

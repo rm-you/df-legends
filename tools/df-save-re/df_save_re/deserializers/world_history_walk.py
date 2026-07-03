@@ -466,7 +466,8 @@ def _figures_anchor_candidates(
         return []
     max_fig_id = header.max_ids[8]
     out: list[int] = []
-    search_lo = max(0, len(payload) - 40_000_000)
+    search_span = max(40_000_000, (max_fig_id + 1) * 4096)
+    search_lo = max(0, len(payload) - search_span)
     for count in (max_fig_id + 1, max_fig_id):
         needle = struct.pack("<i", count)
         pos = search_lo
@@ -500,13 +501,21 @@ def _verify_events_landmark(
     declared = struct.unpack_from("<i", payload, count_off)[0]
     if declared <= 0 or bodies_start != count_off + 4:
         return False
+    if bodies_start >= events_end:
+        return False
     reader = BinaryReader(BytesIO(payload))
-    reader.seek(count_off)
+    reader.seek(bodies_start)
     try:
-        parsed, _ = walk_events_layer(reader, save_version=save_version)
+        for _ in range(declared):
+            if reader.tell() >= events_end:
+                return False
+            tag = reader.read_int32()
+            if not (0 <= tag <= 0x85):
+                return False
+            skip_event_body(reader, tag, save_version=save_version)
     except (ValueError, EOFError):
         return False
-    return parsed == declared and reader.tell() == events_end
+    return reader.tell() == events_end
 
 
 def _event_count_guesses(header: WorldHeaderHypothesis) -> list[int]:
@@ -526,19 +535,17 @@ def _event_count_guesses(header: WorldHeaderHypothesis) -> list[int]:
     return out
 
 
-def _locate_events_start(
+def _locate_events_start_rfind(
     payload: bytes,
     events_end: int,
     *,
     save_version: int,
     scan_back: int,
-    header: WorldHeaderHypothesis | None = None,
+    header: WorldHeaderHypothesis | None,
+    counts: list[int],
 ) -> tuple[int, int, int] | None:
-    """Find events count prefix by rfind on plausible counts, then verify forward walk."""
+    """Fast path: rfind count-echo needles, verify forward walk."""
     lo = max(0, events_end - scan_back)
-    counts = _event_count_guesses(header) if header else []
-    if not counts:
-        counts = list(range(1, 5000))
     for count in counts:
         needle = struct.pack("<i", count)
         pos = events_end
@@ -558,6 +565,80 @@ def _locate_events_start(
                 return (off, off + 4, count)
             pos = off - 4
     return None
+
+
+def _locate_events_start_exhaustive(
+    payload: bytes,
+    events_end: int,
+    *,
+    save_version: int,
+    scan_back: int,
+    header: WorldHeaderHypothesis | None,
+) -> tuple[int, int, int] | None:
+    """Deterministic fallback: scan window for count+tag pairs, verify highest first."""
+    lo = max(0, events_end - scan_back)
+    ceiling = 50_000_000
+    if header is not None and len(header.max_ids) > 9:
+        ceiling = min(ceiling, header.max_ids[9] + 1)
+    by_declared: dict[int, int] = {}
+    # Count prefix is not guaranteed 4-byte aligned (Namushul: 0x11b494a).
+    for off in range(lo, events_end - 7):
+        bodies_start = off + 4
+        span = events_end - bodies_start
+        if span < 8:
+            continue
+        max_decl = min(ceiling, span // 8)
+        declared = struct.unpack_from("<i", payload, off)[0]
+        if not (0 < declared <= max_decl):
+            continue
+        tag = struct.unpack_from("<i", payload, bodies_start)[0]
+        if not (0 <= tag <= 0x85):
+            continue
+        prev = by_declared.get(declared)
+        if prev is None or off < prev:
+            by_declared[declared] = off
+    for declared, off in sorted(by_declared.items(), key=lambda item: item[1]):
+        if _verify_events_landmark(
+            payload,
+            off,
+            off + 4,
+            events_end,
+            save_version=save_version,
+        ):
+            return (off, off + 4, declared)
+    return None
+
+
+def _locate_events_start(
+    payload: bytes,
+    events_end: int,
+    *,
+    save_version: int,
+    scan_back: int,
+    header: WorldHeaderHypothesis | None = None,
+    count_guesses: list[int] | None = None,
+) -> tuple[int, int, int] | None:
+    """Find events count prefix; ratio rfind first, exhaustive chain fallback."""
+    if count_guesses is None:
+        count_guesses = _event_count_guesses(header) if header else []
+    if count_guesses:
+        found = _locate_events_start_rfind(
+            payload,
+            events_end,
+            save_version=save_version,
+            scan_back=scan_back,
+            header=header,
+            counts=count_guesses,
+        )
+        if found is not None:
+            return found
+    return _locate_events_start_exhaustive(
+        payload,
+        events_end,
+        save_version=save_version,
+        scan_back=scan_back,
+        header=header,
+    )
 
 
 def locate_world_history(

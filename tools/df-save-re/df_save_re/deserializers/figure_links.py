@@ -99,7 +99,7 @@ def read_figure_links(
     for _ in range(count):
         tag = reader.read_int16()
         layout = SAVE_LAYOUTS.get(f"link:{factory}:{tag}") if tag != -1 else None
-        symbol = (layout or {}).get("symbol")
+        symbol = (layout or {}).get("symbol") or (layout or {}).get("struct")
         fields = _layout_fields(factory, tag)
         body = read_layout_body(reader, fields, save_version=save_version)
         link_type = _link_type_name(factory, tag, symbol)
